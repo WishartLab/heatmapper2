@@ -88,7 +88,7 @@ class Cache:
 		# If we're in a Pyodide environment, we fetch resources from the web.
 		if Pyodide:
 			self.Download = lambda url: Cache.Remote(url)
-			self.Source = "https://raw.githubusercontent.com/kkernick/kkernick.github.io/main/{}/example_input/".format(project)
+			self.Source = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main/{}/example_input/".format(project)
 
 		# Otherwise, we fetch locally.
 		else:
@@ -179,12 +179,12 @@ def NavBar(current):
 			ui.panel_title(title=None, window_title="Heatmapper"),
 
 		ui.navset_bar(
-				ui.nav_panel(ui.HTML('<a href=https://kkernick.github.io/expression/site/index.html>Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML('<a href=https://kkernick.github.io/pairwise/site/index.html>Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML('<a href=https://kkernick.github.io/image/site/index.html>Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML('<a href=https://kkernick.github.io/geomap/site/index.html>Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML('<a href=https://kkernick.github.io/geocoordinate/site/index.html>Geocoordinate</a>'), value="Geocoordinate"),
-				ui.nav_panel(ui.HTML('<a href=https://kkernick.github.io/about/site/index.html>About</a>'), value="About"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/expression/site/index.html>Expression</a>'), value="Expression"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/pairwise/site/index.html>Pairwise</a>'), value="Pairwise"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/image/site/index.html>Image</a>'), value="Image"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/geomap/site/index.html>Geomap</a>'), value="Geomap"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/geocoordinate/site/index.html>Geocoordinate</a>'), value="Geocoordinate"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/about/site/index.html>About</a>'), value="About"),
 				title="Heatmapper",
 				selected=current,
 		)
@@ -204,7 +204,7 @@ def FileSelection(examples, types):
 	"""
 
 	# If the user needs help with the formatting.
-	return [ui.HTML('<a href=https://kkernick.github.io/about/site/index.html>Data Format</a>'),
+	return [ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/about/site/index.html>Data Format</a>'),
 
 	# Specify whether to use example files, or upload one.
 	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected="Example", inline=True),

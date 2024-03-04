@@ -50,7 +50,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns Either the path to the uploaded file, or the URL to the one provided by us (Folium supports both)
 		"""
 
-		URL = "https://raw.githubusercontent.com/kkernick/kkernick.github.io/main/geomap/data/" if Pyodide else "../data/"
+		URL = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main/geomap/data/" if Pyodide else "../data/"
 
 		if input.JSONFile() == "Upload":
 			file: list[FileInfo] | None = input.JSONUpload()
