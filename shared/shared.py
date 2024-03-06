@@ -27,22 +27,22 @@ else:
 
 
 class ColumnType(Enum):
-	Temporal = 0
+	Time = 0
 	Name = 1
-	Input = 2
-	Longitude = 2
-	Latitude = 3
+	Value = 2
+	Longitude = 3
+	Latitude = 4
 
 Columns = {
-	ColumnType.Temporal: {"time", "date"},
+	ColumnType.Time: {"time", "date"},
 	ColumnType.Name: {"name", "orf", "uniqid"},
-	ColumnType.Input: {"value", "weight", "intensity"},
+	ColumnType.Value: {"value", "weight", "intensity"},
 	ColumnType.Longitude: {"longitude", "long"},
 	ColumnType.Latitude: {"latitude", "lat"}
 }
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], bad: list = []):
+def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
@@ -62,9 +62,15 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = []):
 	# If good was defined, take the intersection
 	if good: options &= set(good)
 
+
 	# If we hit the column type, take the intersection, otherwise take the difference
 	for key, value in Columns.items():
-		if key == ctype: options &= value
+
+		# Only perform the intersection if it actually yields a value.
+		if key == ctype:
+			intersection = options & value
+			if intersection: options = intersection
+
 		else: options -= value
 
 	# Get the valid indices, and sort them in ascending order
@@ -72,7 +78,7 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = []):
 	indices.sort()
 
 	# Get the original column names, without case-folding, and return as a list.
-	return [columns[index] for index in indices]
+	return columns[indices[0]] if only_one else [columns[index] for index in indices]
 
 
 def FillColumnSelection(columns, ctype, default, name):
@@ -83,7 +89,6 @@ def FillColumnSelection(columns, ctype, default, name):
 	@param default: The default index if there are no valid columns
 	@param name: The name of the ui element to update.
 	"""
-
 
 	# Filter the columns
 	names = Filter(columns, ctype)

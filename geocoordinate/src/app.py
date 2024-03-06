@@ -19,7 +19,7 @@ from folium import Map as FoliumMap
 from folium.plugins import HeatMap, HeatMapWithTime
 from pandas import DataFrame
 
-from shared import Table, Cache, NavBar, FileSelection
+from shared import Table, Cache, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -40,21 +40,17 @@ def server(input: Inputs, output: Outputs, session: Session):
 	DataCache = Cache("geocoordinate")
 
 
-	def GenerateMap(df, map):
+	def GenerateMap(df, map, v_col, lon_col, lat_col):
 		"""
 		@brief Generates a standard heatmap
 		@param df The DataFrame containing the data
 		@param map The folium map to attach the heatmap to.
 		"""
 
-		default_value = input.ValueColumn()
-		if default_value is None or default_value not in df: return
-
-		# Get the long and lat.
-		longitudes = df["Longitude"].tolist()
-		latitudes = df["Latitude"].tolist()
-
-		values = df[default_value].tolist()
+		# Get each column
+		longitudes = df[lon_col].tolist()
+		latitudes = df[lat_col].tolist()
+		values = [1] * len(latitudes) if input.Uniform() else df[v_col].tolist()
 
 		HeatMap(list(zip(latitudes, longitudes, values)),
 		min_opacity=input.Opacity(),
@@ -63,44 +59,40 @@ def server(input: Inputs, output: Outputs, session: Session):
 		map.fit_bounds(map.get_bounds())
 
 
-	def GenerateTemporalMap(df, map):
+	def GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col):
 		"""
 		@brief Generates a temporal heatmap
 		@param df The DataFrame containing the data
 		@param map The folium map to attach the heatmap to.
 		"""
 
-		default_value = input.ValueColumn()
-		if default_value is None or default_value not in df: return
-		default_time = input.TimeColumn()
-		if default_time is None or default_time not in df: return
-
 		# Sort by time so we can work linearly.
-		df = df.sort_values(by=default_time)
+		df = df.sort_values(by=t_col)
 
 		# Normalize
-		values = df[default_value]
-		df[default_value] = (values - values.min()) / (values.max() - values.min())
+		if not input.Uniform():
+			values = df[v_col]
+			df[v_col] = (values - values.min()) / (values.max() - values.min())
 
 		# Group data by time
 		data = []
-		for time, group_df in df.groupby(default_time):
+		for time, group_df in df.groupby(t_col):
 			time_slice = []
 			for _, row in group_df.iterrows():
-				lat = row["Latitude"]
-				lon = row["Longitude"]
-				value = row[default_value]
+				lat = row[lat_col]
+				lon = row[lon_col]
+				value = 1 if input.Uniform() else row[v_col]
 				time_slice.append([lat, lon, value])
 			data.append(time_slice)
 
 		# Make the heamap
 		HeatMapWithTime(
 			data,
-			index=df[default_time].drop_duplicates().to_list(),
+			index=df[t_col].drop_duplicates().to_list(),
 			radius=input.Radius(),
 			min_opacity=input.Opacity(),
 			blur=input.Blur(),
-			max_speed=60,).add_to(map)
+			max_speed=60).add_to(map)
 
 
 	async def LoadMap():
@@ -114,12 +106,24 @@ def server(input: Inputs, output: Outputs, session: Session):
 		# Give a placeholder map if nothing is selected, which should never really be the case.
 		if df.empty: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
 
+		if not input.Uniform():
+			v_col = input.ValueColumn()
+			if v_col not in df: return
+		else:
+			v_col = None
 
-		map = FoliumMap((df["Latitude"][0], df["Longitude"][0]), tiles=input.MapType())
+		lon_col = Filter(df.columns, ColumnType.Longitude, only_one=True)
+		lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
+
+		map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
 
 		# Generate the right heatmap.
-		if input.Temporal(): GenerateTemporalMap(df, map)
-		else: GenerateMap(df, map)
+		if input.Temporal():
+			t_col = input.TimeColumn()
+			if t_col not in df: return
+			GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
+		else:
+			GenerateMap(df, map, v_col, lon_col, lat_col)
 		return map
 
 
@@ -131,7 +135,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.ui
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TimeColumn, input.ValueColumn, input.Temporal, input.MapType, input.Opacity, input.Radius, input.Blur, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TimeColumn, input.ValueColumn, input.Temporal, input.MapType, input.Opacity, input.Radius, input.Blur, input.Uniform, ignore_none=False, ignore_init=False)
 	async def Map(): return await LoadMap()
 
 
@@ -174,42 +178,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal, input.Uniform)
 	async def UpdateColumns():
-
-		# Give options for the key and value columns
 		df = await DataCache.Load(input)
-		choices = df.columns.tolist()
-		if choices:
-
-			default_time = None
-			for time in ["Time", "Date"]:
-				if time in df: default_time = time; break
-			if not default_time:
-				columns = df.columns.tolist()
-				for n in ["Longitude", "Latitude", "Weight", "Intensity", "Value"]:
-					if n in columns:
-						columns.remove(n)
-				if columns:
-					default_time = columns[0]
-				else:
-					default_time = df.columns[0]
-
-			default_value = None
-			for value in ["Weight", "Intensity", "Value"]:
-				if value in df: default_value = value; break
-			if not default_value:
-				columns = df.columns.tolist()
-				for n in ["Longitude", "Latitude", "Time", "Date"]:
-					if n in columns:
-						columns.remove(n)
-				if columns:
-					default_value = columns[0]
-				else:
-					default_value = df.columns[0]
-
-			ui.update_select(id="TimeColumn", choices=choices, selected=default_time)
-			ui.update_select(id="ValueColumn", choices=choices, selected=default_value)
+		if not input.Uniform(): FillColumnSelection(df.columns, ColumnType.Value, 0, "ValueColumn")
+		if input.Temporal(): FillColumnSelection(df.columns, ColumnType.Time, 0, "TimeColumn")
 
 
 	@reactive.Effect
@@ -248,7 +221,8 @@ app_ui = ui.page_fluid(
 				types=[".csv", ".txt", ".xlsx"]
 			),
 
-			ui.input_checkbox(id="Temporal", label="Temporal Choropleth"),
+			ui.input_checkbox(id="Temporal", label="Temporal Heatmap"),
+			ui.input_checkbox(id="Uniform", label="Uniform Values"),
 
 			# Only provide a temporal column if we're working with time
 			ui.panel_conditional(
@@ -256,7 +230,11 @@ app_ui = ui.page_fluid(
 				ui.input_select(id="TimeColumn", label="Time Column", choices=[], multiple=False),
 			),
 
-			ui.input_select(id="ValueColumn", label="Value Column", choices=[], multiple=False),
+			# Only give an option if we aren't working with a uniform value range.
+			ui.panel_conditional(
+				"!input.Uniform",
+				ui.input_select(id="ValueColumn", label="Value Column", choices=[], multiple=False),
+			),
 
 			# Only OpenStreatMap and CartoDB Positron seem to work.
 			ui.input_radio_buttons(id="MapType", label="Map Type", choices=["OpenStreetMap", "CartoDB Positron"], selected="CartoDB Positron"),
