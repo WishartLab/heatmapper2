@@ -13,6 +13,8 @@ from io import BytesIO
 from sys import modules
 from copy import deepcopy
 from pathlib import Path
+from enum import Enum
+
 
 # If pyodide is found, we're running WebAssembly.
 if "pyodide" in modules:
@@ -24,20 +26,79 @@ else:
 	Pyodide = False
 
 
-TemporalColumns = {"time", "date"}
+class ColumnType(Enum):
+	Temporal = 0
+	Name = 1
+	Input = 2
+	Longitude = 2
+	Latitude = 3
+
+Columns = {
+	ColumnType.Temporal: {"time", "date"},
+	ColumnType.Name: {"name", "orf", "uniqid"},
+	ColumnType.Input: {"value", "weight", "intensity"},
+	ColumnType.Longitude: {"longitude", "long"},
+	ColumnType.Latitude: {"latitude", "lat"}
+}
 
 
-def Filter(columns, good_columns, bad_columns):
-	ret = None
-	for column in columns:
-		lowered = column.lower()
-		if lowered in good_columns:
-			return column
-		elif lowered in bad_columns:
-			break
-		elif ret is not None:
-			ret = column
-	return ret
+def Filter(columns, ctype: ColumnType, good: list = [], bad: list = []):
+	"""
+	@brief Filters available column names based on what input we want
+	@param columns: The columns of the DataFrame (Usually just df.columns)
+	@param ctype: The type of column we're looking for (Look at the ColumnType Enum)
+	@param good: A list of column names on top of those defined by the type to be included
+	@param bad: A list of column names on top of those defined by the type to be excluded from the result.
+	@return: A list of column names to use.
+	@info Results are
+	"""
+
+	# Fold cases
+	folded = [column.lower() for column in columns]
+
+	# Exclude anything the user explicitly said was invalid.
+	options = set(folded) - set(bad)
+
+	# If good was defined, take the intersection
+	if good: options &= set(good)
+
+	# If we hit the column type, take the intersection, otherwise take the difference
+	for key, value in Columns.items():
+		if key == ctype: options &= value
+		else: options -= value
+
+	# Get the valid indices, and sort them in ascending order
+	indices = [folded.index(value) for value in options]
+	indices.sort()
+
+	# Get the original column names, without case-folding, and return as a list.
+	return [columns[index] for index in indices]
+
+
+def FillColumnSelection(columns, ctype, default, name):
+	"""
+	@brief Updates a column name selection dialog
+	@param columns The list of columns to choose from
+	@param ctype: The type of column we're looking for
+	@param default: The default index if there are no valid columns
+	@param name: The name of the ui element to update.
+	"""
+
+
+	# Filter the columns
+	names = Filter(columns, ctype)
+
+	# If we've got some choices, choose the first as the default.
+	if names: selected = names[0]
+
+	# If we don't, choose the default column (or 0 if that doesn't exit)
+	else:
+		selected = columns[default if default < len(columns) else 0]
+		names = list(columns)
+
+	# Update the ui
+
+	ui.update_select(id=name, choices=names, selected=selected)
 
 
 class Cache:
@@ -119,7 +180,7 @@ class Cache:
 			n = file[0]["name"]
 
 			# Populate the base cache, if we need to
-			if n not in self._primary: self._primary[n] = self._handler(n, read(file[0]["datapath"], "wb"))
+			if n not in self._primary: self._primary[n] = self._handler(n, file[0]["datapath"])
 
 		else:
 			n = input.Example()

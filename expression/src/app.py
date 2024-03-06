@@ -20,7 +20,7 @@ from matplotlib.colors import Normalize
 from scipy.cluster import hierarchy
 from pandas import DataFrame
 
-from shared import Table, Cache, NavBar, FileSelection
+from shared import Table, Cache, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection
 
 def server(input: Inputs, output: Outputs, session: Session):
 	# Information about the Examples
@@ -39,20 +39,18 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns	A list containing the labels for the y axis, a list containing the labels for the x axis, and a
 							DataFrame containing the loaded data without those two columns.
 		"""
+
 		df = await DataCache.Load(input)
 
-		names = ["NAME", "ORF", "UNIQID"]
-
-		for name in names:
-			if name in df.columns:
-				index_labels = df[name]
-				break
+		# If the name hasn't yet been specified, don't do anything
+		name = input.NameColumn()
+		if name not in df: return None, None, None
 
 		# Drop the naming columns before linkage.
-		data = df.drop(columns=[col for col in names if col in df.columns])
+		data = df.drop(columns=Filter(df.columns, ColumnType.Name))
 		x_labels = ["X" + name if list(data.columns).count(name) == 1 else "X" + name + f".{i+1}" for i, name in enumerate(data.columns)]
 
-		return list(index_labels), x_labels, data
+		return list(df[name]), x_labels, data
 
 
 	def GenerateDendrogram(data, ax, orientation, labels = [], invert=False):
@@ -91,6 +89,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		index_labels, x_labels, data = await ProcessData()
+		if data is None: return
 
 		# Create a figure with a heatmap and associated dendrograms
 		fig = figure(figsize=(12, 10))
@@ -158,15 +157,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Features, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Features, input.NameColumn, ignore_none=False, ignore_init=False)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.NameColumn, ignore_none=False, ignore_init=False)
 	async def RowDendrogram():
 		index_labels, _, data = await ProcessData()
+		if data is None: return None
 
 		fig = figure(figsize=(12, 10))
 		ax = fig.add_subplot(111)
@@ -182,9 +182,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.NameColumn, ignore_none=False, ignore_init=False)
 	async def ColumnDendrogram():
 		_, x_labels, data = await ProcessData()
+		if data is None: return None
 
 		fig = figure(figsize=(12, 10))
 		ax = fig.add_subplot(111)
@@ -231,6 +232,13 @@ def server(input: Inputs, output: Outputs, session: Session):
 			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
 
 
+	@reactive.Effect
+	@reactive.event(input.Example, input.File, input.Reset, input.Update)
+	async def UpdateColumnSelection():
+		df = await DataCache.Load(input)
+		FillColumnSelection(df.columns, ColumnType.Name, 0, "NameColumn")
+
+
 app_ui = ui.page_fluid(
 
 	NavBar("Expression"),
@@ -242,6 +250,8 @@ app_ui = ui.page_fluid(
 				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3"},
 				types=[".csv", ".txt", ".xlsx", ".pdb", ".dat"]
 			),
+
+			ui.input_select(id="NameColumn", label="Names", choices=[], multiple=False),
 
 			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
 			ui.input_select(id="ClusterMethod", label="Clustering Method", choices=["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"], selected="Average"),
