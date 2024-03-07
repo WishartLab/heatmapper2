@@ -181,7 +181,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal, input.Uniform)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
-		if not input.Uniform(): FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn")
+		if not input.Uniform():
+			if not FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn"):
+				ui.update_checkbox(id="Uniform", value=True)
 		if input.Temporal(): FillColumnSelection(df.columns, ColumnType.Time, "TimeColumn")
 
 

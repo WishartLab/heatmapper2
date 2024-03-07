@@ -34,7 +34,7 @@ class ColumnType(Enum):
 	Latitude = 4
 
 Columns = {
-	ColumnType.Time: {"time", "date"},
+	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid"},
 	ColumnType.Value: {"value", "weight", "intensity"},
 	ColumnType.Longitude: {"longitude", "long"},
@@ -100,6 +100,7 @@ def FillColumnSelection(columns, ctype, name, bad = []):
 	# This removes ones we know aren't correct (like "time" for when we want a value)
 	else:
 		names = Filter(columns, ctype, bad = bad, return_unknown=True)
+		if not names: return None
 		selected = names[0]
 
 	# Update the ui
