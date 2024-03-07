@@ -42,7 +42,7 @@ Columns = {
 }
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False):
+def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, return_unknown=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
@@ -56,32 +56,32 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	# Fold cases
 	folded = [column.lower() for column in columns]
 
-	# Exclude anything the user explicitly said was invalid.
-	options = set(folded) - set(bad)
-
-	# If good was defined, take the intersection
-	if good: options &= set(good)
-
+	options = set(folded)
+	if bad: options -= set([b.lower() for b in bad])
+	if good: options &= set([g.lower() for g in good])
 
 	# If we hit the column type, take the intersection, otherwise take the difference
 	for key, value in Columns.items():
 
-		# Only perform the intersection if it actually yields a value.
+		# If we exclude unknown values, we always overwrite.
+		# If we aren't excluding unknowns, we replace if the intersection yielded *something*
 		if key == ctype:
 			intersection = options & value
-			if intersection: options = intersection
-
+			if not return_unknown or intersection: options = intersection
 		else: options -= value
 
-	# Get the valid indices, and sort them in ascending order
-	indices = [folded.index(value) for value in options]
-	indices.sort()
+	if options:
+		# Get the valid indices, and sort them in ascending order
+		indices = [folded.index(value) for value in options]
+		indices.sort()
 
-	# Get the original column names, without case-folding, and return as a list.
-	return columns[indices[0]] if only_one else [columns[index] for index in indices]
+		# Get the original column names, without case-folding, and return as a list.
+		return columns[indices[0]] if only_one else [columns[index] for index in indices]
+	else:
+		return None
 
 
-def FillColumnSelection(columns, ctype, default, name):
+def FillColumnSelection(columns, ctype, name, bad = []):
 	"""
 	@brief Updates a column name selection dialog
 	@param columns The list of columns to choose from
@@ -91,19 +91,20 @@ def FillColumnSelection(columns, ctype, default, name):
 	"""
 
 	# Filter the columns
-	names = Filter(columns, ctype)
+	names = Filter(columns, ctype, bad = bad)
 
 	# If we've got some choices, choose the first as the default.
 	if names: selected = names[0]
 
-	# If we don't, choose the default column (or 0 if that doesn't exit)
+	# If we don't, allow unknown variables and take from that one
+	# This removes ones we know aren't correct (like "time" for when we want a value)
 	else:
-		selected = columns[default if default < len(columns) else 0]
-		names = list(columns)
+		names = Filter(columns, ctype, bad = bad, return_unknown=True)
+		selected = names[0]
 
 	# Update the ui
-
 	ui.update_select(id=name, choices=names, selected=selected)
+	return selected
 
 
 class Cache:

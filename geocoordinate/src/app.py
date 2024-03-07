@@ -181,8 +181,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal, input.Uniform)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
-		if not input.Uniform(): FillColumnSelection(df.columns, ColumnType.Value, 0, "ValueColumn")
-		if input.Temporal(): FillColumnSelection(df.columns, ColumnType.Time, 0, "TimeColumn")
+		if not input.Uniform(): FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn")
+		if input.Temporal(): FillColumnSelection(df.columns, ColumnType.Time, "TimeColumn")
 
 
 	@reactive.Effect

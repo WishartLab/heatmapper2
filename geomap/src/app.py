@@ -21,7 +21,7 @@ from branca.colormap import linear
 from json import loads
 from shapely.geometry import shape
 
-from shared import Table, Cache, NavBar, FileSelection, Pyodide, Filter, TemporalColumns
+from shared import Table, Cache, NavBar, FileSelection, Pyodide, Filter, ColumnType, FillColumnSelection
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -61,15 +61,14 @@ def server(input: Inputs, output: Outputs, session: Session):
 			return URL + input.JSONSelection()
 
 
-	def LoadChoropleth(df, map):
-		key, value = input.KeyColumn(), input.ValueColumn()
+	def LoadChoropleth(df, map, k_col, v_col):
 
 		# Add the heatmap and return.
 		Choropleth(
 				geo_data=LoadJSON(),
 				name="choropleth",
 				data=df,
-				columns=[key, value],
+				columns=[k_col, v_col],
 				key_on="feature.properties.name",
 				fill_color=input.ColorMap().lower(),
 				fill_opacity=input.Opacity(),
@@ -79,40 +78,36 @@ def server(input: Inputs, output: Outputs, session: Session):
 		).add_to(map)
 
 
-	async def LoadTemporalChoropleth(df, map):
+	async def LoadTemporalChoropleth(df, map, k_col, v_col):
 		geojson = await DataCache.Download(LoadJSON())
 		geojson = loads(geojson.decode('utf-8'))
 
-		key, value = input.KeyColumn(), input.ValueColumn()
-
 		# Check if we have a dedicated time column, or separate columns for each time slot.
-		column = TemporalColumns.intersection(set(df.columns))
+		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True)
+		values = v_col if column else df.columns[1:]
 
-		values = value if column else df.columns[1:]
 		match input.ColorMap():
 			case "Inferno": cmap = linear.inferno.scale
 			case "Magma": cmap = linear.magma.scale
 			case "Plasma": cmap = linear.plasma.scale
 			case "Viridis": cmap = linear.viridis.scale
-
 		m, M = df[values].values.min(), df[values].values.max()
 		colormap = cmap(m, M)
 
 		style = {}
 
 		if column:
-			temporal_column = Filter(columns=df.columns, good_columns=TemporalColumns, bad_columns=[value])
-			grouped = df.groupby(key)
+			grouped = df.groupby(k_col)
 
 			for i, (name, group) in enumerate(grouped):
 				style[i] = {}
 				for a, row in group.iterrows():
 
 					# If the year isn't parsable, pray that it just works without parsing :)
-					try: year = str(to_datetime(row[temporal_column].split()[0]).timestamp()).split('.')[0]
-					except Exception: pass
+					try: year = str(to_datetime(row[column].split()[0]).timestamp()).split('.')[0]
+					except Exception: year = row[column]
 
-					style[i][year] = {'color': colormap(row[value]), 'opacity': input.Opacity()}
+					style[i][year] = {'color': colormap(row[v_col]), 'opacity': input.Opacity()}
 				for feature in geojson["features"]:
 							if feature["properties"]["name"] == name:
 									feature["id"] = i
@@ -120,19 +115,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 		else:
 			# Convert DataFrame to style format
 			for i, row in df.iterrows():
-					name = row[key]
+					name = row[k_col]
 					style[i] = {}
 					for year in df.columns[1:]:
-							value = row[year]
+						value = row[year]
 
-							# If the year isn't parsable, pray that it just works without parsing :)
-							try: year = str(to_datetime(year.split()[0]).timestamp()).split('.')[0]
-							except Exception: pass
+						# If the year isn't parsable, pray that it just works without parsing :)
+						try: year = str(to_datetime(year.split()[0]).timestamp()).split('.')[0]
+						except Exception: pass
 
-							style[i][year] = {'color': colormap(value), 'opacity': input.Opacity()}
-							for feature in geojson["features"]:
-								if feature["properties"]["name"] == name:
-										feature["id"] = i
+						style[i][year] = {'color': colormap(value), 'opacity': input.Opacity()}
+					for feature in geojson["features"]:
+						if feature["properties"]["name"] == name:
+								feature["id"] = i
 
 		TimeSliderChoropleth(
 				data=geojson,
@@ -148,10 +143,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input, copy=True)
-		key, value = input.KeyColumn(), input.ValueColumn()
+		k_col, v_col = input.KeyColumn(), input.ValueColumn()
 
 		# If the columns aren't defined, or aren't valid, don't do anything.
-		if key not in df or value not in df: return
+		if k_col not in df or v_col not in df: return
 
 		# Give a placeholder map if nothing is selected, which should never really be the case.
 		if df.empty: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
@@ -160,8 +155,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 		map = FoliumMap(tiles=input.MapType())
 
 		# Load the choropleth.
-		if input.Temporal(): await LoadTemporalChoropleth(df, map)
-		else: LoadChoropleth(df, map)
+		if input.Temporal(): await LoadTemporalChoropleth(df, map, k_col, v_col)
+		else: LoadChoropleth(df, map, k_col, v_col)
 
 		map.fit_bounds(map.get_bounds())
 		return map
@@ -193,17 +188,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
+	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal)
 	async def UpdateColumns():
-
-		# Give options for the key and value columns
 		df = await DataCache.Load(input)
-		choices = df.columns.tolist()
-		if choices:
-			default_key = input.KeyColumn() if input.KeyColumn() is not None else df.columns[0]
-			default_value = input.ValueColumn() if input.ValueColumn() is not None else df.columns[1]
-
-			ui.update_select(id="KeyColumn", choices=choices, selected=default_key)
-			ui.update_select(id="ValueColumn", choices=choices, selected=default_value)
+		key = FillColumnSelection(df.columns, ColumnType.Name, "KeyColumn")
+		FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn", bad = [key])
 
 
 	@reactive.Effect

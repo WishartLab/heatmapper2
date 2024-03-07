@@ -236,7 +236,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Example, input.File, input.Reset, input.Update)
 	async def UpdateColumnSelection():
 		df = await DataCache.Load(input)
-		FillColumnSelection(df.columns, ColumnType.Name, 0, "NameColumn")
+		FillColumnSelection(df.columns, ColumnType.Name, "NameColumn")
 
 
 app_ui = ui.page_fluid(
