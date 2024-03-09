@@ -121,11 +121,24 @@ class Cache:
 		@param i: The binary of the file (Either via read() or BytesIO())
 		@returns: A null-filled DataFrame.
 		"""
+
+		# Get the function
 		match Path(n).suffix:
-			case ".csv": df = read_csv(i)
-			case ".xlsx": df = read_excel(i)
-			case _: df = read_table(i)
-		return df.fillna(0)
+			case ".csv": func = read_csv
+			case ".xlsx": func = read_excel
+			case _: df = func = read_table
+
+		# Read the table once.
+		df = func(i).fillna(0)
+
+		# If the first column value is a float, we assume it's data, and not column names.
+		# Re-read the DataFrame with generic column names instead
+		try:
+			float(df.columns[0])
+			i.seek(0)
+			df = func(i, header=None, names=[f"Column {i}" for i in range(df.shape[1])])
+		except ValueError: pass
+		return df
 
 
 	@staticmethod
@@ -187,11 +200,13 @@ class Cache:
 			n = file[0]["name"]
 
 			# Populate the base cache, if we need to
-			if n not in self._primary: self._primary[n] = self._handler(n, file[0]["datapath"])
+			if n not in self._primary: source = open(file[0]["datapath"], 'r')
 
 		else:
 			n = input.Example()
-			if n not in self._primary: self._primary[n] = self._handler(n, BytesIO(await self.Download(self.Source + n)))
+			if n not in self._primary: source = BytesIO(await self.Download(self.Source + n))
+
+		if n not in self._primary: self._primary[n] = self._handler(n, source)
 		if n not in self._secondary: self._secondary[n] = deepcopy(self._primary[n])
 		return n
 

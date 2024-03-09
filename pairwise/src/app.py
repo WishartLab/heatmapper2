@@ -36,11 +36,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	def HandleData(n, i):
 		match Path(n).suffix:
-			case ".csv": return read_csv(i)
-			case ".xlsx": return read_excel(i)
 			case ".pdb": return PDBMatrix(i)
 			case ".fasta": return FASTAMatrix(i)
-			case _: return read_table(i)
+			case _: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("pairwise", HandleData)
 
 
@@ -152,7 +150,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 			# If the first value is an integer, this is a distance matrix.
 			try:
-				int(df.iloc[0,0])
+				float(df.iloc[0,0])
 				coordinates = df.values
 
 			# Otherwise, we assume the first row/column define the axis names.

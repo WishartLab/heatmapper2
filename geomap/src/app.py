@@ -173,6 +173,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.KeyColumn, input.ValueColumn, input.JSONSelection, input.JSONUpload, input.Temporal, input.MapType, input.ColorMap, input.Opacity, input.Bins, ignore_none=False, ignore_init=False)
 	async def Map(): return await LoadMap()
 
+	@output
+	@render.data_frame
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.JSONSelection, input.JSONUpload, ignore_none=False, ignore_init=False)
+	async def GeoJSON():
+		geojson = await DataCache.Download(LoadJSON())
+		geojson = loads(geojson.decode('utf-8'))
+
+		names = [feature['properties']['name'] for feature in geojson['features']]
+		return DataFrame({'Name': names})
+
 
 	@output
 	@render.text
@@ -266,7 +276,8 @@ app_ui = ui.page_fluid(
 		# Add the main interface tabs.
 		ui.navset_tab(
 				ui.nav_panel("Interactive", ui.output_ui("Map")),
-				Table
+				Table,
+				ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")),
 		),
 	)
 )
