@@ -154,6 +154,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 		# Create map
 		map = FoliumMap(tiles=input.MapType())
 
+		if type(input.ROI()) is tuple:
+			m, M = df[v_col].min(), df[v_col].max()
+			l, u = input.ROI()[0], input.ROI()[1]
+			if l >= m and u <= M:
+				oob = []
+				for index, row in df.iterrows():
+					v = row[v_col]
+					if v < l or v > u: oob.append(index)
+				df = df.drop(oob)
+
 		# Load the choropleth.
 		if input.Temporal(): await LoadTemporalChoropleth(df, map, k_col, v_col)
 		else: LoadChoropleth(df, map, k_col, v_col)
@@ -170,7 +180,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.ui
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.KeyColumn, input.ValueColumn, input.JSONSelection, input.JSONUpload, input.Temporal, input.MapType, input.ColorMap, input.Opacity, input.Bins, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.KeyColumn, input.ValueColumn, input.JSONSelection, input.JSONUpload, input.Temporal, input.MapType, input.ColorMap, input.Opacity, input.Bins, input.ROI, ignore_none=False, ignore_init=False)
 	async def Map(): return await LoadMap()
 
 	@output
@@ -230,6 +240,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
 
 
+	@reactive.Effect
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn, input.Temporal,ignore_none=False, ignore_init=False)
+	async def UpdateROI():
+		df = await DataCache.Load(input)
+		v_col = input.ValueColumn()
+
+		if v_col not in df: return
+
+		m, M = int(df[v_col].min()), int(df[v_col].max())
+		print(m, M)
+		ui.update_slider(id="ROI", value=(m, M), min=m, max=M)
+
+
 app_ui = ui.page_fluid(
 
 	NavBar("Geomap"),
@@ -264,6 +287,8 @@ app_ui = ui.page_fluid(
 
 			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
 			ui.input_slider(id="Bins", label="Number of Colors", value=8, min=3, max=8, step=1),
+
+			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
 
 			# Add the download buttons.
 			"Download",
