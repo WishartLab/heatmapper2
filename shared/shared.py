@@ -32,13 +32,19 @@ class ColumnType(Enum):
 	Value = 2
 	Longitude = 3
 	Latitude = 4
+	X = 5
+	Y = 6
 
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid"},
 	ColumnType.Value: {"value", "weight", "intensity"},
 	ColumnType.Longitude: {"longitude", "long"},
-	ColumnType.Latitude: {"latitude", "lat"}
+	ColumnType.Latitude: {"latitude", "lat"},
+
+	# This may seem redundant, but it handles case-folding
+	ColumnType.X: {"x"},
+	ColumnType.Y: {"y"}
 }
 
 
@@ -56,9 +62,10 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	# Fold cases
 	folded = [column.lower() for column in columns]
 
+	# Add and remove what user asked for, filtering None
 	options = set(folded)
-	if bad: options -= set([b.lower() for b in bad])
-	if good: options &= set([g.lower() for g in good])
+	if bad: options -= set([b.lower() for b in bad if b])
+	if good: options &= set([g.lower() for g in good if g])
 
 	# If we hit the column type, take the intersection, otherwise take the difference
 	for key, value in Columns.items():

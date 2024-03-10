@@ -15,11 +15,13 @@
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from matplotlib.pyplot import subplots, colorbar
+from scipy.interpolate import interp2d
 from pandas import DataFrame
 from io import BytesIO
 from PIL import Image
+from numpy import arange, meshgrid, linspace
 
-from shared import Table, Cache, NavBar, FileSelection
+from shared import Table, Cache, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -64,15 +66,29 @@ def server(input: Inputs, output: Outputs, session: Session):
 		if df.empty: return None
 
 		# Wrangle into an acceptable format.
-		if {"x", "y", "value"}.issubset(df.columns):
-			df = df.pivot(index="y", columns="x", values="value")
+		v_col = Filter(df.columns, ColumnType.Value, only_one=True)
+		x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col])
+		y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col])
+
+		if {v_col, x_col, y_col}.issubset(df.columns):
+			df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
+
+		# Expand the data for more refined points
+		x = arange(df.shape[1])
+		y = arange(df.shape[0])
+		x_new = linspace(0, df.shape[1] - 1, input.Smoothing())
+		y_new = linspace(0, df.shape[0] - 1, input.Smoothing())
+		interp_func = interp2d(x, y, df, kind=input.Interpolation().lower())
+		data_interp = interp_func(x_new, y_new)
+		X_new, Y_new = meshgrid(x_new, y_new)
 
 		fig, ax = subplots()
 
 		# Add the image as an overlay, if we have one.
-		if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
+		if img is not None: ax.imshow(img, extent=[x_new.min(), x_new.max(), y_new.min(), y_new.max()], aspect="auto",zorder=0)
+
 		im = ax.contourf(
-			df,
+			X_new, Y_new, data_interp,
 			cmap=input.ColorMap().lower(),
 			extent=[0, 1, 0, 1],
 			zorder=1,
@@ -106,7 +122,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Style, input.Levels, input.Features, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Style, input.Levels, input.Features, input.Smoothing, input.Interpolation, ignore_none=False, ignore_init=False)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
@@ -167,10 +183,15 @@ app_ui = ui.page_fluid(
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
 			ui.input_select(id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], selected="MPL2014"),
 
+			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html
+			ui.input_select(id="Interpolation", label="Spline Interpolation", choices=["Linear", "Cubic", "Quintic"], selected="Linear"),
+
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
 			ui.input_select(id="Style", label=" Line Style", choices=["Solid", "Dashed", "Dashdot", "Dotted"], selected="Solid"),
 
 			ui.input_slider(id="Levels", label="Number of Levels", value=20, min=1, max=100, step=1),
+			ui.input_slider(id="Smoothing", label="Smoothing", value=25, min=10, max=100, step=1),
+
 
 			# Customize what aspects of the heatmap are visible
 			ui.input_checkbox_group(id="Features", label="Heatmap Features",
