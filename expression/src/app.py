@@ -22,6 +22,7 @@ from pandas import DataFrame
 
 from shared import Table, Cache, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection
 
+
 def server(input: Inputs, output: Outputs, session: Session):
 	# Information about the Examples
 	Info = {
@@ -150,6 +151,27 @@ def server(input: Inputs, output: Outputs, session: Session):
 		return fig
 
 
+	def RenderDendrogram(data, labels, invert):
+		"""
+		@brief Renders a Dendrogram
+		@param data: The DataFrame
+		@param labels: The labels for the Dendrogram
+		@param invert: Whether to invert (Use for Column Dendrograms)
+		"""
+		if data is None: return None
+
+		fig = figure(figsize=(12, 10))
+		ax = fig.add_subplot(111)
+
+		ax.spines["top"].set_visible(False)
+		ax.spines["right"].set_visible(False)
+		ax.spines["bottom"].set_visible(False)
+		ax.spines["left"].set_visible(False)
+
+		GenerateDendrogram(data, ax, input.Orientation(), labels, invert=invert)
+		return fig
+
+
 	@output
 	@render.data_frame
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
@@ -164,39 +186,13 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@output
 	@render.plot
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.NameColumn, ignore_none=False, ignore_init=False)
-	async def RowDendrogram():
-		index_labels, _, data = await ProcessData()
-		if data is None: return None
-
-		fig = figure(figsize=(12, 10))
-		ax = fig.add_subplot(111)
-
-		ax.spines["top"].set_visible(False)
-		ax.spines["right"].set_visible(False)
-		ax.spines["bottom"].set_visible(False)
-		ax.spines["left"].set_visible(False)
-
-		GenerateDendrogram(data, ax, input.Orientation(), index_labels)
-		return fig
+	async def RowDendrogram(): index_labels, _, data = await ProcessData(); return RenderDendrogram(data, index_labels, False)
 
 
 	@output
 	@render.plot
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.NameColumn, ignore_none=False, ignore_init=False)
-	async def ColumnDendrogram():
-		_, x_labels, data = await ProcessData()
-		if data is None: return None
-
-		fig = figure(figsize=(12, 10))
-		ax = fig.add_subplot(111)
-
-		ax.spines["top"].set_visible(False)
-		ax.spines["right"].set_visible(False)
-		ax.spines["bottom"].set_visible(False)
-		ax.spines["left"].set_visible(False)
-
-		GenerateDendrogram(data, ax, input.Orientation(), x_labels, invert=True)
-		return fig
+	async def ColumnDendrogram(): _, x_labels, data = await ProcessData(); return RenderDendrogram(data, x_labels, True)
 
 
 	@output
@@ -234,9 +230,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.Example, input.File, input.Reset, input.Update)
-	async def UpdateColumnSelection():
-		df = await DataCache.Load(input)
-		FillColumnSelection(df.columns, ColumnType.Name, "NameColumn")
+	async def UpdateColumnSelection(): df = await DataCache.Load(input); FillColumnSelection(df.columns, ColumnType.Name, "NameColumn")
 
 
 app_ui = ui.page_fluid(
@@ -251,6 +245,7 @@ app_ui = ui.page_fluid(
 				types=[".csv", ".txt", ".xlsx", ".pdb", ".dat"]
 			),
 
+			# The column that holds names for the data.
 			ui.input_select(id="NameColumn", label="Names", choices=[], multiple=False),
 
 			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
