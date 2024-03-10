@@ -21,7 +21,7 @@ from io import BytesIO
 from PIL import Image
 from numpy import arange, meshgrid, linspace
 
-from shared import Table, Cache, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -147,17 +147,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue():
-		"""
-		@brief Updates the label for the Value input to display the current value.
-		"""
-		df = await DataCache.Load(input)
-
-		rows, columns = df.shape
-		row, column = int(input.TableRow()), int(input.TableCol())
-
-		if 0 <= row <= rows and 0 <= column <= columns:
-			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
+	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 app_ui = ui.page_fluid(
@@ -203,10 +193,7 @@ app_ui = ui.page_fluid(
 		),
 
 		# Add the main interface tabs.
-		ui.navset_tab(
-				ui.nav_panel("Interactive", ui.output_plot("Heatmap", height="90vh")),
-				Table
-		),
+		MainTab(),
 	)
 )
 

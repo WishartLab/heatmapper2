@@ -19,7 +19,7 @@ from folium import Map as FoliumMap
 from folium.plugins import HeatMap, HeatMapWithTime
 from pandas import DataFrame
 
-from shared import Table, Cache, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -66,6 +66,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@param map The folium map to attach the heatmap to.
 		"""
 
+		# Ensure we have a valid time column
+		if t_col not in df: return
+
 		# Sort by time so we can work linearly.
 		df = df.sort_values(by=t_col)
 
@@ -106,21 +109,29 @@ def server(input: Inputs, output: Outputs, session: Session):
 		# Give a placeholder map if nothing is selected, which should never really be the case.
 		if df.empty: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
 
+		# Set the Value Column Accordingly (Helper functions handle None)
 		if not input.Uniform():
 			v_col = input.ValueColumn()
 			if v_col not in df: return
 		else:
 			v_col = None
 
+		# Get lat and lon, generate the map
 		lon_col = Filter(df.columns, ColumnType.Longitude, only_one=True)
 		lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
-
 		map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
 
+		# IF ROI is defined, and we have a column of values to work with.
 		if type(input.ROI()) is tuple and v_col is not None:
+
+			# Get the min and max of the data, and the lower and upper bound
 			m, M = df[v_col].min(), df[v_col].max()
 			l, u = input.ROI()[0], input.ROI()[1]
+
+			# Avoid race condition of new data being uploaded, but the ROI not being updated in tandem.
 			if l >= m and u <= M:
+
+				# Get values outside the upper and lower bound, drop them.
 				oob = []
 				for index, row in df.iterrows():
 					v = row[v_col]
@@ -128,12 +139,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 				df = df.drop(oob)
 
 		# Generate the right heatmap.
-		if input.Temporal():
-			t_col = input.TimeColumn()
-			if t_col not in df: return
-			GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
-		else:
-			GenerateMap(df, map, v_col, lon_col, lat_col)
+		if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
+		else: GenerateMap(df, map, v_col, lon_col, lat_col)
 		return map
 
 
@@ -146,7 +153,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@output
 	@render.ui
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TimeColumn, input.ValueColumn, input.Temporal, input.MapType, input.Opacity, input.Radius, input.Blur, input.Uniform, input.ROI, ignore_none=False, ignore_init=False)
-	async def Map(): return await LoadMap()
+	async def Heatmap(): return await LoadMap()
 
 
 	@output
@@ -174,17 +181,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue():
-		"""
-		@brief Updates the label for the Value input to display the current value.
-		"""
-		df = await DataCache.Load(input)
-
-		rows, columns = df.shape
-		row, column = int(input.TableRow()), int(input.TableCol())
-
-		if 0 <= row <= rows and 0 <= column <= columns:
-			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
+	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 	@reactive.Effect
@@ -274,11 +271,7 @@ app_ui = ui.page_fluid(
 			ui.download_button("DownloadTable", "Table"),
 		),
 
-		# Add the main interface tabs.
-		ui.navset_tab(
-				ui.nav_panel("Interactive", ui.output_ui("Map")),
-				Table,
-		),
+		MainTab(m_type=ui.output_ui),
 	)
 )
 

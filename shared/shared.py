@@ -259,6 +259,19 @@ class Cache:
 		del self._secondary[n]
 
 
+def TableValueUpdate(df, input):
+	"""
+	@brief Updates the value displayed in the TableVal based on the current selection
+	@param df The DataFrame
+	@param input The shiny input
+	"""
+
+	rows, columns = df.shape
+	row, column = int(input.TableRow()), int(input.TableCol())
+	if 0 <= row <= rows and 0 <= column <= columns:
+		ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
+
+
 def NavBar(current):
 	"""
 	@brief Returns a Navigation Bar for each project, with the current project selected.
@@ -316,18 +329,23 @@ def FileSelection(examples, types):
 	)]
 
 
-# The Table element
-Table = ui.nav_panel("Table",
-	ui.layout_columns(
-		ui.input_numeric("TableRow", "Row", 0),
-		ui.input_numeric("TableCol", "Column", 0),
-		ui.input_text("TableVal", "Value", 0),
-		ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
-		col_widths=[2,2,6,2],
-	),
-	ui.layout_columns(
-		ui.input_action_button("Update", "Update"),
-		ui.input_action_button("Reset", "Reset Values"),
-	),
-	ui.output_data_frame("LoadedTable"),
-)
+def MainTab(*args, m_type=ui.output_plot):
+	return ui.navset_tab(
+		ui.nav_panel("Interactive", m_type("Heatmap", height="75vh"), value="Interactive"),
+		ui.nav_panel("Table",
+			ui.layout_columns(
+				ui.input_numeric("TableRow", "Row", 0),
+				ui.input_numeric("TableCol", "Column", 0),
+				ui.input_text("TableVal", "Value", 0),
+				ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
+				col_widths=[2,2,6,2],
+			),
+			ui.layout_columns(
+				ui.input_action_button("Update", "Update"),
+				ui.input_action_button("Reset", "Reset Values"),
+			),
+			ui.output_data_frame("LoadedTable")
+		),
+		*args,
+		id="MainTab"
+	)

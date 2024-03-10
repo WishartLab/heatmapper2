@@ -21,7 +21,7 @@ from branca.colormap import linear
 from json import loads
 from shapely.geometry import shape
 
-from shared import Table, Cache, NavBar, FileSelection, Pyodide, Filter, ColumnType, FillColumnSelection
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -181,7 +181,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@output
 	@render.ui
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.KeyColumn, input.ValueColumn, input.JSONSelection, input.JSONUpload, input.Temporal, input.MapType, input.ColorMap, input.Opacity, input.Bins, input.ROI, ignore_none=False, ignore_init=False)
-	async def Map(): return await LoadMap()
+	async def Heatmap(): return await LoadMap()
 
 	@output
 	@render.data_frame
@@ -227,17 +227,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue():
-		"""
-		@brief Updates the label for the Value input to display the current value.
-		"""
-		df = await DataCache.Load(input)
-
-		rows, columns = df.shape
-		row, column = int(input.TableRow()), int(input.TableCol())
-
-		if 0 <= row <= rows and 0 <= column <= columns:
-			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
+	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 	@reactive.Effect
@@ -297,12 +287,7 @@ app_ui = ui.page_fluid(
 			id="SidebarPanel",
 		),
 
-		# Add the main interface tabs.
-		ui.navset_tab(
-				ui.nav_panel("Interactive", ui.output_ui("Map")),
-				Table,
-				ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")),
-		),
+		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),
 	)
 )
 
