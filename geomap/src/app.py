@@ -241,16 +241,15 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn, input.Temporal,ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn,ignore_none=False, ignore_init=False)
 	async def UpdateROI():
 		df = await DataCache.Load(input)
 		v_col = input.ValueColumn()
 
-		if v_col not in df: return
-
-		m, M = int(df[v_col].min()), int(df[v_col].max())
-		print(m, M)
-		ui.update_slider(id="ROI", value=(m, M), min=m, max=M)
+		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
+		else:
+			m, M = int(df[v_col].min()), int(df[v_col].max())
+			ui.update_slider(id="ROI", value=(m, M), min=m, max=M)
 
 
 app_ui = ui.page_fluid(

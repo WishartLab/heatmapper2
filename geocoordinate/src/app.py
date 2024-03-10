@@ -117,6 +117,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 		map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
 
+		if type(input.ROI()) is tuple and v_col is not None:
+			m, M = df[v_col].min(), df[v_col].max()
+			l, u = input.ROI()[0], input.ROI()[1]
+			if l >= m and u <= M:
+				oob = []
+				for index, row in df.iterrows():
+					v = row[v_col]
+					if v < l or v > u: oob.append(index)
+				df = df.drop(oob)
+
 		# Generate the right heatmap.
 		if input.Temporal():
 			t_col = input.TimeColumn()
@@ -135,7 +145,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.ui
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TimeColumn, input.ValueColumn, input.Temporal, input.MapType, input.Opacity, input.Radius, input.Blur, input.Uniform, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TimeColumn, input.ValueColumn, input.Temporal, input.MapType, input.Opacity, input.Radius, input.Blur, input.Uniform, input.ROI, ignore_none=False, ignore_init=False)
 	async def Map(): return await LoadMap()
 
 
@@ -204,6 +214,18 @@ def server(input: Inputs, output: Outputs, session: Session):
 			ui.update_slider(id="Blur", value=15, min=1, max=30, step=1),
 
 
+	@reactive.Effect
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn,ignore_none=False, ignore_init=False)
+	async def UpdateROI():
+		df = await DataCache.Load(input)
+		v_col = input.ValueColumn()
+
+		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
+		else:
+			m, M = int(df[v_col].min()), int(df[v_col].max())
+			ui.update_slider(id="ROI", value=(m, M), min=m, max=M)
+
+
 app_ui = ui.page_fluid(
 
 	NavBar("Geocoordinate"),
@@ -244,6 +266,8 @@ app_ui = ui.page_fluid(
 			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
 			ui.input_slider(id="Radius", label="Size of Points", value=25, min=5, max=50, step=5),
 			ui.input_slider(id="Blur", label="Blurring", value=15, min=1, max=30, step=1),
+
+			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
 
 			# Add the download buttons.
 			ui.download_button("DownloadHeatmap", "Heatmap"),
