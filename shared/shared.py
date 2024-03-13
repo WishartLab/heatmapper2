@@ -37,7 +37,7 @@ class ColumnType(Enum):
 
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
-	ColumnType.Name: {"name", "orf", "uniqid"},
+	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
 	ColumnType.Value: {"value", "weight", "intensity"},
 	ColumnType.Longitude: {"longitude", "long"},
 	ColumnType.Latitude: {"latitude", "lat"},
@@ -213,7 +213,9 @@ class Cache:
 			n = input.Example()
 			if n not in self._primary: source = BytesIO(await self.Download(self.Source + n))
 
-		if n not in self._primary: self._primary[n] = self._handler(n, source)
+		if n not in self._primary:
+			try: self._primary[n] = self._handler(n, source)
+			except Exception: return None
 		if n not in self._secondary: self._secondary[n] = deepcopy(self._primary[n])
 		return n
 
@@ -287,6 +289,7 @@ def NavBar(current):
 				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/image/site/index.html>Image</a>'), value="Image"),
 				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/geomap/site/index.html>Geomap</a>'), value="Geomap"),
 				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/geocoordinate/site/index.html>Geocoordinate</a>'), value="Geocoordinate"),
+				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/3d/site/index.html>3D</a>'), value="3D"),
 				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/about/site/index.html>About</a>'), value="About"),
 				title="Heatmapper",
 				selected=current,
@@ -324,7 +327,7 @@ def FileSelection(examples, types):
 		ui.layout_columns(
 			ui.input_select(id="Example", label=None, choices=examples, multiple=False),
 			ui.popover(ui.input_action_link(id="ExampleInfoButton", label="Info"), ui.output_text("ExampleInfo")),
-			col_widths=[10,2],
+			col_widths=[8,2],
 		)
 	)]
 

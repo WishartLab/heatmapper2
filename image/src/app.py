@@ -18,7 +18,6 @@ from matplotlib.pyplot import subplots, colorbar
 from scipy.interpolate import interp2d
 from pandas import DataFrame
 from io import BytesIO
-from PIL import Image
 from numpy import arange, meshgrid, linspace
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
@@ -122,7 +121,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Style, input.Levels, input.Features, input.Smoothing, input.Interpolation, ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Style, input.Levels, input.Features, input.Smoothing, input.Interpolation, input.Image, ignore_none=False, ignore_init=False)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
