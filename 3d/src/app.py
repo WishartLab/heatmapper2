@@ -158,26 +158,27 @@ def server(input: Inputs, output: Outputs, session: Session):
 		V = np.c_[V, np.ones(len(V))]  @ MVP.T
 		V /= V[:,3].reshape(-1,1)
 		V = V[F]
-		T = V[:,:,:2]
+		T =  V[:,:,:2]
+		Z = -V[:,:,2].mean(axis=1)
 
-		# Get the value of each face, normalize, create a colormap
-		Z = df[Filter(df.columns, ColumnType.Value, only_one=True)]
-		zmin, zmax = Z.min(), Z.max()
-		Z = (Z-zmin)/(zmax-zmin)
-		C = plt.get_cmap(input.ColorMap().lower())(Z)
+		# If no data, just render a value for each triangle
+		if df.empty: C = plt.get_cmap(input.ColorMap().lower())([0.5 for _ in range(len(V))])
+		else:
+			# Normalize the data, make a colormap
+			data = df[Filter(df.columns, ColumnType.Value, only_one=True)]
+			m, M = data.min(), data.max()
+			data = (data-m)/(M-m)
+			C = plt.get_cmap(input.ColorMap().lower())(data)
 
-		# Render back to front so it looks pretty.
+		# Render back to front
 		I = np.argsort(Z)
 		T, C = T[I,:], C[I,:]
 
 		# Rendering
 		fig, ax = plt.subplots(figsize=(6,6))
-		# Set the axis limits and remove the frame
 		ax.set_xlim([-1,+1])
 		ax.set_ylim([-1,+1])
 		ax.axis('off')
-
-		# Set the aspect ratio to be equal
 		ax.set_aspect('equal')
 		collection = PolyCollection(T, closed=True, linewidth=0.1, facecolor=C, edgecolor="black")
 		ax.add_collection(collection)
