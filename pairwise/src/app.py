@@ -14,18 +14,18 @@
 #
 
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, reactive, render, ui
 from matplotlib.pyplot import subplots, colorbar
 from scipy.spatial.distance import pdist, squareform
 from Bio.PDB import PDBParser
 from Bio import SeqIO
-from pandas import DataFrame, read_csv, read_excel, read_table
+from pandas import DataFrame
 from pathlib import Path
 
-from shared import Cache, NavBar, MainTab, FileSelection, TableValueUpdate
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableValueUpdate
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input, output, session):
 
 	# Information about the Examples
 	Info = {
@@ -36,11 +36,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	def HandleData(n, i):
 		match Path(n).suffix:
-			case ".csv": return ChartMatrix(read_csv(i))
-			case ".xlsx": return ChartMatrix(read_excel(i))
 			case ".pdb": return PDBMatrix(n)
 			case ".fasta": return FASTAMatrix(n)
-			case _: return ChartMatrix(read_table(i))
+			case _: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("pairwise", HandleData)
 
 
@@ -119,13 +117,17 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		# If "Name" is found, its assumed to be the label for the points.
-		if "Name" in df:
-			point_names = df["Name"]
+		name_col = Filter(df.columns, ColumnType.Name, only_one=True, reject_unknown=True)
+		if name_col: point_names = df[name_col]
 
 		# If explicit coordinates ar eprovided, use them, with the final column used as labels.
-		if "x" in df.columns and "y" in df.columns and "z" in df.columns:
-			coordinates = df[["x", "y", "z"]].values
-			point_names = df[list(set(df.columns) - set(["x", "y", "z"]))[0]].values
+		x_col = Filter(df.columns, ColumnType.X, only_one=True, reject_unknown=True)
+		y_col = Filter(df.columns, ColumnType.Y, only_one=True, reject_unknown=True)
+		z_col = Filter(df.columns, ColumnType.Z, only_one=True, reject_unknown=True)
+
+		if x_col and y_col and z_col:
+			coordinates = df[[x_col, y_col, z_col]].values
+			point_names = df[list(set(df.columns) - set([x_col, y_col, z_col]))[0]].values
 
 		else:
 
@@ -154,7 +156,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns The heatmap
 		"""
 
-		df = await DataCache.Load(input)
+		n, data = await DataCache.Load(input, return_n=True)
+		if Path(n).suffix not in [".pdb", ".fasta"]: df = ChartMatrix(data)
+		else: df = data
 
 		fig, ax = subplots()
 
@@ -182,23 +186,23 @@ def server(input: Inputs, output: Outputs, session: Session):
 			for i in range(df.shape[0]):
 					for j in range(df.shape[1]):
 							ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
-
 		return ax
 
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
 	async def LoadedTable(): return await DataCache.Load(input)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.MatrixType, input.TextSize, input.DistanceMethod, input.CorrelationMethod, input.Interpolation, input.ColorMap, input.Features, input.Chain, input.K, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MatrixType, input.TextSize, input.DistanceMethod, input.CorrelationMethod, input.Interpolation, input.ColorMap, input.Features, input.Chain, input.K)
 	async def Heatmap(): return await GenerateHeatmap()
 
 	@output
 	@render.text
+	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]
 
 
@@ -217,7 +221,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
 	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 

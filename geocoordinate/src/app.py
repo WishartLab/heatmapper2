@@ -14,10 +14,9 @@
 #
 
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, reactive, render, ui
 from folium import Map as FoliumMap
 from folium.plugins import HeatMap, HeatMapWithTime
-from pandas import DataFrame
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
@@ -25,7 +24,7 @@ from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, Ta
 import branca, certifi, xyzservices
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input, output, session):
 
 	Info = {
 		"example1.txt": "This example dataset shows deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water. A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
@@ -143,18 +142,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
 	async def LoadedTable(): return await DataCache.Load(input)
 
 
 	@output
 	@render.ui
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TimeColumn, input.ValueColumn, input.Temporal, input.MapType, input.Opacity, input.Radius, input.Blur, input.Uniform, input.ROI, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Temporal, input.Uniform, input.TimeColumn, input.ValueColumn, input.MapType, input.Opacity, input.Radius, input.Blur, input.ROI)
 	async def Heatmap(): return await LoadMap()
 
 
 	@output
 	@render.text
+	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]
 
 
@@ -177,12 +177,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
 	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 	@reactive.Effect
-	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal, input.Uniform)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Temporal, input.Uniform)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
 		if not input.Uniform():
@@ -203,9 +203,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 			ui.update_slider(id="Radius", value=15, min=1, max=50, step=1)
 			ui.update_slider(id="Blur", value=0.8, min=0.0, max=1.0, step=0.1)
 		else:
-			ui.update_slider(id="Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
-			ui.update_slider(id="Radius", value=25, min=5, max=50, step=5),
-			ui.update_slider(id="Blur", value=15, min=1, max=30, step=1),
+			ui.update_slider(id="Opacity", value=0.5, min=0.0, max=1.0, step=0.1)
+			ui.update_slider(id="Radius", value=25, min=5, max=50, step=5)
+			ui.update_slider(id="Blur", value=15, min=1, max=30, step=1)
 
 
 	@reactive.Effect
@@ -260,7 +260,6 @@ app_ui = ui.page_fluid(
 			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
 			ui.input_slider(id="Radius", label="Size of Points", value=25, min=5, max=50, step=5),
 			ui.input_slider(id="Blur", label="Blurring", value=15, min=1, max=30, step=1),
-
 			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
 
 			# Add the download buttons.

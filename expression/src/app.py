@@ -14,16 +14,14 @@
 #
 
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, reactive, render, ui
 from matplotlib.pyplot import figure, subplots, colorbar
-from matplotlib.colors import Normalize
 from scipy.cluster import hierarchy
-from pandas import DataFrame
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input, output, session):
 	# Information about the Examples
 	Info = {
 		"example1.txt": "This example dataset is sample input retrieved from the website for the Ashley Lab Heatmap Builder.",
@@ -172,29 +170,30 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
 	async def LoadedTable(): return await DataCache.Load(input)
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Features, input.NameColumn, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Features)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.NameColumn, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
 	async def RowDendrogram(): index_labels, _, data = await ProcessData(); return RenderDendrogram(data, index_labels, False)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.Orientation, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.NameColumn, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
 	async def ColumnDendrogram(): _, x_labels, data = await ProcessData(); return RenderDendrogram(data, x_labels, True)
 
 
 	@output
 	@render.text
+	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]
 
 
@@ -213,12 +212,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
 	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 	@reactive.Effect
-	@reactive.event(input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
 	async def UpdateColumnSelection(): Filter((await DataCache.Load(input)).columns, ColumnType.Name, ui_element="NameColumn")
 
 

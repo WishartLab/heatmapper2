@@ -13,7 +13,7 @@
 #
 #
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, reactive, render, ui
 from numpy import linspace, zeros, float32, tan, cos, sin, radians, array, pi, ones_like, c_, ones, argsort
 from scipy.interpolate import interp1d
 from matplotlib.pyplot import subplots, get_cmap
@@ -27,7 +27,7 @@ from tempfile import NamedTemporaryFile
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input, output, session):
 
 	# Information regarding example files.
 	Info = {
@@ -150,7 +150,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		# If the DataFrame is None, just generate a uniform mapping.
-		if df is None: return get_cmap(input.ColorMap().lower())([0.5 for _ in range(len(V))])
+		if df.empty: return get_cmap(input.ColorMap().lower())([0.5 for _ in range(len(V))])
 
 		# If there is a name column, make sure the triangles are in order.
 		name_col = Filter(df.columns, ColumnType.Name, only_one=True)
@@ -175,7 +175,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		# Get the source and model. We don't need a source file, we do need a model.
-		model = await DataCache.Load(input, source_file=input.Object(), example_file=Info[input.Example()]["Object"])
+		model = await DataCache.Load(
+			input,
+			source_file=input.Object(),
+			example_file=Info[input.Example()]["Object"],
+			default=None
+		)
 		source = await DataCache.Load(input)
 		if model is None: return
 
@@ -214,18 +219,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.File, input.Update, input.Reset)
 	async def LoadedTable(): return await DataCache.Load(input)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ColorMap, input.X, input.Y, input.Zoom, input.Object, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Object, input.Update, input.Reset, input.ColorMap, input.X, input.Y, input.Zoom)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
 	@output
 	@render.text
+	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]["Description"]
 
 
@@ -247,7 +253,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
 	async def UpdateTableValue():
 		df = await DataCache.Load(input)
 		if df is not None:

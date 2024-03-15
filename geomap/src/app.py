@@ -13,7 +13,7 @@
 #
 #
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, reactive, render, ui
 from folium import Map as FoliumMap, Choropleth
 from folium.plugins import TimeSliderChoropleth
 from pandas import DataFrame, to_datetime
@@ -28,7 +28,8 @@ from geojson import Mappings
 import branca, certifi, xyzservices
 
 URL = f"{Raw}/geomap/data/" if Pyodide else "../data/"
-def server(input: Inputs, output: Outputs, session: Session):
+
+def server(input, output, session):
 
 	Info = {
 		"example1.txt": "This example file is from the Open Data Portal. The data is from a carbon monoxide emissions study conducted by Environment Canada. The three columns represent results from 1990, 2000, and 2013.",
@@ -69,7 +70,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	async def LoadTemporalChoropleth(df, map, geojson, k_col, v_col):
 		# Check if we have a dedicated time column, or separate columns for each time slot.
-		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True)
+		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True, reject_unknown=True)
 		values = v_col if column else df.columns[1:]
 
 		match input.ColorMap():
@@ -167,18 +168,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
 	async def LoadedTable(): return await DataCache.Load(input)
 
 
 	@output
 	@render.ui
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.KeyColumn, input.ValueColumn, input.JSONSelection, input.JSONUpload, input.Temporal, input.MapType, input.ColorMap, input.Opacity, input.Bins, input.ROI, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.JSONFile, input.JSONSelection, input.JSONUpload, input.Temporal, input.KeyColumn, input.ValueColumn, input.MapType, input.ColorMap, input.Opacity, input.Bins, input.ROI)
 	async def Heatmap(): return await LoadMap()
+
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.JSONSelection, input.JSONUpload, input.JSONFile, ignore_none=False, ignore_init=False)
+	@reactive.event(input.JSONFile, input.JSONSelection, input.JSONUpload)
 	async def GeoJSON():
 		geojson = await DataCache.Load(
 			input,
@@ -195,6 +197,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@output
 	@render.text
+	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]
 
 
@@ -225,12 +228,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
 	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 	@reactive.Effect
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn,ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.ValueColumn)
 	async def UpdateROI():
 		df = await DataCache.Load(input)
 		v_col = input.ValueColumn()
@@ -271,10 +274,8 @@ app_ui = ui.page_fluid(
 			ui.input_radio_buttons(id="MapType", label="Map Type", choices=["OpenStreetMap", "CartoDB Positron"], selected="CartoDB Positron"),
 
 			ui.input_select(id="ColorMap", label="Color Map", choices=["Inferno", "Magma", "Plasma", "Viridis"], selected="Viridis"),
-
 			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
 			ui.input_slider(id="Bins", label="Number of Colors", value=8, min=3, max=8, step=1),
-
 			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
 
 			# Add the download buttons.

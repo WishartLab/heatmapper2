@@ -23,35 +23,16 @@ if "pyodide" in modules: from pyodide.http import pyfetch; Pyodide = True
 else: from os.path import exists; Pyodide = False
 
 
-class ColumnType(Enum):
-	"""
-	@brief A specific kind of column
-	@info The Columns dictionary contains the name mappings.
-	"""
-
-	Time = 0
-	Name = 1
-	Value = 2
-	Longitude = 3
-	Latitude = 4
-	X = 5
-	Y = 6
-	Row = 7
-	Col = 8
-
+class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
 	ColumnType.Value: {"value", "weight", "intensity", "in_tissue"},
 	ColumnType.Longitude: {"longitude", "long"},
 	ColumnType.Latitude: {"latitude", "lat"},
-
-	# This may seem redundant, but it handles case-folding
 	ColumnType.X: {"x"},
 	ColumnType.Y: {"y"},
-
-	ColumnType.Row: {"row", "array_row", "pxl_row_in_fullres"},
-	ColumnType.Col: {"col", "array_col", "pxl_col_in_fullres"},
+	ColumnType.Z: {"z"}
 }
 
 
@@ -93,8 +74,7 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	if not reassembled: return None
 
 	# Update a UI element, if one was provided
-	if ui_element is not None:
-			ui.update_select(id=ui_element, choices=reassembled, selected=reassembled[0])
+	if ui_element is not None: ui.update_select(id=ui_element, choices=reassembled, selected=reassembled[0])
 	return reassembled[0] if only_one else reassembled
 
 
@@ -111,6 +91,7 @@ class Cache:
 		@param function: The pandas function to use to read the file.
 		@returns A DataFrame
 		"""
+
 		# Read the table once.
 		df = function(i).fillna(0)
 
@@ -136,8 +117,7 @@ class Cache:
 		match Path(n).suffix:
 			case ".csv": return Cache.HandleDataFrame(i, read_csv)
 			case ".xlsx": return Cache.HandleDataFrame(i, read_excel)
-			case ".txt": return Cache.HandleDataFrame(i, read_table)
-			case _: return None
+			case _: return Cache.HandleDataFrame(i, read_table)
 
 
 	async def _remote(self, url):
@@ -185,7 +165,7 @@ class Cache:
 			self._source = "../example_input/"
 
 
-	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame):
+	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
@@ -199,6 +179,7 @@ class Cache:
 		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
 										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
 										initialize without arguments.
+		@param return_n: Return the filename for post-processing.
 		"""
 
 		if source_file is None: source_file = input.File()
@@ -209,7 +190,7 @@ class Cache:
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
 		if input_switch == "Upload":
 			file: list[FileInfo] | None = source_file
-			if file is None: return default()
+			if file is None: return (None, default) if return_n else default
 
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
@@ -224,7 +205,8 @@ class Cache:
 		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
 		if n not in self._secondary:
 			self._secondary[n] = self._handler(n, BytesIO(raw))
-		return self._secondary[n]
+
+		return (n, self._secondary[n]) if return_n else self._secondary[n]
 
 
 	async def Update(self, input):
@@ -252,7 +234,7 @@ class Cache:
 				case "String": df.iloc[row, column] = input.TableVal()
 
 
-	async def Purge(self, input, source_file=None, example_file=None):
+	async def Purge(self, input, source_file=None, example_file=None, source=None):
 		"""
 		@brief Purges the secondary cache of whatever the user has uploaded/selected
 		@param input: The Shiny input. See N() for required objects.
@@ -263,12 +245,13 @@ class Cache:
 
 		if source_file is None: source_file = input.File()
 		if example_file is None: example_file = input.Example()
+		if source is None: source = self._source
 
 		if input.SourceFile() == "Upload":
 			file: list[FileInfo] | None = source_file
 			if file is None: return None
-			n = file[0]["name"]
-		else: n = example_file
+			n = file[0]["datapath"]
+		else: n = source + example_file
 		del self._secondary[n]
 
 
@@ -283,7 +266,7 @@ def TableValueUpdate(df, input):
 		rows, columns = df.shape
 		row, column = int(input.TableRow()), int(input.TableCol())
 		if 0 <= row <= rows and 0 <= column <= columns:
-			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
+			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")")
 
 
 def NavBar(current):
@@ -293,7 +276,7 @@ def NavBar(current):
 	"""
 
 	return [
-			ui.panel_title(title=None, window_title="Heatmapper"),
+		ui.panel_title(title=None, window_title="Heatmapper"),
 
 		ui.navset_bar(
 				ui.nav_panel(ui.HTML(f'<a href={URL}/expression/site/index.html>Expression</a>'), value="Expression"),
@@ -349,8 +332,8 @@ def MainTab(*args, m_type=ui.output_plot):
 		ui.nav_panel("Interactive", m_type("Heatmap", height="75vh"), value="Interactive"),
 		ui.nav_panel("Table",
 			ui.layout_columns(
-				ui.input_numeric("TableRow", "Row", 0),
-				ui.input_numeric("TableCol", "Column", 0),
+				ui.input_numeric("TableRow", "Row", 0, min=0),
+				ui.input_numeric("TableCol", "Column", 0, min=0),
 				ui.input_text("TableVal", "Value", 0),
 				ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
 				col_widths=[2,2,6,2],

@@ -13,11 +13,9 @@
 #
 #
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import App, reactive, render, ui
 from matplotlib.pyplot import subplots, colorbar
 from scipy.interpolate import interp2d
-from pandas import DataFrame
-from io import BytesIO
 from numpy import arange, meshgrid, linspace
 from PIL import Image
 from pathlib import Path
@@ -25,7 +23,7 @@ from pathlib import Path
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
 
 
-def server(input: Inputs, output: Outputs, session: Session):
+def server(input, output, session):
 
 	# Information regarding example files.
 	Info = {
@@ -64,7 +62,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 		x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
 		y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
 
-		print(x_col, y_col, v_col)
 		if {v_col, x_col, y_col}.issubset(df.columns):
 			df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
 
@@ -96,33 +93,30 @@ def server(input: Inputs, output: Outputs, session: Session):
 		# Visibility of features
 		if "legend" in input.Features(): colorbar(im, ax=ax, label="Value")
 
-		if "y" in input.Features():
-			ax.tick_params(axis="y", labelsize=input.TextSize())
-		else:
-			ax.set_yticklabels([])
+		if "y" in input.Features(): ax.tick_params(axis="y", labelsize=input.TextSize())
+		else: ax.set_yticklabels([])
 
-		if "x" in input.Features():
-			ax.tick_params(axis="x", labelsize=input.TextSize())
-		else:
-			ax.set_xticklabels([])
+		if "x" in input.Features(): ax.tick_params(axis="x", labelsize=input.TextSize())
+		else: ax.set_xticklabels([])
 
 		return ax
 
 
 	@output
 	@render.data_frame
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
 	async def LoadedTable(): return await DataCache.Load(input)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Style, input.Levels, input.Features, input.Smoothing, input.Interpolation, input.Image, ignore_none=False, ignore_init=False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Interpolation, input.Style, input.Levels, input.Smoothing, input.Features)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
 	@output
 	@render.text
+	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]["Description"]
 
 
@@ -141,7 +135,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@reactive.Effect
-	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
 	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
