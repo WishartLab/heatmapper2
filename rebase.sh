@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the list of subfolder names
-subfolders=("expression" "geocoordinate" "geomap" "image" "pairwise")
+subfolders=("expression" "geocoordinate" "geomap" "image" "pairwise" "3d")
 
 # Iterate through each subfolder
 for folder in "${subfolders[@]}"; do
