@@ -155,7 +155,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
-		if df is None: return
 
 		fig, ax = subplots()
 
@@ -204,9 +203,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable():
-		df = await DataCache.Load(input)
-		if df is not None: yield df.to_string()
+	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
 
 
 	@reactive.Effect
@@ -221,9 +218,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue():
-		df = await DataCache.Load(input)
-		if df is not None: TableValueUpdate(await DataCache.Load(input), input)
+	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 app_ui = ui.page_fluid(

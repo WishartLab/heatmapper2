@@ -21,17 +21,13 @@ from branca.colormap import linear
 from pathlib import Path
 from json import loads
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, FillColumnSelection, TableValueUpdate
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableValueUpdate, Raw
+from geojson import Mappings
 
 # Fine, Shiny
 import branca, certifi, xyzservices
 
-
-# Generated from dictionary.sh
-Mappings = { "africa.geojson": "Africa", "akron.geojson": "Akron", "alameda.geojson": "Alameda", "albany.geojson": "Albany", "albuquerque.geojson": "Albuquerque", "amsterdam.geojson": "Amsterdam", "amusement-parks.geojson": "Amusement Parks", "anchorage.geojson": "Anchorage", "angers.geojson": "Angers", "angers-loire-metropole.geojson": "Angers Loire Metropole", "antwerp.geojson": "Antwerp", "apulia.geojson": "Apulia", "arlingtonva.geojson": "Arlingtonva", "asia.geojson": "Asia", "athens.geojson": "Athens", "atlanta.geojson": "Atlanta", "augsburg.geojson": "Augsburg", "austin.geojson": "Austin", "australia.geojson": "Australia", "austria-oberoesterreich.geojson": "Austria Oberoesterreich", "austria-states.geojson": "Austria States", "austria-steiermark.geojson": "Austria Steiermark", "bad-belzig.geojson": "Bad Belzig", "badenwuerttemberg-kreise.geojson": "Badenwuerttemberg Kreise", "baltimore.geojson": "Baltimore", "bari.geojson": "Bari", "basel.geojson": "Basel", "bayern.geojson": "Bayern", "belgium-arrondissements.geojson": "Belgium Arrondissements", "berlin.geojson": "Berlin", "bern-districts.geojson": "Bern Districts", "bern-quarters.geojson": "Bern Quarters", "birmingham.geojson": "Birmingham", "blacksburg.geojson": "Blacksburg", "blumenau.geojson": "Blumenau", "bogota.geojson": "Bogota", "boston.geojson": "Boston", "brandenburg.geojson": "Brandenburg", "brandenburg-municipalities.geojson": "Brandenburg Municipalities", "braunschweig.geojson": "Braunschweig", "brazil-states.geojson": "Brazil States", "bremen.geojson": "Bremen", "bronx.geojson": "Bronx", "brooklyn.geojson": "Brooklyn", "buenos-aires.geojson": "Buenos Aires", "calgary.geojson": "Calgary", "california-counties.geojson": "California Counties", "california-vista-points.geojson": "California Vista Points", "caltrain-stations.geojson": "Caltrain Stations", "canada.geojson": "Canada", "canberra.geojson": "Canberra", "caribbean-islands.geojson": "Caribbean Islands", "chapel-hill.geojson": "Chapel Hill", "charlotte.geojson": "Charlotte", "charlottesville.geojson": "Charlottesville", "chemnitz.geojson": "Chemnitz", "chesapeake.geojson": "Chesapeake", "chicago.geojson": "Chicago", "china.geojson": "China", "cincinnati.geojson": "Cincinnati", "cleveland.geojson": "Cleveland", "cologne.geojson": "Cologne", "colorado-counties.geojson": "Colorado Counties", "columbus.geojson": "Columbus", "copenhagen.geojson": "Copenhagen", "cuba.geojson": "Cuba", "dallas.geojson": "Dallas", "dane-county-municipalities.geojson": "Dane County Municipalities", "denmark-municipalities.geojson": "Denmark Municipalities", "denver.geojson": "Denver", "des-moines.geojson": "Des Moines", "detroit.geojson": "Detroit", "dresden.geojson": "Dresden", "dublin.geojson": "Dublin", "duesseldorf.geojson": "Duesseldorf", "durham.geojson": "Durham", "edmonton.geojson": "Edmonton", "eindhoven.geojson": "Eindhoven", "enschede.geojson": "Enschede", "esztergom.geojson": "Esztergom", "europe-1914.geojson": "Europe 1914", "europe-1938.geojson": "Europe 1938", "europe-capitals.geojson": "Europe Capitals", "europe.geojson": "Europe", "fairbanks.geojson": "Fairbanks", "fargo.geojson": "Fargo", "fort-lauderdale.geojson": "Fort Lauderdale", "france-departments.geojson": "France Departments", "france-regions.geojson": "France Regions", "frankfurt-main.geojson": "Frankfurt Main", "freiburg.geojson": "Freiburg", "geneva.geojson": "Geneva", "germany-capitals.geojson": "Germany Capitals", "germany.geojson": "Germany", "ghent.geojson": "Ghent", "gisborne.geojson": "Gisborne", "grand-rapids.geojson": "Grand Rapids", "greece-prefectures.geojson": "Greece Prefectures", "greece-regions.geojson": "Greece Regions", "hamburg.geojson": "Hamburg", "hampton.geojson": "Hampton", "hartford.geojson": "Hartford", "henderson.geojson": "Henderson", "honolulu.geojson": "Honolulu", "houston.geojson": "Houston", "hungary.geojson": "Hungary", "illinois-counties.geojson": "Illinois Counties", "india.geojson": "India", "indianapolis.geojson": "Indianapolis", "iran-provinces.geojson": "Iran Provinces", "ireland-counties.geojson": "Ireland Counties", "isle-of-man.geojson": "Isle Of Man", "italy-provinces.geojson": "Italy Provinces", "italy-regions.geojson": "Italy Regions", "james-city-county.geojson": "James City County", "japan.geojson": "Japan", "kaiserslautern.geojson": "Kaiserslautern", "kansas-city.geojson": "Kansas City", "korea.geojson": "Korea", "las-vegas.geojson": "Las Vegas", "leipzig.geojson": "Leipzig", "le-mans-cantons.geojson": "Le Mans Cantons", "lexington.geojson": "Lexington", "liberia-central.geojson": "Liberia Central", "liberia-east.geojson": "Liberia East", "liberia.geojson": "Liberia", "liberia-west.geojson": "Liberia West", "lombardy.geojson": "Lombardy", "london.geojson": "London", "london-underground.geojson": "London Underground", "long-beach.geojson": "Long Beach", "los-angeles-county.geojson": "Los Angeles County", "los-angeles.geojson": "Los Angeles", "louisville.geojson": "Louisville", "luxembourg-cantons.geojson": "Luxembourg Cantons", "luxembourg-communes.geojson": "Luxembourg Communes", "luzern.geojson": "Luzern", "macon.geojson": "Macon", "madrid-districts.geojson": "Madrid Districts", "madrid.geojson": "Madrid", "malaysia.geojson": "Malaysia", "manhattan-bridges.geojson": "Manhattan Bridges", "manhattan.geojson": "Manhattan", "melbourne.geojson": "Melbourne", "mexico.geojson": "Mexico", "miami.geojson": "Miami", "middle_east_countries.geojson": "Middle_east_countries", "milan.geojson": "Milan", "milwaukee.geojson": "Milwaukee", "minneapolis-cities.geojson": "Minneapolis Cities", "minneapolis.geojson": "Minneapolis", "mississauga.geojson": "Mississauga", "montreal.geojson": "Montreal", "moscow.geojson": "Moscow", "muenster.geojson": "Muenster", "new-haven.geojson": "New Haven", "new-orleans.geojson": "New Orleans", "new-york-areas-of-interest.geojson": "New York Areas Of Interest", "new-york-city-boroughs.geojson": "New York City Boroughs", "new-york-counties.geojson": "New York Counties", "nordrhein-westfalen.geojson": "Nordrhein Westfalen", "norfolk.geojson": "Norfolk", "north-america.geojson": "North America", "north-carolina-cities.geojson": "North Carolina Cities", "oakland.geojson": "Oakland", "oceania.geojson": "Oceania", "oklahoma-cities.geojson": "Oklahoma Cities", "oklahoma-counties.geojson": "Oklahoma Counties", "olympia.geojson": "Olympia", "oman.geojson": "Oman", "oman-provinces.geojson": "Oman Provinces", "orlando.geojson": "Orlando", "pakistan.geojson": "Pakistan", "paris.geojson": "Paris", "peaks.geojson": "Peaks", "philadelphia.geojson": "Philadelphia", "phoenix.geojson": "Phoenix", "pittsburgh.geojson": "Pittsburgh", "poland.geojson": "Poland", "poland-parks.geojson": "Poland Parks", "porirua.geojson": "Porirua", "portland.geojson": "Portland", "portugal.geojson": "Portugal", "potsdam.geojson": "Potsdam", "prague.geojson": "Prague", "providence.geojson": "Providence", "quebec.geojson": "Quebec", "queens.geojson": "Queens", "raleigh.geojson": "Raleigh", "red-deer.geojson": "Red Deer", "richmond.geojson": "Richmond", "riga.geojson": "Riga", "rio-de-janeiro.geojson": "Rio De Janeiro", "rochester.geojson": "Rochester", "rockville.geojson": "Rockville", "roller-coasters-fastest-steel.geojson": "Roller Coasters Fastest Steel", "romania.geojson": "Romania", "rome-rioni.geojson": "Rome Rioni", "rotterdam.geojson": "Rotterdam", "russia.geojson": "Russia", "sacramento.geojson": "Sacramento", "salt-lake-city.geojson": "Salt Lake City", "san-antonio.geojson": "San Antonio", "san-diego.geojson": "San Diego", "san-francisco.geojson": "San Francisco", "san-jose.geojson": "San Jose", "saskatoon.geojson": "Saskatoon", "savannah.geojson": "Savannah", "seattle.geojson": "Seattle", "seoul.geojson": "Seoul", "serbia.geojson": "Serbia", "silicon-valley.geojson": "Silicon Valley", "south-africa.geojson": "South Africa", "south-america.geojson": "South America", "southeast-asia.geojson": "Southeast Asia", "spain-communities.geojson": "Spain Communities", "spain-provinces.geojson": "Spain Provinces", "springfield.geojson": "Springfield", "stamford.geojson": "Stamford", "staten-island.geojson": "Staten Island", "st-louis.geojson": "St Louis", "st-petersburg.geojson": "St Petersburg", "surrey.geojson": "Surrey", "sweden-counties.geojson": "Sweden Counties", "switzerland.geojson": "Switzerland", "sydney.geojson": "Sydney", "szczecin.geojson": "Szczecin", "taiwan.geojson": "Taiwan", "tampa.geojson": "Tampa", "the-hague.geojson": "The Hague", "the-netherlands.geojson": "The Netherlands", "thessaloniki.geojson": "Thessaloniki", "toronto.geojson": "Toronto", "tucson.geojson": "Tucson", "turkey.geojson": "Turkey", "turku.geojson": "Turku", "ulm.geojson": "Ulm", "united-kingdom.geojson": "United Kingdom", "united-kingdom-regions.geojson": "United Kingdom Regions", "united-states-1810.geojson": "United States 1810", "united-states-big-cities.geojson": "United States Big Cities", "united-states.geojson": "United States", "united-states-international-airports.geojson": "United States International Airports", "united-states-mlb-stadiums.geojson": "United States Mlb Stadiums", "unna.geojson": "Unna", "utrecht.geojson": "Utrecht", "vancouver.geojson": "Vancouver", "venice.geojson": "Venice", "venlo.geojson": "Venlo", "vermont-counties.geojson": "Vermont Counties", "vienna.geojson": "Vienna", "villetta.geojson": "Villetta", "washington.geojson": "Washington", "wellington.geojson": "Wellington", "west-linn.geojson": "West Linn", "west-palm-beach.geojson": "West Palm Beach", "wiesenburg.geojson": "Wiesenburg", "williamsburg.geojson": "Williamsburg", "windsor.geojson": "Windsor", "winterthur.geojson": "Winterthur", "zurich-city.geojson": "Zurich City", "zurich.geojson": "Zurich", "world.geojson": "World"}
-
-URL = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main/geomap/data/" if Pyodide else "../data/"
-
+URL = f"{Raw}/geomap/data/" if Pyodide else "../data/"
 def server(input: Inputs, output: Outputs, session: Session):
 
 	Info = {
@@ -55,17 +51,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 	DataCache = Cache("geomap", DataHandler=HandleData)
 
 
-	async def LoadChoropleth(df, map, k_col, v_col):
-
-		geojson = await DataCache.Load(
-				input,
-			source_file=input.JSONUpload(),
-			example_file=input.JSONSelection(),
-			source=URL,
-			input_switch=input.JSONFile()
-		)
-		if geojson is None: return
-
+	async def LoadChoropleth(df, map, geojson, k_col, v_col):
 		# Add the heatmap and return.
 		Choropleth(
 				geo_data=geojson,
@@ -81,16 +67,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		).add_to(map)
 
 
-	async def LoadTemporalChoropleth(df, map, k_col, v_col):
-		geojson = await DataCache.Load(
-			input,
-			source_file=input.JSONUpload(),
-			example_file=input.JSONSelection(),
-			source=URL,
-			input_switch=input.JSONFile()
-		)
-		if geojson is None: return
-
+	async def LoadTemporalChoropleth(df, map, geojson, k_col, v_col):
 		# Check if we have a dedicated time column, or separate columns for each time slot.
 		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True)
 		values = v_col if column else df.columns[1:]
@@ -152,15 +129,20 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
-		if df is None: return
+		geojson = await DataCache.Load(
+			input,
+			source_file=input.JSONUpload(),
+			example_file=input.JSONSelection(),
+			source=URL,
+			input_switch=input.JSONFile(),
+			default=None
+		)
 
 		k_col, v_col = input.KeyColumn(), input.ValueColumn()
-
-		# If the columns aren't defined, or aren't valid, don't do anything.
 		if k_col not in df or v_col not in df: return
 
 		# Give a placeholder map if nothing is selected, which should never really be the case.
-		if df.empty: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
+		if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
 
 		# Create map
 		map = FoliumMap(tiles=input.MapType())
@@ -176,8 +158,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 				df = df.drop(oob)
 
 		# Load the choropleth.
-		if input.Temporal(): await LoadTemporalChoropleth(df, map, k_col, v_col)
-		else: await LoadChoropleth(df, map, k_col, v_col)
+		if input.Temporal(): await LoadTemporalChoropleth(df, map, geojson, k_col, v_col)
+		else: await LoadChoropleth(df, map, geojson, k_col, v_col)
 
 		map.fit_bounds(map.get_bounds())
 		return map
@@ -203,10 +185,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 			source_file=input.JSONUpload(),
 			example_file=input.JSONSelection(),
 			source=URL,
-			input_switch=input.JSONFile()
+			input_switch=input.JSONFile(),
+			default=None
 		)
 		if geojson is None: return
-
 		names = [feature['properties']['name'] for feature in geojson['features']]
 		return DataFrame({'Name': names})
 
@@ -217,25 +199,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable():
-		df = await DataCache.Load(input)
-		if df is not None: yield df.to_string()
+	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
 
 
 	@render.download(filename="heatmap.html")
-	async def DownloadHeatmap():
-		m = await LoadMap()
-		if m is not None: yield m.get_root().render()
+	async def DownloadHeatmap(): yield (await LoadMap()).get_root().render()
 
 
 	@reactive.Effect
 	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
-		if df is None: return
-
-		key = FillColumnSelection(df.columns, ColumnType.Name, "KeyColumn")
-		FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn", bad = [key])
+		key = Filter(df.columns, ColumnType.Name, only_one=True, ui_element="KeyColumn")
+		Filter(df.columns, ColumnType.Value, bad=[key], ui_element="ValueColumn")
 
 
 	@reactive.Effect
@@ -257,8 +233,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn,ignore_none=False, ignore_init=False)
 	async def UpdateROI():
 		df = await DataCache.Load(input)
-		if df is None: return
-
 		v_col = input.ValueColumn()
 		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
 		else:

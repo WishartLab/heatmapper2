@@ -20,7 +20,7 @@ from matplotlib.colors import Normalize
 from scipy.cluster import hierarchy
 from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -42,9 +42,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
-		if df is None: return
-
-		# If the name hasn't yet been specified, don't do anything
 		name = input.NameColumn()
 		if name not in df: return None, None, None
 
@@ -202,9 +199,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable():
-		df = await LoadData()
-		if df is not None: yield df.to_string()
+	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
 
 
 	@reactive.Effect
@@ -219,16 +214,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue():
-		df = await DataCache.Load(input)
-		if df is not None: TableValueUpdate(df, input)
+	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
 
 
 	@reactive.Effect
 	@reactive.event(input.Example, input.File, input.Reset, input.Update)
-	async def UpdateColumnSelection():
-		df = await DataCache.Load(input);
-		if df is not None: FillColumnSelection(df.columns, ColumnType.Name, "NameColumn")
+	async def UpdateColumnSelection(): Filter((await DataCache.Load(input)).columns, ColumnType.Name, ui_element="NameColumn")
 
 
 app_ui = ui.page_fluid(

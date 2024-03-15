@@ -22,7 +22,7 @@ from numpy import arange, meshgrid, linspace
 from PIL import Image
 from pathlib import Path
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -57,13 +57,14 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 		df = await DataCache.Load(input)
 		img = await DataCache.Load(input, source_file=input.Image(), example_file=Info[input.Example()]["Image"])
-		if df is None or img is None: return None
+		if img is None or df.empty: return None
 
 		# Wrangle into an acceptable format.
-		v_col = Filter(df.columns, ColumnType.Value, only_one=True)
-		x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col])
-		y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col])
+		v_col = Filter(df.columns, ColumnType.Value, only_one=True, reject_unknown=True)
+		x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
+		y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
 
+		print(x_col, y_col, v_col)
 		if {v_col, x_col, y_col}.issubset(df.columns):
 			df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
 
@@ -126,7 +127,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): df = await DataCache.Load(input); yield df.to_string()
+	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
 
 
 	@reactive.Effect

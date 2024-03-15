@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Remove cache dirs
+for dir in $(find -type d -name "__pycache__"); do
+	rm -r $dir
+done
+
 # Define the list of subfolder names
 subfolders=("expression" "geocoordinate" "geomap" "image" "pairwise" "3d")
 

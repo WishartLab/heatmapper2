@@ -24,7 +24,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
 
 
 def server(input: Inputs, output: Outputs, session: Session):

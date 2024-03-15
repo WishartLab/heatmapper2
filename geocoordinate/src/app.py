@@ -19,7 +19,7 @@ from folium import Map as FoliumMap
 from folium.plugins import HeatMap, HeatMapWithTime
 from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -105,7 +105,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
-		if df is None: return
 
 		# Set the Value Column Accordingly (Helper functions handle None)
 		if not input.Uniform():
@@ -160,9 +159,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable():
-		df = await DataCache.Load(input);
-		if df is not None: yield df.to_string()
+	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
 
 
 	@render.download(filename="heatmap.html")
@@ -188,11 +185,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal, input.Uniform)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
-		if df is None: return
 		if not input.Uniform():
-			if not FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn"):
+			if not Filter(df.columns, ColumnType.Value, ui_element="ValueColumn"):
 				ui.update_checkbox(id="Uniform", value=True)
-		if input.Temporal(): FillColumnSelection(df.columns, ColumnType.Time, "TimeColumn")
+		if input.Temporal(): Filter(df.columns, ColumnType.Time, ui_element="TimeColumn")
 
 
 	@reactive.Effect

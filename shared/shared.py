@@ -6,28 +6,29 @@
 # Due to the way ShinyLive exports applications, this file is symlinked into each project to reduce redundancy.
 #
 
-from shiny import App, Inputs, Outputs, Session, reactive, render, ui
+from shiny import ui
 from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
-from io import BytesIO, StringIO
+from io import BytesIO
 from sys import modules
 from pathlib import Path
 from enum import Enum
 
 # Used for fetching web resources in a variety of fashions.
-URL = "https://wishartlab.github.io/heatmapper2/"
+URL = "https://wishartlab.github.io/heatmapper2"
+Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
-# If pyodide is found, we're running WebAssembly.
-if "pyodide" in modules:
-	from pyodide.http import pyfetch
-	Pyodide = True
-# Otherwise,
-else:
-	from os.path import exists
-	Pyodide = False
+# Detect the running environment
+if "pyodide" in modules: from pyodide.http import pyfetch; Pyodide = True
+else: from os.path import exists; Pyodide = False
 
 
 class ColumnType(Enum):
+	"""
+	@brief A specific kind of column
+	@info The Columns dictionary contains the name mappings.
+	"""
+
 	Time = 0
 	Name = 1
 	Value = 2
@@ -54,7 +55,7 @@ Columns = {
 }
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, return_unknown=False):
+def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, ui_element=None, reject_unknown=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
@@ -62,7 +63,8 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	@param good: A list of column names on top of those defined by the type to be included
 	@param bad: A list of column names on top of those defined by the type to be excluded from the result.
 	@param only_one: Only return a single result, so the variable can be used immediately.
-	@param return_unknown: Return column names that aren't explicitly outlined in the associated ColumnType
+	@param ui_element: An optional Shiny selection input to update.
+	@param reject_unknown: Only include columns explicitly defined
 	@return: A list of column names to use.
 	"""
 
@@ -74,52 +76,26 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	if bad: options -= set([b.lower() for b in bad if b])
 	if good: options &= set([g.lower() for g in good if g])
 
-	# If we hit the column type, take the intersection, otherwise take the difference
-	for key, value in Columns.items():
-
-		# If we exclude unknown values, we always overwrite.
-		# If we aren't excluding unknowns, we replace if the intersection yielded *something*
-		if key == ctype:
-			intersection = options & value
-			if not return_unknown or intersection: options = intersection
-		else: options -= value
-
-	if options:
-		# Get the valid indices, and sort them in ascending order
-		indices = [folded.index(value) for value in options]
-		indices.sort()
-
-		# Get the original column names, without case-folding, and return as a list.
-		return columns[indices[0]] if only_one else [columns[index] for index in indices]
+	# Take an intersection of our columns and the type we want. If there is a match, return those
+	# Otherwise, remove all columns we know it shouldn't be, and return that instead.
+	intersection = options & Columns[ctype]
+	if intersection or reject_unknown: options = intersection
 	else:
-		return None
+		for key, value in Columns.items():
+			if key != ctype: options -= value
 
+	# Get the valid indices, and sort them in ascending order
+	indices = [folded.index(value) for value in options]
+	indices.sort()
 
-def FillColumnSelection(columns, ctype, name, bad = []):
-	"""
-	@brief Updates a column name selection dialog
-	@param columns The list of columns to choose from
-	@param ctype: The type of column we're looking for
-	@param default: The default index if there are no valid columns
-	@param name: The name of the ui element to update.
-	"""
+	# Get the original column names, without case-folding, and return as a list.
+	reassembled = [columns[index] for index in indices]
+	if not reassembled: return None
 
-	# Filter the columns
-	names = Filter(columns, ctype, bad = bad)
-
-	# If we've got some choices, choose the first as the default.
-	if names: selected = names[0]
-
-	# If we don't, allow unknown variables and take from that one
-	# This removes ones we know aren't correct (like "time" for when we want a value)
-	else:
-		names = Filter(columns, ctype, bad = bad, return_unknown=True)
-		if not names: return None
-		selected = names[0]
-
-	# Update the ui
-	ui.update_select(id=name, choices=names, selected=selected)
-	return selected
+	# Update a UI element, if one was provided
+	if ui_element is not None:
+			ui.update_select(id=ui_element, choices=reassembled, selected=reassembled[0])
+	return reassembled[0] if only_one else reassembled
 
 
 class Cache:
@@ -201,7 +177,7 @@ class Cache:
 		# If we're in a Pyodide environment, we fetch resources from the web.
 		if Pyodide:
 			self._download = lambda url: self._remote(url)
-			self._source = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main/{}/example_input/".format(project)
+			self._source = f"{Raw}/{project}/example_input/"
 
 		# Otherwise, we fetch locally.
 		else:
@@ -209,7 +185,7 @@ class Cache:
 			self._source = "../example_input/"
 
 
-	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None):
+	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame):
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
@@ -218,7 +194,11 @@ class Cache:
 			input.SourceFile: Whether the user wants "Upload" or "Example"
 		@param source_file: The input ID that should be used to fetch the file (Defaults to input.File() if None)
 		@param example_file: The input ID that should be used to fetch th example (Defaults to input.Example() if None)
-		@returns: The identifier. You should probably use Load() unless you need this.
+		@param input_switch:	The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user
+													uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
+		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
+										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
+										initialize without arguments.
 		"""
 
 		if source_file is None: source_file = input.File()
@@ -229,7 +209,7 @@ class Cache:
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
 		if input_switch == "Upload":
 			file: list[FileInfo] | None = source_file
-			if file is None: return None
+			if file is None: return default()
 
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
@@ -342,7 +322,7 @@ def FileSelection(examples, types):
 	"""
 
 	# If the user needs help with the formatting.
-	return [ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/about/site/index.html>Data Format</a>'),
+	return [ui.HTML(f'<a href={URL}/about/site/index.html>Data Format</a>'),
 
 	# Specify whether to use example files, or upload one.
 	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected="Example", inline=True),
