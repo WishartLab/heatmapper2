@@ -175,7 +175,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		# Get the source and model. We don't need a source file, we do need a model.
-		model = await DataCache.Load(input, source_file=input.Object(), example_file=Info[input.Example()]["Object"], mutable=False)
+		model = await DataCache.Load(input, source_file=input.Object(), example_file=Info[input.Example()]["Object"])
 		source = await DataCache.Load(input)
 		if model is None: return
 

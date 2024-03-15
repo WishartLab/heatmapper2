@@ -11,11 +11,11 @@ from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
 from io import BytesIO, StringIO
 from sys import modules
-from copy import deepcopy
 from pathlib import Path
 from enum import Enum
-from PIL import Image
 
+# Used for fetching web resources in a variety of fashions.
+URL = "https://wishartlab.github.io/heatmapper2/"
 
 # If pyodide is found, we're running WebAssembly.
 if "pyodide" in modules:
@@ -61,8 +61,9 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	@param ctype: The type of column we're looking for (Look at the ColumnType Enum)
 	@param good: A list of column names on top of those defined by the type to be included
 	@param bad: A list of column names on top of those defined by the type to be excluded from the result.
+	@param only_one: Only return a single result, so the variable can be used immediately.
+	@param return_unknown: Return column names that aren't explicitly outlined in the associated ColumnType
 	@return: A list of column names to use.
-	@info Results are
 	"""
 
 	# Fold cases
@@ -157,19 +158,25 @@ class Cache:
 		"""
 
 		match Path(n).suffix:
-			case ".png" | ".jpg": return Image.open(i)
 			case ".csv": return Cache.HandleDataFrame(i, read_csv)
 			case ".xlsx": return Cache.HandleDataFrame(i, read_excel)
 			case ".txt": return Cache.HandleDataFrame(i, read_table)
 			case _: return None
 
 
-	@staticmethod
-	async def Remote(url): r = await pyfetch(url); return await r.bytes() if r.ok else None
+	async def _remote(self, url):
+		if url not in self._primary:
+			r = await pyfetch(url);
+			if not r.ok: return None
+			else: self._primary[url] = await r.bytes()
+		return self._primary[url]
 
 
-	@staticmethod
-	async def Local(url): return open(url, "rb").read() if exists(url) else None
+	async def _local(self, url):
+		if not exists(url): return None
+		elif url not in self._primary:
+			self._primary[url] = open(url, "rb").read()
+		return self._primary[url]
 
 
 	def __init__(self, project, DataHandler = DefaultHandler):
@@ -180,10 +187,12 @@ class Cache:
 												take a name, and a binary stream, and return a DataFrame.
 		"""
 
-		# The primary cache is immutable, and is used when the resource has not been fetched before.
+		# The primary cache now serves as a file agnostic cache, containing the raw bytes of files.
 		self._primary = {}
 
-		# The secondary cache is mutable, and is populated by the primary cache. Purge deletes from here.
+		# The Secondary cache now serves as the transformed output through the handler. There is now
+		# no need to specify mutability because the primary cache doesn't contain data that can be changed.
+		# It serves solely as a cache for the Handler if the user throws out whatever is in the secondary.
 		self._secondary = {}
 
 		# The data handler for processing the binary files.
@@ -191,23 +200,16 @@ class Cache:
 
 		# If we're in a Pyodide environment, we fetch resources from the web.
 		if Pyodide:
-			self.Download = lambda url: Cache.Remote(url)
-			self.Source = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main/{}/example_input/".format(project)
+			self._download = lambda url: self._remote(url)
+			self._source = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main/{}/example_input/".format(project)
 
 		# Otherwise, we fetch locally.
 		else:
-			self.Download = lambda url: Cache.Local(url)
-			self.Source = "../example_input/"
+			self._download = lambda url: self._local(url)
+			self._source = "../example_input/"
 
 
-	async def Load(self, input, source_file=None, example_file=None, mutable=True):
-		n = await self.N(input, source_file, example_file, mutable);
-		if n is None: return None
-		if mutable: return self._secondary[n]
-		else: return self._primary[n]
-
-
-	async def N(self, input, source_file=None, example_file=None, mutable=True):
+	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None):
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
@@ -215,33 +217,34 @@ class Cache:
 			input.Example: The selected example file
 			input.SourceFile: Whether the user wants "Upload" or "Example"
 		@param source_file: The input ID that should be used to fetch the file (Defaults to input.File() if None)
+		@param example_file: The input ID that should be used to fetch th example (Defaults to input.Example() if None)
 		@returns: The identifier. You should probably use Load() unless you need this.
 		"""
 
 		if source_file is None: source_file = input.File()
 		if example_file is None: example_file = input.Example()
+		if source is None: source = self._source
+		if input_switch is None: input_switch = input.SourceFile()
 
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
-		if input.SourceFile() == "Upload":
+		if input_switch == "Upload":
 			file: list[FileInfo] | None = source_file
 			if file is None: return None
-			n = file[0]["name"]
-			source = None if n in self._primary else file[0]["datapath"]
 
+			# The datapath can be immediately used to load examples, but we explicitly need to use
+			# Local as a user uploaded file will always be fetched on disk.
+			n = str(file[0]["datapath"])
+			raw = await self._local(n)
+
+		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
-			n = example_file
-			if n in self._primary:
-				source = None
-			else:
-				bytes = await self.Download(self.Source + n)
-				source = None if bytes is None else BytesIO(bytes)
+			n = str(source + example_file)
+			raw = await self._download(n)
 
-		if source: self._primary[n] = self._handler(n, source)
-		if n not in self._secondary and mutable: self._secondary[n] = deepcopy(self._primary[n])
-		return n
-
-
-	def Cache(self): return self._secondary
+		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
+		if n not in self._secondary:
+			self._secondary[n] = self._handler(n, BytesIO(raw))
+		return self._secondary[n]
 
 
 	async def Update(self, input):
@@ -269,19 +272,23 @@ class Cache:
 				case "String": df.iloc[row, column] = input.TableVal()
 
 
-	async def Purge(self, input, source_file=None):
+	async def Purge(self, input, source_file=None, example_file=None):
 		"""
 		@brief Purges the secondary cache of whatever the user has uploaded/selected
 		@param input: The Shiny input. See N() for required objects.
+		@param source_file: The source ID, defaults to input.File()
+		@param example_file: The example ID, defaults to input.Example()
 		@info This function should be called on a reactive hook for a "Reset" button.
 		"""
 
 		if source_file is None: source_file = input.File()
+		if example_file is None: example_file = input.Example()
+
 		if input.SourceFile() == "Upload":
 			file: list[FileInfo] | None = source_file
 			if file is None: return None
 			n = file[0]["name"]
-		else: n = input.Example()
+		else: n = example_file
 		del self._secondary[n]
 
 
@@ -309,13 +316,13 @@ def NavBar(current):
 			ui.panel_title(title=None, window_title="Heatmapper"),
 
 		ui.navset_bar(
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/expression/site/index.html>Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/pairwise/site/index.html>Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/image/site/index.html>Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/geomap/site/index.html>Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/geocoordinate/site/index.html>Geocoordinate</a>'), value="Geocoordinate"),
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/3d/site/index.html>3D</a>'), value="3D"),
-				ui.nav_panel(ui.HTML('<a href=https://wishartlab.github.io/heatmapper2/about/site/index.html>About</a>'), value="About"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/expression/site/index.html>Expression</a>'), value="Expression"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/pairwise/site/index.html>Pairwise</a>'), value="Pairwise"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/image/site/index.html>Image</a>'), value="Image"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/geomap/site/index.html>Geomap</a>'), value="Geomap"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/geocoordinate/site/index.html>Geocoordinate</a>'), value="Geocoordinate"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/3d/site/index.html>3D</a>'), value="3D"),
+				ui.nav_panel(ui.HTML(f'<a href={URL}/about/site/index.html>About</a>'), value="About"),
 				title="Heatmapper",
 				selected=current,
 		)

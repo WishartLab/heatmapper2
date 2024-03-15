@@ -20,6 +20,7 @@ from pandas import DataFrame
 from io import BytesIO
 from numpy import arange, meshgrid, linspace
 from PIL import Image
+from pathlib import Path
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
@@ -34,7 +35,19 @@ def server(input: Inputs, output: Outputs, session: Session):
 		}
 	}
 
-	DataCache = Cache("image")
+	def HandleData(n, i):
+		"""
+		@brief A custom Data Handler for the Cache.
+		@param n: The name of the file
+		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
+		@returns A data object from the cache.
+		@info This Data Handler supports png and jpg images as PIL.Image objects
+		"""
+		match Path(n).suffix:
+			case ".png" | ".jpg": return Image.open(i)
+			case _: return DataCache.DefaultHandler(n, i)
+	DataCache = Cache("image", DataHandler=HandleData)
+
 
 	async def GenerateHeatmap():
 		"""

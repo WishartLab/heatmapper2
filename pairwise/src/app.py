@@ -36,32 +36,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	def HandleData(n, i):
 		match Path(n).suffix:
-			case ".pdb": return PDBMatrix(i)
-			case ".fasta": return FASTAMatrix(i)
-			case _: return DataCache.DefaultHandler(n, i)
+			case ".csv": return ChartMatrix(read_csv(i))
+			case ".xlsx": return ChartMatrix(read_excel(i))
+			case ".pdb": return PDBMatrix(n)
+			case ".fasta": return FASTAMatrix(n)
+			case _: return ChartMatrix(read_table(i))
 	DataCache = Cache("pairwise", HandleData)
-
-
-	async def ParseData():
-		"""
-		@brief Returns a table containing the pairwise matrix.
-		@returns	A DataFrame containing the data requested, formatted as a pairwise matrix, or
-							an empty DataFrame if we're on Upload, but the user has not supplied a file.
-		"""
-
-		n = await DataCache.N(input)
-		if n is None: return None
-
-		df = DataCache.Cache()[n]
-		match Path(n).suffix:
-			case ".csv": df = ChartMatrix(df)
-			case ".xlsx": df = ChartMatrix(df)
-			case ".pdb": pass
-			case ".fasta": pass
-			case _: df = ChartMatrix(df)
-
-		# Fix garbage data and return the resultant DataFrame.
-		return df.fillna(0)
 
 
 	def FASTAMatrix(file):
@@ -174,7 +154,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns The heatmap
 		"""
 
-		df = await ParseData()
+		df = await DataCache.Load(input)
 		if df is None: return
 
 		fig, ax = subplots()
