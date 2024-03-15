@@ -19,7 +19,6 @@ from folium.plugins import TimeSliderChoropleth
 from pandas import DataFrame, to_datetime
 from branca.colormap import linear
 from json import loads
-from shapely.geometry import shape
 
 from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
@@ -142,7 +141,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns the Folium.Map
 		"""
 
-		df = await DataCache.Load(input, copy=True)
+		df = await DataCache.Load(input)
+		if df is None: return
+
 		k_col, v_col = input.KeyColumn(), input.ValueColumn()
 
 		# If the columns aren't defined, or aren't valid, don't do anything.
@@ -200,17 +201,23 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): df = await DataCache.Load(input); yield df.to_string()
+	async def DownloadTable():
+		df = await DataCache.Load(input)
+		if df is not None: yield df.to_string()
 
 
 	@render.download(filename="heatmap.html")
-	async def DownloadHeatmap(): m = await DataCache.Load(input); yield m.get_root().render()
+	async def DownloadHeatmap():
+		m = await LoadMap()
+		if m is not None: yield m.get_root().render()
 
 
 	@reactive.Effect
 	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
+		if df is None: return
+
 		key = FillColumnSelection(df.columns, ColumnType.Name, "KeyColumn")
 		FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn", bad = [key])
 
@@ -234,8 +241,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn,ignore_none=False, ignore_init=False)
 	async def UpdateROI():
 		df = await DataCache.Load(input)
-		v_col = input.ValueColumn()
+		if df is None: return
 
+		v_col = input.ValueColumn()
 		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
 		else:
 			m, M = int(df[v_col].min()), int(df[v_col].max())

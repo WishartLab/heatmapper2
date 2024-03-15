@@ -42,6 +42,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
+		if df is None: return
 
 		# If the name hasn't yet been specified, don't do anything
 		name = input.NameColumn()
@@ -158,7 +159,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@param labels: The labels for the Dendrogram
 		@param invert: Whether to invert (Use for Column Dendrograms)
 		"""
-		if data is None: return None
+		if data is None: return
 
 		fig = figure(figsize=(12, 10))
 		ax = fig.add_subplot(111)
@@ -201,7 +202,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): df = await LoadData(); yield df.to_string()
+	async def DownloadTable():
+		df = await LoadData()
+		if df is not None: yield df.to_string()
+
 
 	@reactive.Effect
 	@reactive.event(input.Update)
@@ -215,12 +219,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
+	async def UpdateTableValue():
+		df = await DataCache.Load(input)
+		if df is not None: TableValueUpdate(df, input)
 
 
 	@reactive.Effect
 	@reactive.event(input.Example, input.File, input.Reset, input.Update)
-	async def UpdateColumnSelection(): df = await DataCache.Load(input); FillColumnSelection(df.columns, ColumnType.Name, "NameColumn")
+	async def UpdateColumnSelection():
+		df = await DataCache.Load(input);
+		if df is not None: FillColumnSelection(df.columns, ColumnType.Name, "NameColumn")
 
 
 app_ui = ui.page_fluid(

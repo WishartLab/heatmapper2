@@ -9,11 +9,12 @@
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
 from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
-from io import BytesIO
+from io import BytesIO, StringIO
 from sys import modules
 from copy import deepcopy
 from pathlib import Path
 from enum import Enum
+from PIL import Image
 
 
 # If pyodide is found, we're running WebAssembly.
@@ -34,17 +35,22 @@ class ColumnType(Enum):
 	Latitude = 4
 	X = 5
 	Y = 6
+	Row = 7
+	Col = 8
 
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
-	ColumnType.Value: {"value", "weight", "intensity"},
+	ColumnType.Value: {"value", "weight", "intensity", "in_tissue"},
 	ColumnType.Longitude: {"longitude", "long"},
 	ColumnType.Latitude: {"latitude", "lat"},
 
 	# This may seem redundant, but it handles case-folding
 	ColumnType.X: {"x"},
-	ColumnType.Y: {"y"}
+	ColumnType.Y: {"y"},
+
+	ColumnType.Row: {"row", "array_row", "pxl_row_in_fullres"},
+	ColumnType.Col: {"col", "array_col", "pxl_col_in_fullres"},
 }
 
 
@@ -121,31 +127,41 @@ class Cache:
 	"""
 
 	@staticmethod
-	def DefaultHandler(n, i):
+	def HandleDataFrame(i, function):
 		"""
-		@brief The default handler. It can handle csv, xlsx, and defaults all other files to read_table
-		@param n: The name of the file. We use this for pattern matching against the suffix.
-		@param i: The binary of the file (Either via read() or BytesIO())
-		@returns: A null-filled DataFrame.
+		@brief Handle DataFrame's
+		@param i: The binary of the file
+		@param function: The pandas function to use to read the file.
+		@returns A DataFrame
 		"""
-
-		# Get the function
-		match Path(n).suffix:
-			case ".csv": func = read_csv
-			case ".xlsx": func = read_excel
-			case _: df = func = read_table
-
 		# Read the table once.
-		df = func(i).fillna(0)
+		df = function(i).fillna(0)
 
 		# If the first column value is a float, we assume it's data, and not column names.
 		# Re-read the DataFrame with generic column names instead
 		try:
 			float(df.columns[0])
 			i.seek(0)
-			df = func(i, header=None, names=[f"Column {i}" for i in range(df.shape[1])])
+			df = function(i, header=None, names=[f"Column {i}" for i in range(df.shape[1])])
 		except ValueError: pass
 		return df
+
+
+	@staticmethod
+	def DefaultHandler(n, i):
+		"""
+		@brief The default handler. It can handle csv, xlsx, and defaults all other files to read_table
+		@param n: The name of the file. We use this for pattern matching against the suffix.
+		@param i: The binary of the file (Either via read() or BytesIO())
+		@returns: An object, if the provided file is supported, None otherwise.
+		"""
+
+		match Path(n).suffix:
+			case ".png" | ".jpg": return Image.open(i)
+			case ".csv": return Cache.HandleDataFrame(i, read_csv)
+			case ".xlsx": return Cache.HandleDataFrame(i, read_excel)
+			case ".txt": return Cache.HandleDataFrame(i, read_table)
+			case _: return None
 
 
 	@staticmethod
@@ -184,39 +200,44 @@ class Cache:
 			self.Source = "../example_input/"
 
 
-	async def Load(self, input, copy=False):
-		n = await self.N(input);
-		df = DataFrame() if n is None else self._secondary[n]
-		return deepcopy(df) if copy else df
+	async def Load(self, input, source_file=None, example_file=None, mutable=True):
+		n = await self.N(input, source_file, example_file, mutable);
+		if n is None: return None
+		if mutable: return self._secondary[n]
+		else: return self._primary[n]
 
 
-	async def N(self, input):
+	async def N(self, input, source_file=None, example_file=None, mutable=True):
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
 			input.File: The uploaded file
 			input.Example: The selected example file
 			input.SourceFile: Whether the user wants "Upload" or "Example"
+		@param source_file: The input ID that should be used to fetch the file (Defaults to input.File() if None)
 		@returns: The identifier. You should probably use Load() unless you need this.
 		"""
 
+		if source_file is None: source_file = input.File()
+		if example_file is None: example_file = input.Example()
+
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
 		if input.SourceFile() == "Upload":
-			file: list[FileInfo] | None = input.File()
+			file: list[FileInfo] | None = source_file
 			if file is None: return None
 			n = file[0]["name"]
-
-			# Populate the base cache, if we need to
-			if n not in self._primary: source = open(file[0]["datapath"], 'r')
+			source = None if n in self._primary else file[0]["datapath"]
 
 		else:
-			n = input.Example()
-			if n not in self._primary: source = BytesIO(await self.Download(self.Source + n))
+			n = example_file
+			if n in self._primary:
+				source = None
+			else:
+				bytes = await self.Download(self.Source + n)
+				source = None if bytes is None else BytesIO(bytes)
 
-		if n not in self._primary:
-			try: self._primary[n] = self._handler(n, source)
-			except Exception: return None
-		if n not in self._secondary: self._secondary[n] = deepcopy(self._primary[n])
+		if source: self._primary[n] = self._handler(n, source)
+		if n not in self._secondary and mutable: self._secondary[n] = deepcopy(self._primary[n])
 		return n
 
 
@@ -235,6 +256,8 @@ class Cache:
 
 		# Get the data
 		df = await self.Load(input)
+		if not type(df) is DataFrame: return
+
 		row_count, column_count = df.shape
 		row, column = input.TableRow(), input.TableCol()
 
@@ -246,18 +269,19 @@ class Cache:
 				case "String": df.iloc[row, column] = input.TableVal()
 
 
-	async def Purge(self, input):
+	async def Purge(self, input, source_file=None):
 		"""
 		@brief Purges the secondary cache of whatever the user has uploaded/selected
 		@param input: The Shiny input. See N() for required objects.
 		@info This function should be called on a reactive hook for a "Reset" button.
 		"""
+
+		if source_file is None: source_file = input.File()
 		if input.SourceFile() == "Upload":
-			file: list[FileInfo] | None = input.File()
+			file: list[FileInfo] | None = source_file
 			if file is None: return None
 			n = file[0]["name"]
-		else:
-			n = input.Example()
+		else: n = input.Example()
 		del self._secondary[n]
 
 
@@ -268,10 +292,11 @@ def TableValueUpdate(df, input):
 	@param input The shiny input
 	"""
 
-	rows, columns = df.shape
-	row, column = int(input.TableRow()), int(input.TableCol())
-	if 0 <= row <= rows and 0 <= column <= columns:
-		ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
+	if not df.empty:
+		rows, columns = df.shape
+		row, column = int(input.TableRow()), int(input.TableCol())
+		if 0 <= row <= rows and 0 <= column <= columns:
+			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")"),
 
 
 def NavBar(current):

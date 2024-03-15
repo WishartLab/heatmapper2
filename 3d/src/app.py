@@ -14,13 +14,16 @@
 #
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, ui
-import numpy as np
-from matplotlib.pyplot import subplots
-import matplotlib.pyplot as plt
+from numpy import linspace, zeros, float32, tan, cos, sin, radians, array, pi, ones_like, c_, ones, argsort
+from scipy.interpolate import interp1d
+from matplotlib.pyplot import subplots, get_cmap
 from matplotlib.collections import PolyCollection
-from pandas import DataFrame
 from pywavefront import Wavefront
-from io import BytesIO, StringIO
+from io import BytesIO
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+
+# Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
 
@@ -30,11 +33,27 @@ def server(input: Inputs, output: Outputs, session: Session):
 	Info = {
 		"example1.csv": {
 			"Object": "bunny.obj",
-			"Description": "A bunny, mapped with random data"
+			"Description": "A bunny, mapped with the distance from the starting Z position"
 		}
 	}
 
-	DataCache = Cache("3d")
+	def HandleData(n, i):
+		"""
+		@brief A custom Data Handler for the Cache.
+		@param n: The name of the file
+		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
+		@returns A data object from the cache.
+		@info This Data Handler supports object files as Wavefront files
+		"""
+		match Path(n).suffix:
+			case ".obj":
+				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
+				if type(i) is BytesIO:
+					temp = NamedTemporaryFile(); temp.write(i.read())
+					i = temp.name
+				return Wavefront(i, create_materials=True, collect_faces=True)
+			case _: return DataCache.DefaultHandler(n, i)
+	DataCache = Cache("3d", DataHandler=HandleData)
 
 
 	def Frustum(left, right, bottom, top, znear, zfar):
@@ -49,7 +68,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns The viewing volume
 		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
 		"""
-		M = np.zeros((4, 4), dtype=np.float32)
+		M = zeros((4, 4), dtype=float32)
 		M[0, 0] = +2.0 * znear / (right - left)
 		M[1, 1] = +2.0 * znear / (top - bottom)
 		M[2, 2] = -(zfar + znear) / (zfar - znear)
@@ -70,7 +89,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@return The viewing volume
 		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
 		"""
-		h = np.tan(0.5*np.radians(fovy)) * znear
+
+		h = tan(0.5*radians(fovy)) * znear
 		w = h * aspect
 		return Frustum(-w, w, -h, h, znear, zfar)
 
@@ -84,7 +104,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@return The translated numpy array.
 		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
 		"""
-		return np.array([[1, 0, 0, x],
+
+		return array([[1, 0, 0, x],
 											[0, 1, 0, y],
 											[0, 0, 1, z],
 											[0, 0, 0, 1]], dtype=float)
@@ -96,9 +117,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@param theta: The angle to rotate
 		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
 		"""
-		t = np.pi * theta / 180
-		c, s = np.cos(t), np.sin(t)
-		return np.array([[1, 0,  0, 0],
+
+		t = pi * theta / 180
+		c, s = cos(t), sin(t)
+		return array([[1, 0,  0, 0],
 											[0, c, -s, 0],
 											[0, s,  c, 0],
 											[0, 0,  0, 1]], dtype=float)
@@ -110,44 +132,55 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@param theta: The angle to rotate
 		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
 		"""
-		t = np.pi * theta / 180
-		c, s = np.cos(t), np.sin(t)
-		return  np.array([[ c, 0, s, 0],
+
+		t = pi * theta / 180
+		c, s = cos(t), sin(t)
+		return  array([[ c, 0, s, 0],
 											[ 0, 1, 0, 0],
 											[-s, 0, c, 0],
 											[ 0, 0, 0, 1]], dtype=float)
 
 
-	async def LoadObject():
+	def DataFrameHeatmap(V, df):
 		"""
-		@brief Loads the image to render behind the heatmap.
-		@returns an Image object, if an image is specified, otherwise None.
+		@brief Generate a colormap to apply to the model via a DataFrame
+		@param V: the set of vertices associated with the model
+		@param df: The DataFrame
+		@returns The generated colormap if df is defined, a uniform map otherwise.
 		"""
 
-		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
-		if input.SourceFile() == "Upload":
-			file: list[FileInfo] | None = input.Object()
-			return None if file is None else Wavefront(file[0]["datapath"], create_materials=True, collect_faces=True)
-		else:
-			n = Info[input.Example()]["Object"]
-			cache = DataCache.Cache()
-			if n not in cache:
-				# Unfortunate, but we need to write to a temporary file.
-				open("temp.obj", "wb").write(await DataCache.Download(DataCache.Source + n))
-				cache[n] = Wavefront("temp.obj", create_materials=True, collect_faces=True)
-			return cache[n]
-
-
-	async def GenerateHeatmap():
-		model = await LoadObject()
-		df = await DataCache.Load(input)
+		# If the DataFrame is None, just generate a uniform mapping.
+		if df is None: return get_cmap(input.ColorMap().lower())([0.5 for _ in range(len(V))])
 
 		# If there is a name column, make sure the triangles are in order.
 		name_col = Filter(df.columns, ColumnType.Name, only_one=True)
 		if name_col is not None: df.sort_values(name_col)
 
+		# Normalize the data, make a colormap
+		data = df[Filter(df.columns, ColumnType.Value, only_one=True)]
+		m, M = data.min(), data.max()
+		data = (data-m)/(M-m)
+
+		# Ensure that the size of the data matches the triangles of the object.
+		if len(data) != len(V):
+			new_values = linspace(data.min(), data.max(), len(V))
+			interp_func = interp1d(data, ones_like(data))
+			data = interp_func(new_values)
+		return get_cmap(input.ColorMap().lower())(data)
+
+
+	async def GenerateHeatmap():
+		"""
+		@brief Generates a Heatmap.
+		"""
+
+		# Get the source and model. We don't need a source file, we do need a model.
+		model = await DataCache.Load(input, source_file=input.Object(), example_file=Info[input.Example()]["Object"], mutable=False)
+		source = await DataCache.Load(input)
+		if model is None: return
+
 		# Get the faces and vertices
-		V, F = np.array(model.vertices), np.array(model.mesh_list[0].faces)
+		V, F = array(model.vertices), array(model.mesh_list[0].faces)
 
 		# Magic math I don't understand ;)
 		V = (V-(V.max(0)+V.min(0))/2) / max(V.max(0)-V.min(0))
@@ -155,27 +188,21 @@ def server(input: Inputs, output: Outputs, session: Session):
 		view = Translate(0,0,-3.5)
 		proj = Perspective(input.Zoom(), 1, 1, 100)
 		MVP = proj @ view @ model
-		V = np.c_[V, np.ones(len(V))]  @ MVP.T
+		V = c_[V, ones(len(V))]  @ MVP.T
 		V /= V[:,3].reshape(-1,1)
 		V = V[F]
 		T =  V[:,:,:2]
 		Z = -V[:,:,2].mean(axis=1)
 
-		# If no data, just render a value for each triangle
-		if df.empty: C = plt.get_cmap(input.ColorMap().lower())([0.5 for _ in range(len(V))])
-		else:
-			# Normalize the data, make a colormap
-			data = df[Filter(df.columns, ColumnType.Value, only_one=True)]
-			m, M = data.min(), data.max()
-			data = (data-m)/(M-m)
-			C = plt.get_cmap(input.ColorMap().lower())(data)
+		# Generate a heatmap
+		C = DataFrameHeatmap(V, source)
 
 		# Render back to front
-		I = np.argsort(Z)
+		I = argsort(Z)
 		T, C = T[I,:], C[I,:]
 
-		# Rendering
-		fig, ax = plt.subplots(figsize=(6,6))
+		# Setup the figure.
+		fig, ax = subplots(figsize=(6,6))
 		ax.set_xlim([-1,+1])
 		ax.set_ylim([-1,+1])
 		ax.axis('off')
@@ -183,6 +210,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		collection = PolyCollection(T, closed=True, linewidth=0.1, facecolor=C, edgecolor="black")
 		ax.add_collection(collection)
 		return ax
+
 
 	@output
 	@render.data_frame
@@ -200,8 +228,12 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@render.text
 	def ExampleInfo(): return Info[input.Example()]["Description"]
 
+
 	@render.download(filename="table.csv")
-	async def DownloadTable(): df = await DataCache.Load(input); yield df.to_string()
+	async def DownloadTable():
+		df = await DataCache.Load(input);
+		if df is not None:
+			yield df.to_string()
 
 
 	@reactive.Effect
@@ -216,7 +248,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
+	async def UpdateTableValue():
+		df = await DataCache.Load(input)
+		if df is not None:
+			TableValueUpdate(df, input)
 
 
 app_ui = ui.page_fluid(

@@ -19,6 +19,7 @@ from scipy.interpolate import interp2d
 from pandas import DataFrame
 from io import BytesIO
 from numpy import arange, meshgrid, linspace
+from PIL import Image
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, FillColumnSelection, TableValueUpdate
 
@@ -35,24 +36,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	DataCache = Cache("image")
 
-	async def LoadImage():
-		"""
-		@brief Loads the image to render behind the heatmap.
-		@returns an Image object, if an image is specified, otherwise None.
-		"""
-
-		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
-		if input.SourceFile() == "Upload":
-			file: list[FileInfo] | None = input.Image()
-			return None if file is None else Image.open(file[0]["datapath"])
-		else:
-			n = Info[input.Example()]["Image"]
-			cache = DataCache.Cache()
-			if n not in cache:
-				cache[n] = Image.open(BytesIO(await DataCache.Download(DataCache.Source + n)))
-			return cache[n]
-
-
 	async def GenerateHeatmap():
 		"""
 		@brief Generates the heatmap, overlaying the Image with the DataFrame
@@ -60,9 +43,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
-		img = await LoadImage()
-
-		if df.empty: return None
+		img = await DataCache.Load(input, source_file=input.Image(), example_file=Info[input.Example()]["Image"])
+		if df is None or img is None: return None
 
 		# Wrangle into an acceptable format.
 		v_col = Filter(df.columns, ColumnType.Value, only_one=True)

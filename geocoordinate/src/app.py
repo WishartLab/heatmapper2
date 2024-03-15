@@ -105,9 +105,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await DataCache.Load(input)
-
-		# Give a placeholder map if nothing is selected, which should never really be the case.
-		if df.empty: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
+		if df is None: return
 
 		# Set the Value Column Accordingly (Helper functions handle None)
 		if not input.Uniform():
@@ -162,7 +160,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): df = await DataCache.Load(input); yield df.to_string()
+	async def DownloadTable():
+		df = await DataCache.Load(input);
+		if df is not None: yield df.to_string()
 
 
 	@render.download(filename="heatmap.html")
@@ -188,6 +188,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal, input.Uniform)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
+		if df is None: return
 		if not input.Uniform():
 			if not FillColumnSelection(df.columns, ColumnType.Value, "ValueColumn"):
 				ui.update_checkbox(id="Uniform", value=True)

@@ -48,10 +48,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 		@returns	A DataFrame containing the data requested, formatted as a pairwise matrix, or
 							an empty DataFrame if we're on Upload, but the user has not supplied a file.
 		"""
-		n = await DataCache.N(input)
-		df = await DataCache.Load(input)
 
-		if n is None: return DataFrame()
+		n = await DataCache.N(input)
+		if n is None: return None
+
+		df = DataCache.Cache()[n]
 		match Path(n).suffix:
 			case ".csv": df = ChartMatrix(df)
 			case ".xlsx": df = ChartMatrix(df)
@@ -174,6 +175,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 		"""
 
 		df = await ParseData()
+		if df is None: return
+
 		fig, ax = subplots()
 
 		im = ax.imshow(df, cmap=input.ColorMap().lower(), interpolation=input.Interpolation().lower())
@@ -221,7 +224,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): df = await DataCache.Load(input); yield df.to_string()
+	async def DownloadTable():
+		df = await DataCache.Load(input)
+		if df is not None: yield df.to_string()
 
 
 	@reactive.Effect
@@ -236,7 +241,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 	@reactive.Effect
 	@reactive.event(input.TableRow, input.TableCol, input.Example, input.File, input.Reset, input.Update)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
+	async def UpdateTableValue():
+		df = await DataCache.Load(input)
+		if df is not None: TableValueUpdate(await DataCache.Load(input), input)
 
 
 app_ui = ui.page_fluid(
