@@ -14,14 +14,18 @@
 #
 
 from shiny import App, reactive, render, ui
-from numpy import linspace, zeros, float32, tan, cos, sin, radians, array, pi, ones_like, c_, ones, argsort
+from numpy import zeros, array, linspace
+from matplotlib.pyplot import get_cmap
+from matplotlib.colors import Normalize
 from scipy.interpolate import interp1d
-from matplotlib.pyplot import subplots, get_cmap
-from matplotlib.collections import PolyCollection
-from pywavefront import Wavefront
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from pandas import DataFrame
+
+from pyvista import Plotter, MultiBlock, PolyData, plotting, read_texture, read as VistaRead
+# Requires: python: trame, trame-vtk, trame-vuetify, vtk, meshio, nest_asyncio, pywebview
+#						system: openmpi, verdict, glew
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
@@ -45,176 +49,60 @@ def server(input, output, session):
 		@returns A data object from the cache.
 		@info This Data Handler supports object files as Wavefront files
 		"""
-		match Path(n).suffix:
-			case ".obj":
+
+		suffix = Path(n).suffix
+		match suffix:
+			case ".obj" | ".fbx" | ".usdz" | ".glb":
 				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
 				if type(i) is BytesIO:
-					temp = NamedTemporaryFile(); temp.write(i.read())
+					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
 					i = temp.name
-				return Wavefront(i, create_materials=True, collect_faces=True)
+				return VistaRead(i)
+			case ".png" | ".jpg":
+				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
+				if type(i) is BytesIO:
+					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
+					i = temp.name
+				return read_texture(i)
 			case _: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("3d", DataHandler=HandleData)
 
 
-	def Frustum(left, right, bottom, top, znear, zfar):
-		"""
-		@brief Returns a viewing volume giving clipping planes
-		@param left: left clipping plane
-		@param right: right clipping plane
-		@param bottom: bottom clipping plane
-		@param top: top clipping plane
-		@param znear: near clipping plame
-		@param zfar: far clipping plane
-		@returns The viewing volume
-		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
-		"""
-		M = zeros((4, 4), dtype=float32)
-		M[0, 0] = +2.0 * znear / (right - left)
-		M[1, 1] = +2.0 * znear / (top - bottom)
-		M[2, 2] = -(zfar + znear) / (zfar - znear)
-		M[0, 2] = (right + left) / (right - left)
-		M[2, 1] = (top + bottom) / (top - bottom)
-		M[2, 3] = -2.0 * znear * zfar / (zfar - znear)
-		M[3, 2] = -1.0
-		return M
+	def GenerateHeatMap(model, source):
+		pl = Plotter()
+
+		if source is None:
+			pl.add_mesh(
+				model,
+				style=input.Style(),
+				opacity=input.Opacity(),
+				show_edges="Edges" in input.Features(),
+				lighting="Lighting" in input.Features(),
+				interpolate_before_map="Interpolation" in input.Features(),
+				smooth_shading="Smooth Shading" in input.Features(),
+			)
+
+		elif type(source) is DataFrame:
+			values = source[Filter(source.columns, ColumnType.Name, only_one=True)]
+			pl.add_mesh(
+				model,
+				scalars=values,
+				style=input.Style(),
+				cmap=input.ColorMap().lower(),
+				opacity=input.Opacity(),
+				n_colors=input.Colors(),
+				show_edges="Edges" in input.Features(),
+				lighting="Lighting" in input.Features(),
+				interpolate_before_map="Interpolation" in input.Features(),
+				smooth_shading="Smooth Shading" in input.Features(),
+			)
+
+		elif type(source) is plotting.texture.Texture:
+			mesh = model.texture_map_to_plane()
+			pl.add_mesh(mesh, texture=source)
 
 
-	def Perspective(fovy, aspect, znear, zfar):
-		"""
-		@brief Return a perspective projection
-		@param fovy: field of View
-		@param aspect: aspect
-		@param znear: near clipping plane
-		@param zfar: far clipping plane
-		@return The viewing volume
-		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
-		"""
-
-		h = tan(0.5*radians(fovy)) * znear
-		w = h * aspect
-		return Frustum(-w, w, -h, h, znear, zfar)
-
-
-	def Translate(x, y, z):
-		"""
-		@brief Apply a translation to move the model around"
-		@param x: The x translation
-		@param y: The y translation
-		@param z: The z translation
-		@return The translated numpy array.
-		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
-		"""
-
-		return array([[1, 0, 0, x],
-											[0, 1, 0, y],
-											[0, 0, 1, z],
-											[0, 0, 0, 1]], dtype=float)
-
-
-	def Y(theta):
-		"""
-		@param Rotate about the Y axis
-		@param theta: The angle to rotate
-		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
-		"""
-
-		t = pi * theta / 180
-		c, s = cos(t), sin(t)
-		return array([[1, 0,  0, 0],
-											[0, c, -s, 0],
-											[0, s,  c, 0],
-											[0, 0,  0, 1]], dtype=float)
-
-
-	def X(theta):
-		"""
-		@param Rotate about the X axis
-		@param theta: The angle to rotate
-		@info https://matplotlib.org/matplotblog/posts/custom-3d-engine/
-		"""
-
-		t = pi * theta / 180
-		c, s = cos(t), sin(t)
-		return  array([[ c, 0, s, 0],
-											[ 0, 1, 0, 0],
-											[-s, 0, c, 0],
-											[ 0, 0, 0, 1]], dtype=float)
-
-
-	def DataFrameHeatmap(V, df):
-		"""
-		@brief Generate a colormap to apply to the model via a DataFrame
-		@param V: the set of vertices associated with the model
-		@param df: The DataFrame
-		@returns The generated colormap if df is defined, a uniform map otherwise.
-		"""
-
-		# If the DataFrame is None, just generate a uniform mapping.
-		if df.empty: return get_cmap(input.ColorMap().lower())([0.5 for _ in range(len(V))])
-
-		# If there is a name column, make sure the triangles are in order.
-		name_col = Filter(df.columns, ColumnType.Name, only_one=True)
-		if name_col is not None: df.sort_values(name_col)
-
-		# Normalize the data, make a colormap
-		data = df[Filter(df.columns, ColumnType.Value, only_one=True)]
-		m, M = data.min(), data.max()
-		data = (data-m)/(M-m)
-
-		# Ensure that the size of the data matches the triangles of the object.
-		if len(data) != len(V):
-			new_values = linspace(data.min(), data.max(), len(V))
-			interp_func = interp1d(data, ones_like(data))
-			data = interp_func(new_values)
-		return get_cmap(input.ColorMap().lower())(data)
-
-
-	async def GenerateHeatmap():
-		"""
-		@brief Generates a Heatmap.
-		"""
-
-		# Get the source and model. We don't need a source file, we do need a model.
-		model = await DataCache.Load(
-			input,
-			source_file=input.Object(),
-			example_file=Info[input.Example()]["Object"],
-			default=None
-		)
-		source = await DataCache.Load(input)
-		if model is None: return
-
-		# Get the faces and vertices
-		V, F = array(model.vertices), array(model.mesh_list[0].faces)
-
-		# Magic math I don't understand ;)
-		V = (V-(V.max(0)+V.min(0))/2) / max(V.max(0)-V.min(0))
-		model = Y(input.Y()) @ X(input.X())
-		view = Translate(0,0,-3.5)
-		proj = Perspective(input.Zoom(), 1, 1, 100)
-		MVP = proj @ view @ model
-		V = c_[V, ones(len(V))]  @ MVP.T
-		V /= V[:,3].reshape(-1,1)
-		V = V[F]
-		T =  V[:,:,:2]
-		Z = -V[:,:,2].mean(axis=1)
-
-		# Generate a heatmap
-		C = DataFrameHeatmap(V, source)
-
-		# Render back to front
-		I = argsort(Z)
-		T, C = T[I,:], C[I,:]
-
-		# Setup the figure.
-		fig, ax = subplots(figsize=(6,6))
-		ax.set_xlim([-1,+1])
-		ax.set_ylim([-1,+1])
-		ax.axis('off')
-		ax.set_aspect('equal')
-		collection = PolyCollection(T, closed=True, linewidth=0.1, facecolor=C, edgecolor="black")
-		ax.add_collection(collection)
-		return ax
+		return ui.HTML(pl.export_html(filename=None).read())
 
 
 	@output
@@ -224,9 +112,18 @@ def server(input, output, session):
 
 
 	@output
-	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Object, input.Update, input.Reset, input.ColorMap, input.X, input.Y, input.Zoom)
-	async def Heatmap(): return await GenerateHeatmap()
+	@render.ui
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Object, input.Update, input.Reset, input.ColorMap, input.Style, input.Colors, input.Opacity, input.Features)
+	async def Heatmap():
+		model = await DataCache.Load(
+			input,
+			source_file=input.Object(),
+			example_file=Info[input.Example()]["Object"],
+			default=None
+		)
+		source = await DataCache.Load(input, default=None)
+		if model is None: return
+		return GenerateHeatMap(model, source)
 
 
 	@output
@@ -252,14 +149,6 @@ def server(input, output, session):
 	async def Reset(): await DataCache.Purge(input)
 
 
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue():
-		df = await DataCache.Load(input)
-		if df is not None:
-			TableValueUpdate(df, input)
-
-
 app_ui = ui.page_fluid(
 
 	NavBar("3D"),
@@ -267,23 +156,29 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"example1.csv": "Example 1"}, types=[".csv", ".txt", ".xlsx"]),
+			FileSelection(examples={"example1.csv": "Example 1"}, types=[".csv", ".txt", ".xlsx", ".png", ".jpg"]),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Object", "Choose an Object File", accept=[".obj"], multiple=False)),
+
+			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=1.0, min=0.0, max=1.0, step=0.1),
+			ui.input_slider(id="Colors", label="Number of Colors", value=256, min=1, max=256, step=1),
 
 			# Set the ColorMap used.
 			ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
 
-			ui.input_slider(id="X", label="X Rotation", value=45, min=0, max=360, step=5),
-			ui.input_slider(id="Y", label="Y Rotation", value=20, min=0, max=360, step=5),
-			ui.input_slider(id="Zoom", label="Zoom", value=25, min=0, max=50, step=5),
+			ui.input_select(id="Style", label="Style", choices={"surface": "Surface", "wireframe": "Wireframe", "points": "Points", "points_gaussian": "Gaussian"}, selected="surface"),
+
+			ui.input_checkbox_group(id="Features", label="Heatmap Features",
+				choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"],
+				selected=["Lighting", "Interpolation", "Smooth Shading"]
+			),
 
 			# Add the download buttons.
 			ui.download_button("DownloadTable", "Download Table"),
 		),
 
 		# Add the main interface tabs.
-		MainTab(),
+		MainTab(m_type=ui.output_ui),
 	)
 )
 
