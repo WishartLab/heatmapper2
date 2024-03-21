@@ -2,15 +2,14 @@
 # Heatmapper
 # 3D
 #
-# This file contains the ShinyLive application for 3D Heatmapper.
+# This file contains the Shiny application for 3D Heatmapper.
 # It can be run with the following command within this directory:
-#		shinylive export . [site]
-# Where [site] is the destination of the site folder.
-#
-# If you would rather deploy the application as a PyShiny application,
-# run the following command within this directory:
 #		shiny run
 #
+# Exporting via ShinyLive is not currently supported, as pyvista
+# is not yet available in the Pyodide environment. Required libraries
+# include: openmpi, verdict, glew, alongside python libraries in requirements.txt
+# WebGL is required for this application.
 #
 
 from shiny import App, reactive, render, ui
@@ -24,8 +23,6 @@ from tempfile import NamedTemporaryFile
 from pandas import DataFrame
 
 from pyvista import Plotter, MultiBlock, PolyData, plotting, read_texture, read as VistaRead
-# Requires: python: trame, trame-vtk, trame-vuetify, vtk, meshio, nest_asyncio, pywebview
-#						system: openmpi, verdict, glew
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
@@ -37,9 +34,10 @@ def server(input, output, session):
 	Info = {
 		"example1.csv": {
 			"Object": "bunny.obj",
-			"Description": "A bunny, mapped with the distance from the starting Z position"
+			"Description": "A bunny, mapped with random data."
 		}
 	}
+
 
 	def HandleData(n, i):
 		"""
@@ -47,12 +45,12 @@ def server(input, output, session):
 		@param n: The name of the file
 		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
 		@returns A data object from the cache.
-		@info This Data Handler supports object files as Wavefront files
+		@info This Data Handler supports object files, and images as textures.
 		"""
 
 		suffix = Path(n).suffix
 		match suffix:
-			case ".obj" | ".fbx" | ".usdz" | ".glb":
+			case ".obj":
 				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
 				if type(i) is BytesIO:
 					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
@@ -69,6 +67,15 @@ def server(input, output, session):
 
 
 	def GenerateHeatMap(model, source):
+		"""
+		@brief Generates a heatmap using a model and data source.
+		@param model: The pyvista model to render
+		@param source:	The data source. Can either be:
+										None: The Model is rendered by itself.
+										DataFrame: Content is used as scalar values applied to the model
+										Texture: Texture is applied to model
+		@returns: the HTML ui element that can be embedded within the application.
+		"""
 		pl = Plotter()
 
 		if source is None:
@@ -100,7 +107,6 @@ def server(input, output, session):
 		elif type(source) is plotting.texture.Texture:
 			mesh = model.texture_map_to_plane()
 			pl.add_mesh(mesh, texture=source)
-
 
 		return ui.HTML(pl.export_html(filename=None).read())
 

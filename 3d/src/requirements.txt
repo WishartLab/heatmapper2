@@ -1,1 +1,6 @@
-pywavefront
+pyvista
+trame
+vtk
+trame-vtk
+meshio
+pywebview
