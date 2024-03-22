@@ -135,6 +135,13 @@ class Cache:
 		return self._primary[url]
 
 
+	def _local_sync(self, url):
+		if not exists(url): return None
+		elif url not in self._primary:
+			self._primary[url] = open(url, "rb").read()
+		return self._primary[url]
+
+
 	def __init__(self, project, DataHandler = DefaultHandler):
 		"""
 		@brief Initialize an instance of the Cache object.
@@ -163,6 +170,38 @@ class Cache:
 		else:
 			self._download = lambda url: self._local(url)
 			self._source = "../example_input/"
+
+
+	def SyncLoad(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
+		"""
+		@brief A synchronous loading function that only supports local files
+		@info See Load() for more information
+		"""
+		if source_file is None: source_file = input.File()
+		if example_file is None: example_file = input.Example()
+		if source is None: source = self._source
+		if input_switch is None: input_switch = input.SourceFile()
+
+		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
+		if input_switch == "Upload":
+			file: list[FileInfo] | None = source_file
+			if file is None: return (None, default) if return_n else default
+
+			# The datapath can be immediately used to load examples, but we explicitly need to use
+			# Local as a user uploaded file will always be fetched on disk.
+			n = str(file[0]["datapath"])
+			raw = self._local_sync(n)
+
+		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
+		else:
+			n = str(source + example_file)
+			raw = self._local_sync(n)
+
+		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
+		if n not in self._secondary:
+			self._secondary[n] = self._handler(n, BytesIO(raw))
+
+		return (n, self._secondary[n]) if return_n else self._secondary[n]
 
 
 	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
