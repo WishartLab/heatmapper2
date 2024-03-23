@@ -33,6 +33,9 @@ def server(input, output, session):
 		"example1.h5ad": "Adult Mouse Brain Section 2, from https://support.10xgenomics.com/spatial-gene-expression/datasets/1.1.0/V1_Adult_Mouse_Brain_Coronal_Section_2?",
 	}
 
+	# The DataCache holds our H5AD files, but DataCache serves as a Cache to conserve
+	# bandwidth, not computation. The SpatialCache caches objects computed via
+	# squidpy.gr functions, using a hash of the input parameters
 	SpatialCache = {}
 
 
@@ -57,7 +60,7 @@ def server(input, output, session):
 
 
 	def GenerateSpatial(n, adata):
-		h = hash(f"Spatial{n}{input.SpatialKey()}{input.Coordinate()}{input.Neighs()}{input.Rings()}")
+		h = hash(f"Spatial{n}{input.SpatialKey()}{input.Coordinate()}{input.Neighs()}{input.Rings()}{input.Radius()}{input.Percentile()}{input.SpatialFeatures()}{input.Transform()}")
 
 		if h not in SpatialCache:
 			copy = adata.copy()
@@ -66,14 +69,19 @@ def server(input, output, session):
 				spatial_key=input.SpatialKey(),
 				coord_type=input.Coordinate().lower(),
 				n_neighs=input.Neighs(),
-				n_rings=input.Rings()
+				n_rings=input.Rings(),
+				radius=None if input.Radius() == 0 else input.Radius(),
+				percentile=None if input.Percentile() == 0.0 else input.Percentile(),
+				delaunay="Delaunay" in input.SpatialFeatures(),
+				set_diag="Diagonal = 1.0" in input.SpatialFeatures(),
+				transform=None if input.Transform() == "None" else input.Transform(),
 			)
 			SpatialCache[h] = copy
 		return SpatialCache[h]
 
 
 	def GenerateOccurrence(n, adata):
-		h = hash(f"Occurrence{n}{input.ClusterKey()}{input.SpatialKey()}{input.Interval()}{input.Clusters()}")
+		h = hash(f"Occurrence{n}{input.ClusterKey()}{input.SpatialKey()}{input.Interval()}{input.Clusters()}{input.Splits()}")
 		if h not in SpatialCache:
 			copy = adata.copy()
 			gr.co_occurrence(
@@ -81,6 +89,8 @@ def server(input, output, session):
 				cluster_key=input.ClusterKey(),
 				spatial_key=input.SpatialKey(),
 				interval=input.Interval(),
+				n_splits=None if input.Splits() == 0 else input.Splits(),
+				show_progress_bar=False
 			)
 			SpatialCache[h] = copy
 		return SpatialCache[h]
@@ -197,7 +207,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.OccurrenceGraph, input.ClusterKey, input.Clusters, input.Coordinate, input.Interval, input.Neighs, input.Rings)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.OccurrenceGraph, input.ClusterKey, input.Clusters, input.Coordinate, input.Interval, input.Neighs, input.Rings, input.Radius, input.SpatialFeatures, input.Percentile, input.Transform, input.Splits)
 	def Occurrence():
 		n, adata = DataCache.SyncLoad(input, default=None, return_n=True)
 		if adata is None: return
@@ -206,7 +216,12 @@ def server(input, output, session):
 		occurrence = GenerateOccurrence(n, spatial)
 
 		if input.OccurrenceGraph() == "Line" and input.Clusters() is not None:
-			pl.co_occurrence(occurrence, cluster_key=input.ClusterKey(), clusters=input.Clusters())
+			pl.co_occurrence(
+				occurrence,
+				cluster_key=input.ClusterKey(),
+				clusters=input.Clusters(),
+
+			)
 		else:
 			pl.spatial_scatter(occurrence, color=input.ClusterKey(), size=10, shape=None)
 
@@ -267,9 +282,13 @@ app_ui = ui.page_fluid(
 			ui.input_select(id="SpatialKey", label="Spatial Key", choices=[], multiple=False),
 			ui.input_radio_buttons(id="Coordinate", label="Coordinate System", choices=["Grid", "Generic"], inline=True),
 			ui.input_slider(id="Neighs", label="Neighboring Tiles", value=6, min=1, max=10, step=1),
+			ui.input_slider(id="Radius", label="Radius (0 = auto)", value=0, min=0, max=10, step=0.1),
 			ui.input_slider(id="Rings", label="Neighbor Rings", value=1, min=1, max=5, step=1),
+			ui.input_slider(id="Percentile", label="Distance Percentile (0 = auto)", value=0.0, min=0.0, max=1.0, step=0.01),
 
+			ui.input_select(id="Transform", label="Matrix Transform", choices={"None": "None", "spectral": "Spectral", "cosine": "Cosine"}),
 
+			ui.input_checkbox_group(id="SpatialFeatures", label="Spatial Features", choices=["Delaunay", "Diagonal = 1.0"], selected=[]),
 
 
 			ui.panel_conditional(
@@ -313,6 +332,7 @@ app_ui = ui.page_fluid(
 				),
 
 				ui.input_slider(id="Interval", label="Distance Interval", value=50, min=1, max=100, step=1),
+				ui.input_slider(id="Splits", label="Splits (0 = auto)", value=0, min=0, max=10, step=0),
 			),
 
 
@@ -326,7 +346,7 @@ app_ui = ui.page_fluid(
 			ui.nav_panel("Spatial Neighbors", ui.output_plot("Neighbors", height="75vh"), value="Neighbors"),
 			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="75vh"), value="Ripley"),
 			ui.nav_panel("Receptor-Ligand", ui.output_plot("ReceptorLigand", height="75vh"), value="ReceptorLigand"),
-			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="75vh"), value="Occurrence")
+			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="90vh"), value="Occurrence")
 		),
 	)
 )
