@@ -19,9 +19,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from pandas import DataFrame
 from numpy import append
-
-import squidpy as sq
-import scanpy as sp
+from scanpy import read_h5ad
+from squidpy import gr, pl
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
@@ -34,6 +33,8 @@ def server(input, output, session):
 		"example1.h5ad": "Adult Mouse Brain Section 2, from https://support.10xgenomics.com/spatial-gene-expression/datasets/1.1.0/V1_Adult_Mouse_Brain_Coronal_Section_2?",
 	}
 
+	SpatialCache = {}
+
 
 	def HandleData(n, i):
 		"""
@@ -41,7 +42,7 @@ def server(input, output, session):
 		@param n: The name of the file
 		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
 		@returns A data object from the cache.
-		@info This Data Handler supports object files, and images as textures.
+		@info This Data Handler supports h5ad files via scanpy.
 		"""
 
 		suffix = Path(n).suffix
@@ -50,16 +51,46 @@ def server(input, output, session):
 				if type(i) is BytesIO:
 					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
 					i = temp.name
-				return sp.read_h5ad(i)
+				return read_h5ad(i)
 			case _: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("spatial", DataHandler=HandleData)
 
 
+	def GenerateSpatial(n, adata):
+		h = hash(f"Spatial{n}{input.SpatialKey()}{input.Coordinate()}{input.Neighs()}{input.Rings()}")
+
+		if h not in SpatialCache:
+			copy = adata.copy()
+			gr.spatial_neighbors(
+				copy,
+				spatial_key=input.SpatialKey(),
+				coord_type=input.Coordinate().lower(),
+				n_neighs=input.Neighs(),
+				n_rings=input.Rings()
+			)
+			SpatialCache[h] = copy
+		return SpatialCache[h]
+
+
+	def GenerateOccurrence(n, adata):
+		h = hash(f"Occurrence{n}{input.ClusterKey()}{input.SpatialKey()}{input.Interval()}{input.Clusters()}")
+		if h not in SpatialCache:
+			copy = adata.copy()
+			gr.co_occurrence(
+				adata,
+				cluster_key=input.ClusterKey(),
+				spatial_key=input.SpatialKey(),
+				interval=input.Interval(),
+			)
+			SpatialCache[h] = copy
+		return SpatialCache[h]
+
+
 	def GenerateMoran(adata):
 		genes = adata[:, adata.var.highly_variable].var_names.values[:100]
-		sq.gr.spatial_neighbors(adata)
-		sq.gr.spatial_autocorr(
-				adata,
+		data = GenerateSpatial()
+		gr.spatial_autocorr(
+				data,
 				mode="moran",
 				genes=genes,
 				n_perms=100,
@@ -69,9 +100,9 @@ def server(input, output, session):
 
 
 	def GenerateSepal(adata):
-		sq.gr.spatial_neighbors(adata)
+		gr.spatial_neighbors(adata)
 		genes = adata.var_names[(adata.var.n_cells > 100) & adata.var.highly_variable][0:100]
-		sq.gr.sepal(adata, max_neighs=6, genes=genes, n_jobs=1)
+		gr.sepal(adata, max_neighs=6, genes=genes, n_jobs=1)
 		return adata
 
 
@@ -92,7 +123,7 @@ def server(input, output, session):
 			case "Moran's I": adata = GenerateMoran(data)
 			case "Sepal": adata = GenerateSepal(data)
 
-		sq.pl.spatial_scatter(
+		pl.spatial_scatter(
 			adata,
 			color=input.Keys(),
 			shape=input.Shape().lower(),
@@ -110,9 +141,9 @@ def server(input, output, session):
 	def Centrality():
 		adata = DataCache.SyncLoad(input, default=None)
 		if adata is None: return
-		sq.gr.spatial_neighbors(adata)
-		sq.gr.centrality_scores(adata, input.ClusterKey())
-		sq.pl.centrality_scores(adata, input.ClusterKey())
+		gr.spatial_neighbors(adata)
+		gr.centrality_scores(adata, input.ClusterKey())
+		pl.centrality_scores(adata, input.ClusterKey())
 
 
 	@output
@@ -122,10 +153,10 @@ def server(input, output, session):
 		adata = DataCache.SyncLoad(input, default=None)
 		if adata is None: return
 
-		sq.gr.spatial_neighbors(adata, n_rings=2, coord_type="grid", n_neighs=6)
+		gr.spatial_neighbors(adata, n_rings=2, coord_type="grid", n_neighs=6)
 		_, idx = adata.obsp[input.ConnectKey()][420, :].nonzero()
 		idx = append(idx, 420)
-		sq.pl.spatial_scatter(
+		pl.spatial_scatter(
 				adata[idx, :],
 				shape=None,
 				color=input.Key(),
@@ -141,8 +172,8 @@ def server(input, output, session):
 		adata = DataCache.SyncLoad(input, default=None)
 		if adata is None: return
 
-		sq.gr.ripley(adata, cluster_key=input.ClusterKey(), mode=input.Function())
-		sq.pl.ripley(adata, cluster_key=input.ClusterKey(), mode=input.Function())
+		gr.ripley(adata, cluster_key=input.ClusterKey(), mode=input.Function())
+		pl.ripley(adata, cluster_key=input.ClusterKey(), mode=input.Function())
 
 
 	@output
@@ -152,7 +183,7 @@ def server(input, output, session):
 		adata = DataCache.SyncLoad(input, default=None)
 		if adata is None: return
 
-		res = sq.gr.ligrec(
+		res = gr.ligrec(
 			adata,
 			n_perms=1000,
 			cluster_key="celltype_mapped_refined",
@@ -161,23 +192,23 @@ def server(input, output, session):
 			transmitter_params={"categories": "ligand"},
 			receiver_params={"categories": "receptor"},
 		)
-		sq.pl.ligrec(res, source_groups="Erythroid", alpha=0.005)
+		pl.ligrec(res, source_groups="Erythroid", alpha=0.005)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.OccurrenceGraph)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.OccurrenceGraph, input.ClusterKey, input.Clusters, input.Coordinate, input.Interval, input.Neighs, input.Rings)
 	def Occurrence():
-		adata = DataCache.SyncLoad(input, default=None)
+		n, adata = DataCache.SyncLoad(input, default=None, return_n=True)
 		if adata is None: return
 
-		sq.gr.spatial_neighbors(adata)
-		sq.gr.co_occurrence(adata, cluster_key=input.ClusterKey())
+		spatial = GenerateSpatial(n, adata)
+		occurrence = GenerateOccurrence(n, spatial)
 
-		if input.OccurrenceGraph() == "Line":
-			sq.pl.co_occurrence(adata, cluster_key=input.ClusterKey(), clusters="basal CK tumor cell")
+		if input.OccurrenceGraph() == "Line" and input.Clusters() is not None:
+			pl.co_occurrence(occurrence, cluster_key=input.ClusterKey(), clusters=input.Clusters())
 		else:
-			sq.pl.spatial_scatter(adata, color=input.ClusterKey(), size=10, shape=None)
+			pl.spatial_scatter(occurrence, color=input.ClusterKey(), size=10, shape=None)
 
 
 	@output
@@ -203,6 +234,18 @@ def server(input, output, session):
 	async def Reset(): await DataCache.Purge(input)
 
 
+	@reactive.Effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.OccurrenceGraph)
+	async def UpdateColumnSelection():
+		adata = DataCache.SyncLoad(input, default=None)
+		if adata is None: return
+		Filter(adata.obs.columns, ColumnType.Cluster, ui_element="ClusterKey")
+		Filter(list(adata.obsm), ColumnType.Spatial, ui_element="SpatialKey")
+
+		if input.MainTab() == "Occurrence" and input.OccurrenceGraph() == "Line":
+			Filter(adata.obs[input.ClusterKey()].cat.categories.tolist(), ColumnType.Free, ui_element="Clusters")
+
+
 app_ui = ui.page_fluid(
 
 	NavBar("Spatial"),
@@ -217,10 +260,21 @@ app_ui = ui.page_fluid(
 				}, types=[".h5ad"]
 			),
 
-			ui.input_text("ClusterKey", "Cluster Key", value="cell type"),
+			# The column that holds names for the data.
+			ui.HTML("<b>Spatial Settings</b>"),
+			ui.input_select(id="ClusterKey", label="Cluster Key", choices=[], multiple=False),
+
+			ui.input_select(id="SpatialKey", label="Spatial Key", choices=[], multiple=False),
+			ui.input_radio_buttons(id="Coordinate", label="Coordinate System", choices=["Grid", "Generic"], inline=True),
+			ui.input_slider(id="Neighs", label="Neighboring Tiles", value=6, min=1, max=10, step=1),
+			ui.input_slider(id="Rings", label="Neighbor Rings", value=1, min=1, max=5, step=1),
+
+
+
 
 			ui.panel_conditional(
 				"input.MainTab === 'Interactive'",
+				ui.HTML("<b>Interactive Settings</b>"),
 				ui.input_select(id="Statistic", label="Statistic", choices=["Moran's I", "Sepal"]),
 
 				ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
@@ -235,11 +289,8 @@ app_ui = ui.page_fluid(
 			),
 
 			ui.panel_conditional(
-				"input.MainTab === 'Centrality'",
-			),
-
-			ui.panel_conditional(
 				"input.MainTab === 'Neighbors'",
+				ui.HTML("<b>Spatial Neighbors Settings</b>"),
 				ui.input_text("Key", "Key", value="cell type"),
 				ui.input_text("ConnectKey", "Connectivity Key", value="spatial_connectivities"),
 			),
@@ -247,12 +298,21 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'Ripley'",
+				ui.HTML("<b>Ripley Settings</b>"),
 				ui.input_select(id="Function", label="Function", choices=["L", "F", "G"]),
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'Occurrence'",
-				ui.input_radio_buttons(id="OccurrenceGraph", label="Graph Type", choices=["Line", "Scatter"], inline=True),
+				ui.HTML("<b>Co-occurrence Settings</b>"),
+				ui.input_radio_buttons(id="OccurrenceGraph", label="Graph Type", choices=["Scatter", "Line"], inline=True),
+
+				ui.panel_conditional(
+					"input.OccurrenceGraph === 'Line'",
+					ui.input_select(id="Clusters", label="Clusters", choices=[], multiple=False),
+				),
+
+				ui.input_slider(id="Interval", label="Distance Interval", value=50, min=1, max=100, step=1),
 			),
 
 
