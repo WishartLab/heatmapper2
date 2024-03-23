@@ -19,7 +19,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from pandas import DataFrame
 from numpy import append
-from scanpy import read_h5ad
+from anndata import read_h5ad
 from squidpy import gr, pl
 
 # Shared functions
@@ -50,7 +50,7 @@ def server(input, output, session):
 
 		suffix = Path(n).suffix
 		match suffix:
-			case ".h5ad":
+			case ".h5ad" | ".h5":
 				if type(i) is BytesIO:
 					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
 					i = temp.name
@@ -60,13 +60,12 @@ def server(input, output, session):
 
 
 	def GenerateSpatial(n, adata):
-		h = hash(f"Spatial{n}{input.SpatialKey()}{input.Coordinate()}{input.Neighs()}{input.Rings()}{input.Radius()}{input.Percentile()}{input.SpatialFeatures()}{input.Transform()}")
+		h = hash(f"Spatial{n}{input.Coordinate()}{input.Neighs()}{input.Rings()}{input.Radius()}{input.Percentile()}{input.SpatialFeatures()}{input.Transform()}")
 
 		if h not in SpatialCache:
 			copy = adata.copy()
 			gr.spatial_neighbors(
 				copy,
-				spatial_key=input.SpatialKey(),
 				coord_type=input.Coordinate().lower(),
 				n_neighs=input.Neighs(),
 				n_rings=input.Rings(),
@@ -81,39 +80,18 @@ def server(input, output, session):
 
 
 	def GenerateOccurrence(n, adata):
-		h = hash(f"Occurrence{n}{input.ClusterKey()}{input.SpatialKey()}{input.Interval()}{input.Clusters()}{input.Splits()}")
+		h = hash(f"Occurrence{n}{input.Key()}{input.Interval()}{input.Clusters()}{input.Splits()}")
 		if h not in SpatialCache:
 			copy = adata.copy()
 			gr.co_occurrence(
 				adata,
-				cluster_key=input.ClusterKey(),
-				spatial_key=input.SpatialKey(),
+				cluster_key=input.Key(),
 				interval=input.Interval(),
 				n_splits=None if input.Splits() == 0 else input.Splits(),
 				show_progress_bar=False
 			)
 			SpatialCache[h] = copy
 		return SpatialCache[h]
-
-
-	def GenerateMoran(adata):
-		genes = adata[:, adata.var.highly_variable].var_names.values[:100]
-		data = GenerateSpatial()
-		gr.spatial_autocorr(
-				data,
-				mode="moran",
-				genes=genes,
-				n_perms=100,
-				n_jobs=1,
-		)
-		return adata
-
-
-	def GenerateSepal(adata):
-		gr.spatial_neighbors(adata)
-		genes = adata.var_names[(adata.var.n_cells > 100) & adata.var.highly_variable][0:100]
-		gr.sepal(adata, max_neighs=6, genes=genes, n_jobs=1)
-		return adata
 
 
 	@output
@@ -124,14 +102,29 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Statistic, input.Shape, input.Features, input.Opacity, input.ColorMap, input.Keys)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Key, input.Neighs, input.Radius, input.Rings, input.Percentile, input.Transform, input.SpatialFeatures, input.Statistic, input.Shape, input.Features, input.Opacity, input.ColorMap, input.Keys)
 	def Heatmap():
-		data = DataCache.SyncLoad(input, default=None)
-		if data is None: return
+		n, adata = DataCache.SyncLoad(input, default=None, return_n=True)
+		if adata is None: return
+
+		spatial = GenerateSpatial(n, adata)
 
 		match input.Statistic():
-			case "Moran's I": adata = GenerateMoran(data)
-			case "Sepal": adata = GenerateSepal(data)
+			case "Moran's I":
+				genes = adata[:, adata.var.highly_variable].var_names.values[:100]
+				gr.spatial_autocorr(
+					spatial,
+					mode="moran",
+					genes=genes,
+					n_perms=100,
+				)
+			case "Sepal":
+				genes = adata.var_names[(adata.var.n_cells > 100) & adata.var.highly_variable][0:100]
+				gr.sepal(
+					spatial,
+					max_neighs=6,
+					genes=genes,
+				)
 
 		pl.spatial_scatter(
 			adata,
@@ -147,30 +140,33 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.ClusterKey)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Key)
 	def Centrality():
-		adata = DataCache.SyncLoad(input, default=None)
+		n, adata = DataCache.SyncLoad(input, default=None, return_n=True)
 		if adata is None: return
-		gr.spatial_neighbors(adata)
-		gr.centrality_scores(adata, input.ClusterKey())
-		pl.centrality_scores(adata, input.ClusterKey())
+
+		spatial = GenerateSpatial(n, adata)
+
+		gr.centrality_scores(spatial, input.Key())
+		pl.centrality_scores(spatial, input.Key())
 
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Key, input.ConnectKey)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Key)
 	def Neighbors():
-		adata = DataCache.SyncLoad(input, default=None)
+		n, adata = DataCache.SyncLoad(input, default=None, return_n=True)
 		if adata is None: return
 
-		gr.spatial_neighbors(adata, n_rings=2, coord_type="grid", n_neighs=6)
-		_, idx = adata.obsp[input.ConnectKey()][420, :].nonzero()
+		spatial = GenerateSpatial(n, adata)
+		_, idx = spatial.obsp["spatial_connectivities"][420, :].nonzero()
 		idx = append(idx, 420)
+
 		pl.spatial_scatter(
-				adata[idx, :],
+				spatial[idx, :],
 				shape=None,
 				color=input.Key(),
-				connectivity_key=input.ConnectKey(),
+				connectivity_key="spatial_connectivities",
 				size=100,
 		)
 
@@ -182,8 +178,8 @@ def server(input, output, session):
 		adata = DataCache.SyncLoad(input, default=None)
 		if adata is None: return
 
-		gr.ripley(adata, cluster_key=input.ClusterKey(), mode=input.Function())
-		pl.ripley(adata, cluster_key=input.ClusterKey(), mode=input.Function())
+		gr.ripley(adata, cluster_key=input.Key(), mode=input.Function())
+		pl.ripley(adata, cluster_key=input.Key(), mode=input.Function())
 
 
 	@output
@@ -196,7 +192,7 @@ def server(input, output, session):
 		res = gr.ligrec(
 			adata,
 			n_perms=1000,
-			cluster_key="celltype_mapped_refined",
+			cluster_key=input.Key(),
 			copy=True,
 			use_raw=False,
 			transmitter_params={"categories": "ligand"},
@@ -207,7 +203,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.OccurrenceGraph, input.ClusterKey, input.Clusters, input.Coordinate, input.Interval, input.Neighs, input.Rings, input.Radius, input.SpatialFeatures, input.Percentile, input.Transform, input.Splits)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.OccurrenceGraph, input.Key, input.Clusters, input.Coordinate, input.Interval, input.Neighs, input.Rings, input.Radius, input.SpatialFeatures, input.Percentile, input.Transform, input.Splits)
 	def Occurrence():
 		n, adata = DataCache.SyncLoad(input, default=None, return_n=True)
 		if adata is None: return
@@ -218,12 +214,12 @@ def server(input, output, session):
 		if input.OccurrenceGraph() == "Line" and input.Clusters() is not None:
 			pl.co_occurrence(
 				occurrence,
-				cluster_key=input.ClusterKey(),
+				cluster_key=input.Key(),
 				clusters=input.Clusters(),
 
 			)
 		else:
-			pl.spatial_scatter(occurrence, color=input.ClusterKey(), size=10, shape=None)
+			pl.spatial_scatter(occurrence, color=input.Key(), size=10, shape=None)
 
 
 	@output
@@ -254,11 +250,11 @@ def server(input, output, session):
 	async def UpdateColumnSelection():
 		adata = DataCache.SyncLoad(input, default=None)
 		if adata is None: return
-		Filter(adata.obs.columns, ColumnType.Cluster, ui_element="ClusterKey")
-		Filter(list(adata.obsm), ColumnType.Spatial, ui_element="SpatialKey")
+
+		Filter(adata.obs.columns, ColumnType.Cluster, ui_element="Key")
 
 		if input.MainTab() == "Occurrence" and input.OccurrenceGraph() == "Line":
-			Filter(adata.obs[input.ClusterKey()].cat.categories.tolist(), ColumnType.Free, ui_element="Clusters")
+			Filter(adata.obs[input.Key()].cat.categories.tolist(), ColumnType.Free, ui_element="Clusters")
 
 
 app_ui = ui.page_fluid(
@@ -272,14 +268,12 @@ app_ui = ui.page_fluid(
 				examples={
 					"seqfish.h5ad": "Example 1",
 					"imc.h5ad": "Example 2",
-				}, types=[".h5ad"]
+				}, types=[".h5ad", ".h5"]
 			),
 
 			# The column that holds names for the data.
 			ui.HTML("<b>Spatial Settings</b>"),
-			ui.input_select(id="ClusterKey", label="Cluster Key", choices=[], multiple=False),
-
-			ui.input_select(id="SpatialKey", label="Spatial Key", choices=[], multiple=False),
+			ui.input_select(id="Key", label="Key", choices=[], multiple=False),
 			ui.input_radio_buttons(id="Coordinate", label="Coordinate System", choices=["Grid", "Generic"], inline=True),
 			ui.input_slider(id="Neighs", label="Neighboring Tiles", value=6, min=1, max=10, step=1),
 			ui.input_slider(id="Radius", label="Radius (0 = auto)", value=0, min=0, max=10, step=0.1),
@@ -310,8 +304,6 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'Neighbors'",
 				ui.HTML("<b>Spatial Neighbors Settings</b>"),
-				ui.input_text("Key", "Key", value="cell type"),
-				ui.input_text("ConnectKey", "Connectivity Key", value="spatial_connectivities"),
 			),
 
 
@@ -342,10 +334,10 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(
-			ui.nav_panel("Centrality Scores", ui.output_plot("Centrality", height="75vh"), value="Centrality"),
-			ui.nav_panel("Spatial Neighbors", ui.output_plot("Neighbors", height="75vh"), value="Neighbors"),
-			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="75vh"), value="Ripley"),
-			ui.nav_panel("Receptor-Ligand", ui.output_plot("ReceptorLigand", height="75vh"), value="ReceptorLigand"),
+			ui.nav_panel("Centrality Scores", ui.output_plot("Centrality", height="90vh"), value="Centrality"),
+			ui.nav_panel("Spatial Neighbors", ui.output_plot("Neighbors", height="90vh"), value="Neighbors"),
+			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="90vh"), value="Ripley"),
+			ui.nav_panel("Receptor-Ligand", ui.output_plot("ReceptorLigand"), value="ReceptorLigand"),
 			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="90vh"), value="Occurrence")
 		),
 	)

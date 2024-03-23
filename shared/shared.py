@@ -23,7 +23,7 @@ if "pyodide" in modules: from pyodide.http import pyfetch; Pyodide = True
 else: from os.path import exists; Pyodide = False
 
 
-class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Spatial = 9; Free = 10
+class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
@@ -33,8 +33,7 @@ Columns = {
 	ColumnType.X: {"x"},
 	ColumnType.Y: {"y"},
 	ColumnType.Z: {"z"},
-	ColumnType.Cluster: {"cell type", "celltype_mapped_refined"},
-	ColumnType.Spatial: {"spatial"},
+	ColumnType.Cluster: {"cell type", "celltype_mapped_refined", "cluster", "cell_class", "cell_subclass", "cell_cluster"},
 	ColumnType.Free: {None}
 }
 
