@@ -126,10 +126,10 @@ class Cache:
 		@returns: An object, if the provided file is supported, None otherwise.
 		"""
 
-		match Path(n).suffix:
-			case ".csv": return Cache.HandleDataFrame(i, read_csv)
-			case ".xlsx": return Cache.HandleDataFrame(i, read_excel)
-			case _: return Cache.HandleDataFrame(i, read_table)
+		suffix = Path(n).suffix
+		if suffix == ".csv": return Cache.HandleDataFrame(i, read_csv)
+		elif suffix == ".xlsx": return Cache.HandleDataFrame(i, read_excel)
+		else: return Cache.HandleDataFrame(i, read_table)
 
 
 	async def _remote(self, url):
@@ -279,10 +279,9 @@ class Cache:
 
 		# So long as row and column are sane, update.
 		if row < row_count and column < column_count:
-			match input.Type():
-				case "Integer": df.iloc[row, column] = int(input.TableVal())
-				case "Float": df.iloc[row, column] = float(input.TableVal())
-				case "String": df.iloc[row, column] = input.TableVal()
+			if input.Type() == "Integer": df.iloc[row, column] = int(input.TableVal())
+			elif input.Type() == "Float": df.iloc[row, column] = float(input.TableVal())
+			else: df.iloc[row, column] = input.TableVal()
 
 
 	async def Purge(self, input, source_file=None, example_file=None, source=None):

@@ -49,20 +49,19 @@ def server(input, output, session):
 		"""
 
 		suffix = Path(n).suffix
-		match suffix:
-			case ".obj":
+		if suffix == ".obj":
 				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
 				if type(i) is BytesIO:
 					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
 					i = temp.name
 				return VistaRead(i)
-			case ".png" | ".jpg":
+		if suffix == ".png" or suffix == ".jpg":
 				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
 				if type(i) is BytesIO:
 					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
 					i = temp.name
 				return read_texture(i)
-			case _: return DataCache.DefaultHandler(n, i)
+		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("3d", DataHandler=HandleData)
 
 

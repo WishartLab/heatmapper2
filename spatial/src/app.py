@@ -54,16 +54,15 @@ def server(input, output, session):
 		"""
 
 		suffix = Path(n).suffix
-		match suffix:
-			case ".h5ad":
-				if type(i) is BytesIO:
-					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
-					i = temp.name
-				adata = read_h5ad(i)
-				gr.spatial_neighbors(adata)
-				return adata
-			case ".h5": return None
-			case _: return DataCache.DefaultHandler(n, i)
+		if suffix == ".h5ad":
+			if type(i) is BytesIO:
+				temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
+				i = temp.name
+			adata = read_h5ad(i)
+			gr.spatial_neighbors(adata)
+			return adata
+		elif suffix == ".h5": return None
+		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("spatial", DataHandler=HandleData)
 
 
@@ -85,12 +84,10 @@ def server(input, output, session):
 					base = file["name"]
 
 					# These files are located in the spatial subdir
-					match Path(base).suffix:
-						case ".png" | ".json" | ".csv": base = f"spatial/{base}"
-						case ".h5": counts=base
-
-						# Only a single file will be uploaded, so we can exit out immediately.
-						case ".h5ad": return DataCache.SyncLoad(input, default=None, return_n=return_n)
+					suffix = Path(base).suffix
+					if suffix in [".png", ".json", ".csv"]: base = f"spatial/{base}"
+					elif suffix == ".h5": counts = base
+					elif suffix == ".h5ad": return DataCache.SyncLoad(input, default=None, return_n=return_n)
 
 					open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
 
@@ -123,9 +120,8 @@ def server(input, output, session):
 
 		genes = adata[:, adata.var.highly_variable].var_names.values[:100]
 
-		match input.Statistic():
-			case "Moran's I": gr.spatial_autocorr(adata, genes=genes, mode="moran", n_perms=100)
-			case "Sepal": gr.sepal(adata, genes=genes, max_neighs=6)
+		if input.Statistic() == "Moran's I": gr.spatial_autocorr(adata, genes=genes, mode="moran", n_perms=100)
+		else: gr.sepal(adata, genes=genes, max_neighs=6)
 
 		pl.spatial_scatter(
 			adata,

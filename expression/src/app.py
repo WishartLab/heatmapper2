@@ -68,13 +68,12 @@ def server(input, output, session):
 		if labels: labels = [labels[i] for i in dendrogram["leaves"]]
 
 		# Add ticks depending on the orientation.
-		match orientation:
-			case "Left" | "Right":
-				ax.set_xticks([])
-				ax.set_yticklabels(labels, fontsize=input.TextSize())
-			case "Top" | "Bottom":
-				ax.set_yticks([])
-				ax.set_xticklabels(labels, fontsize=input.TextSize())
+		if orientation == "Left" or orientation == "Right":
+			ax.set_xticks([])
+			ax.set_yticklabels(labels, fontsize=input.TextSize())
+		else:
+			ax.set_yticks([])
+			ax.set_xticklabels(labels, fontsize=input.TextSize())
 
 		return dendrogram
 
@@ -111,9 +110,10 @@ def server(input, output, session):
 			ax_col.axis("off")
 
 		# Handle normalization
-		match input.ScaleType():
-			case "Row": df = df.div(df.max(axis=1), axis=0)
-			case "Column": df = df.div(df.max(axis=0), axis=1)
+		if input.ScaleType() == "Row":
+			df = df.div(df.max(axis=1), axis=0)
+		else:
+			df = df.div(df.max(axis=0), axis=1)
 
 		# Render the heatmap.
 		ax_heatmap = fig.add_subplot(gs[1, 1])

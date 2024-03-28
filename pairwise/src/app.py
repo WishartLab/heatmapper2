@@ -35,10 +35,10 @@ def server(input, output, session):
 	}
 
 	def HandleData(n, i):
-		match Path(n).suffix:
-			case ".pdb": return PDBMatrix(n)
-			case ".fasta": return FASTAMatrix(n)
-			case _: return DataCache.DefaultHandler(n, i)
+		suffix = Path(n).suffix
+		if suffix == ".pdb": return PDBMatrix(n)
+		elif suffix == ".fasta": return FASTAMatrix(n)
+		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("pairwise", HandleData)
 
 

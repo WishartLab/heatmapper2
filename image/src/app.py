@@ -41,9 +41,12 @@ def server(input, output, session):
 		@returns A data object from the cache.
 		@info This Data Handler supports png and jpg images as PIL.Image objects
 		"""
-		match Path(n).suffix:
-			case ".png" | ".jpg": return Image.open(i)
-			case _: return DataCache.DefaultHandler(n, i)
+
+		suffix = Path(n).suffix
+		if suffix == ".png" or suffix == ".jpg":
+			return Image.open(i)
+		else:
+			return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("image", DataHandler=HandleData)
 
 
