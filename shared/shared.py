@@ -23,7 +23,7 @@ if "pyodide" in modules: from pyodide.http import pyfetch; Pyodide = True
 else: from os.path import exists; Pyodide = False
 
 
-class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9
+class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
@@ -34,7 +34,8 @@ Columns = {
 	ColumnType.Y: {"y"},
 	ColumnType.Z: {"z"},
 	ColumnType.Cluster: {"cell type", "celltype_mapped_refined", "cluster", "cell_class", "cell_subclass", "cell_cluster"},
-	ColumnType.Free: {None}
+	ColumnType.Free: {None},
+	ColumnType.Spatial: {"spatial"}
 }
 
 
@@ -333,7 +334,7 @@ def NavBar(current):
 	]
 
 
-def FileSelection(examples, types):
+def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Example"):
 	"""
 	@brief Returns the file selection dialog for the user to upload/select an example
 	@param examples: Either a list of example file names, or a dictionary mapping
@@ -349,12 +350,12 @@ def FileSelection(examples, types):
 	return [ui.HTML(f'<a href={URL}/about/site/index.html>Data Format</a>'),
 
 	# Specify whether to use example files, or upload one.
-	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected="Example", inline=True),
+	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected=default, inline=True),
 
 	# Only display an input dialog if the user is one Upload
 	ui.panel_conditional(
 		"input.SourceFile === 'Upload'",
-		ui.input_file("File", "Choose a File", accept=types, multiple=False),
+		ui.input_file("File", upload_label, accept=types, multiple=multiple),
 	),
 
 	# Otherwise, add the example selection and an info button.
