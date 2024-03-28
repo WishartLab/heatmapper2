@@ -19,8 +19,17 @@ URL = "https://wishartlab.github.io/heatmapper2"
 Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
 # Detect the running environment
-if "pyodide" in modules: from pyodide.http import pyfetch; Pyodide = True
-else: from os.path import exists; Pyodide = False
+if "pyodide" in modules:
+	from pyodide.http import pyfetch;
+	Pyodide = True
+else:
+	from os.path import exists;
+	Pyodide = False
+
+	# Define the Server and Port of the Shiny instances (Port is incremented)
+	# Change these if Heatmapper is running on a server.
+	Server = "http://127.0.0.1"
+	Port = 8000
 
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
@@ -317,21 +326,35 @@ def NavBar(current):
 	@returns A list, containing a ui.panel_title, and a ui.navset_bar.
 	"""
 
-	return [
-		ui.panel_title(title=None, window_title="Heatmapper"),
+	ret = [ui.panel_title(title=None, window_title="Heatmapper")]
 
-		ui.navset_bar(
-				ui.nav_panel(ui.HTML(f'<a href={URL}/expression/site/index.html>Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML(f'<a href={URL}/pairwise/site/index.html>Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML(f'<a href={URL}/image/site/index.html>Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML(f'<a href={URL}/geomap/site/index.html>Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML(f'<a href={URL}/geocoordinate/site/index.html>Geocoordinate</a>'), value="Geocoordinate"),
-				ui.nav_panel(ui.HTML(f'<a href={URL}/3d/site/index.html>3D</a>'), value="3D"),
-				ui.nav_panel(ui.HTML(f'<a href={URL}/about/site/index.html>About</a>'), value="About"),
+	# If we're in Pyodide, offer the user the applications that work.
+	if Pyodide:
+		ret.append(ui.navset_bar(
+				ui.nav_panel(ui.HTML(f'<a href="{URL}/expression/site/index.html">Expression</a>'), value="Expression"),
+				ui.nav_panel(ui.HTML(f'<a href="{URL}/pairwise/site/index.html">Pairwise</a>'), value="Pairwise"),
+				ui.nav_panel(ui.HTML(f'<a href="{URL}/image/site/index.html">Image</a>'), value="Image"),
+				ui.nav_panel(ui.HTML(f'<a href="{URL}/geomap/site/index.html">Geomap</a>'), value="Geomap"),
+				ui.nav_panel(ui.HTML(f'<a href="{URL}/geocoordinate/site/index.html">Geocoordinate</a>'), value="Geocoordinate"),
 				title="Heatmapper",
 				selected=current,
-		)
-	]
+		))
+
+	# Otherwise, use the Server. Port is incremented (Use deploy.sh to make sure it lines up)
+	else:
+		print(Server, Port)
+		ret.append(ui.navset_bar(
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port}">Expression</a>'), value="Expression"),
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 1}">Pairwise</a>'), value="Pairwise"),
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 2}">Image</a>'), value="Image"),
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 3}">Geomap</a>'), value="Geomap"),
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 4}">Geocoordinate</a>'), value="Geocoordinate"),
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 5}">3D</a>'), value="3D"),
+				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 6}">Spatial</a>'), value="Spatial"),
+				title="Heatmapper",
+				selected=current,
+		))
+	return ret
 
 
 def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Example"):
