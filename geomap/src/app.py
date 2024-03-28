@@ -74,11 +74,12 @@ def server(input, output, session):
 		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True, reject_unknown=True)
 		values = v_col if column else df.columns[1:]
 
-		match input.ColorMap():
-			case "Inferno": cmap = linear.inferno.scale
-			case "Magma": cmap = linear.magma.scale
-			case "Plasma": cmap = linear.plasma.scale
-			case "Viridis": cmap = linear.viridis.scale
+		color = input.ColorMap()
+		if color == "Inferno": cmap = linear.inferno.scale
+		elif color == "Magma": cmap = linear.magma.scale
+		elif color == "Plasma": cmap = linear.plasma.scale
+		elif color == "Viridis": cmap = linear.viridis.scale
+
 		m, M = df[values].values.min(), df[values].values.max()
 		colormap = cmap(m, M)
 
