@@ -325,34 +325,30 @@ def NavBar(current):
 	@returns A list, containing a ui.panel_title, and a ui.navset_bar.
 	"""
 
-	ret = [ui.panel_title(title=None, window_title="Heatmapper")]
+	Sources = {
+		"expression": URL if Pyodide else f"{Server}:{Port}",
+		"pairwise": URL if Pyodide else f"{Server}:{Port + 1}",
+		"image": URL if Pyodide else f"{Server}:{Port + 2}",
+		"geomap": URL if Pyodide else f"{Server}:{Port + 3}",
+		"geocoordinate": URL if Pyodide else f"{Server}:{Port + 4}",
+		"3d": f"{Server}:{Port + 5}",
+		"spatial": f"{Server}:{Port + 6}",
+	}
 
-	# If we're in Pyodide, offer the user the applications that work.
-	if Pyodide:
-		ret.append(ui.navset_bar(
-				ui.nav_panel(ui.HTML(f'<a href="{URL}/expression/site/index.html">Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML(f'<a href="{URL}/pairwise/site/index.html">Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML(f'<a href="{URL}/image/site/index.html">Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML(f'<a href="{URL}/geomap/site/index.html">Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML(f'<a href="{URL}/geocoordinate/site/index.html">Geocoordinate</a>'), value="Geocoordinate"),
+	return (
+		ui.panel_title(title=None, window_title="Heatmapper"),
+			ui.navset_bar(
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["expression"]}">Expression</a>'), value="Expression"),
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["pairwise"]}">Pairwise</a>'), value="Pairwise"),
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["image"]}">Image</a>'), value="Image"),
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["geomap"]}">Geomap</a>'), value="Geomap"),
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["geocoordinate"]}">Geocoordinate</a>'), value="Geocoordinate"),
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["3d"]}">3D</a>'), value="3D"),
+				ui.nav_panel(ui.HTML(f'<a href="{Sources["spatial"]}">Spatial</a>'), value="Spatial"),
 				title="Heatmapper",
 				selected=current,
-		))
-
-	# Otherwise, use the Server. Port is incremented (Use deploy.sh to make sure it lines up)
-	else:
-		ret.append(ui.navset_bar(
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port}">Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 1}">Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 2}">Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 3}">Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 4}">Geocoordinate</a>'), value="Geocoordinate"),
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 5}">3D</a>'), value="3D"),
-				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 6}">Spatial</a>'), value="Spatial"),
-				title="Heatmapper",
-				selected=current,
-		))
-	return ret
+		),
+	)
 
 
 def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Example"):
