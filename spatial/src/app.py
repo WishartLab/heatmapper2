@@ -179,7 +179,12 @@ def server(input, output, session):
 		adata = Load()
 		if adata is None: return
 
-		gr.centrality_scores(adata, input.Key())
+		gr.centrality_scores(
+			adata,
+			cluster_key=input.Key(),
+			n_jobs=Jobs,
+			show_progress_bar=False
+		)
 		pl.centrality_scores(adata, input.Key())
 
 
@@ -188,7 +193,12 @@ def server(input, output, session):
 	def Ripley():
 		adata = Load()
 		if adata is None: return
-		gr.ripley(adata, cluster_key=input.Key(), mode=input.Function())
+		gr.ripley(
+			adata,
+			cluster_key=input.Key(),
+			mode=input.Function(),
+			metric=input.Distance().lower(),
+		)
 		pl.ripley(adata, cluster_key=input.Key(), mode=input.Function())
 
 
@@ -203,7 +213,8 @@ def server(input, output, session):
 			cluster_key=input.Key(),
 			interval=input.Interval(),
 			n_splits=None if input.Splits() == 0 else input.Splits(),
-			show_progress_bar=False
+			show_progress_bar=False,
+			n_jobs=Jobs,
 		)
 
 		if input.OccurrenceGraph() == "Line" and input.Cluster() is not None:
@@ -292,6 +303,7 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'Ripley'",
 				ui.HTML("<b>Ripley Settings</b>"),
 				ui.input_select(id="Function", label="Function", choices=["L", "F", "G"]),
+				ui.input_select(id="Distance", label="Distance Method", choices=["Euclidean", "Manhattan", "Chebyshev", "Minkowski"]),
 			),
 
 			ui.panel_conditional(
