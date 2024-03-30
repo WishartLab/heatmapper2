@@ -43,6 +43,9 @@ def server(input, output, session):
 	# squidpy.gr functions, using a hash of the input parameters
 	SpatialCache = {}
 
+	# Concurrent jobs to run for calculations.
+	Jobs = 8
+
 
 	def HandleData(n, i):
 		"""
@@ -61,23 +64,32 @@ def server(input, output, session):
 			adata = read_h5ad(i)
 			gr.spatial_neighbors(adata)
 			return adata
+
+		# Pass loading .h5, we deal with them in Load()
 		elif suffix == ".h5": return None
 		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("spatial", DataHandler=HandleData)
 
 
-	def Load(return_n=False):
+	def Load():
+		"""
+		@brief Returns AnnData objects with data for Spatial Mapping.
+		"""
+
 		if input.SourceFile() == "Upload":
 
-			if input.File() is None: return (None, None) if return_n else None
+			# Get all the files, to generate a name.
+			if input.File() is None: return None
 			name = ""
 			for file in input.File():
 				name += file["datapath"]
 
+			# If the name hasn't been cached, we need to construct the object.
 			if name not in SpatialCache:
+
+				# For each file uploaded, dump it into a temporary directory
 				temp = TemporaryDirectory()
 				Path(f"{temp.name}/spatial").mkdir()
-
 				counts = None
 				for file in input.File():
 					n = file["datapath"]
@@ -85,26 +97,35 @@ def server(input, output, session):
 
 					# These files are located in the spatial subdir
 					suffix = Path(base).suffix
+
+					# These files are considered spatial.
 					if suffix in [".png", ".json", ".csv"]: base = f"spatial/{base}"
 					elif suffix == ".h5": counts = base
-					elif suffix == ".h5ad": return DataCache.SyncLoad(input, default=None, return_n=return_n)
+
+					# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
+					elif suffix == ".h5ad": return DataCache.SyncLoad(input, default=None)
 
 					open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
 
+				# Make SquidPy generate an object from the folder.
 				adata = read.visium(temp.name, counts_file=counts)
-				adata.var_names_make_unique()
 
+				# Post-processing so all the needed statistics are present.
+				adata.var_names_make_unique()
 				pp.filter_genes(adata, inplace=True, min_counts=100)
 				gr.spatial_neighbors(adata)
 				pp.calculate_qc_metrics(adata, inplace=True)
 				tl.leiden(adata, key_added="cluster", neighbors_key="spatial_neighbors")
 				pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
+
+				# Throw it into the Cache.
 				SpatialCache[name] = adata
 
-			return (name, SpatialCache[name]) if return_n else SpatialCache[name]
+			# Return the cached information.
+			return SpatialCache[name]
 
-		else:
-			return DataCache.SyncLoad(input, default=None, return_n=return_n)
+		# With an example, just return it.
+		else: return DataCache.SyncLoad(input, default=None)
 
 
 	@output
@@ -117,11 +138,28 @@ def server(input, output, session):
 	def Heatmap():
 		adata = Load()
 		if adata is None: return
-
 		genes = adata[:, adata.var.highly_variable].var_names.values[:100]
 
-		if input.Statistic() == "Moran's I": gr.spatial_autocorr(adata, genes=genes, mode="moran", n_perms=100)
-		else: gr.sepal(adata, genes=genes, max_neighs=6)
+
+		stat = input.Statistic()
+		if stat == "sepal":
+			gr.sepal(
+				adata,
+				genes=genes,
+				max_neighs=6,
+				n_jobs=Jobs,
+				show_progress_bar=False,
+
+			)
+		else:
+			gr.spatial_autocorr(
+				adata,
+				genes=genes,
+				mode=stat,
+				n_perms=input.Perm(),
+				two_tailed=input.P() == "Two-Tailed",
+				corr_method=input.Correlation()
+			)
 
 		pl.spatial_scatter(
 			adata,
@@ -131,7 +169,7 @@ def server(input, output, session):
 			img_alpha=input.ImgOpacity(),
 			cmap=get_cmap(input.ColorMap().lower()),
 			alpha=input.Opacity(),
-			colorbar="Legend" in input.Features() and len(input.Keys()) > 1,
+			colorbar=False
 		)
 
 
@@ -157,7 +195,7 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def Occurrence():
-		n, adata = Load(return_n=True)
+		adata = Load()
 		if adata is None: return
 
 		gr.co_occurrence(
@@ -193,8 +231,9 @@ def server(input, output, session):
 		if adata is None: return
 		key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True, ui_element="Key")
 		if key is not None:
-			print(adata.obs.cluster)
 			Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
+		if not input.Keys():
+			ui.update_select(id="Keys", label="Annotation Keys", choices=adata.var.gene_ids.index.drop_duplicates().to_list())
 
 
 app_ui = ui.page_fluid(
@@ -221,18 +260,26 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'Interactive'",
 				ui.HTML("<b>Interactive Settings</b>"),
-				ui.input_select(id="Statistic", label="Statistic", choices=["Moran's I", "Sepal"]),
+				ui.input_select(id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
+
+				ui.input_slider(id="Perm", label="Permutations", value=100, min=1, max=200, step=1),
+
+				ui.input_radio_buttons(id="P", label="P-Value Distribution", choices=["Two-Tailed", "One-Tailed"], selected="One-Tailed", inline=True),
+
+				# https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html#statsmodels.stats.multitest.multipletests
+				ui.input_select(id="Correlation", label="Correlation Method", choices=["bonferroni" "sidak", "holm-sidak", "holm", "simes-hochberg", "hommel", "fdr_bh", "fdr_by", "fdr_tsbh", "fdr_tsbky"], selected="holm-sidak"),
+
+				ui.input_select(id="Keys", label="Annotation Keys", choices=[], selected=None),
+
+				ui.HTML("<b>Visual Settings</b>"),
 
 				ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
-
 				ui.input_select(id="Shape", label="Shape", choices=["Circle", "Square", "Hex"], selected="Hex"),
 
 				ui.input_slider(id="ImgOpacity", label="Image Opacity", value=1, min=0.0, max=1.0, step=0.1),
 				ui.input_slider(id="Opacity", label="Data Opacity", value=1, min=0.0, max=1.0, step=0.1),
 
-				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=["Image", "Legend"], selected=["Image", "Legend"]),
-
-				ui.input_checkbox_group(id="Keys", label="Annotation Keys", choices=["Lct", "Ecel1", "Cfap65", "Resp18", "Tuba4a"], selected=["Lct"]),
+				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=["Image"], selected=["Image"]),
 			),
 
 			ui.panel_conditional(

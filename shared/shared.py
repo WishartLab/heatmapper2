@@ -341,7 +341,6 @@ def NavBar(current):
 
 	# Otherwise, use the Server. Port is incremented (Use deploy.sh to make sure it lines up)
 	else:
-		print(Server, Port)
 		ret.append(ui.navset_bar(
 				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port}">Expression</a>'), value="Expression"),
 				ui.nav_panel(ui.HTML(f'<a href="{Server}:{Port + 1}">Pairwise</a>'), value="Pairwise"),
