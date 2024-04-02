@@ -20,7 +20,7 @@ for folder in "${subfolders[@]}"; do
 
 	# Split into a separate process, at the specified port, and reload the application
 	# If the source files change, so we don't need to manually teardown.
-	shiny run -r -p $port &
+	shiny run --host 0.0.0.0 --reload --port $port &
 
 	# Increment port, return to root
 	port=$((port+1))

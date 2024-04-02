@@ -23,16 +23,10 @@ from tempfile import NamedTemporaryFile
 from pandas import DataFrame
 
 from pyvista import Plotter, MultiBlock, PolyData, plotting, read_texture, read as VistaRead
-
-from pyvista.trame.jupyter import launch_server
-
-
-# Requires trame-vtk, trame-vuetify
+# Requires trame-vtk, trame-vuetify, nest_asyncio
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
-
-
 
 
 def server(input, output, session):
@@ -44,15 +38,6 @@ def server(input, output, session):
 			"Description": "A bunny, mapped with random data."
 		}
 	}
-
-	Launched = False
-
-
-	async def LaunchServer():
-		print("Launching")
-		await launch_server().ready
-		print("Done!")
-		Launched = True
 
 
 	def HandleData(n, i):
@@ -136,7 +121,6 @@ def server(input, output, session):
 	@render.ui
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Object, input.Update, input.Reset, input.ColorMap, input.Style, input.Colors, input.Opacity, input.Features)
 	async def Heatmap():
-		if not Launched: await LaunchServer()
 		model = await DataCache.Load(
 			input,
 			source_file=input.Object(),
