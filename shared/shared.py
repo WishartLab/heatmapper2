@@ -18,6 +18,11 @@ from enum import Enum
 URL = "https://wishartlab.github.io/heatmapper2"
 Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
+# Define the Server and Port of the Shiny instances (Port is incremented)
+# Change these if Heatmapper is running on a server.
+Server = "http://127.0.0.1"
+Port = 8000
+
 
 # Detect the running environment
 if "pyodide" in modules:
@@ -26,12 +31,6 @@ if "pyodide" in modules:
 else:
 	from os.path import exists;
 	Pyodide = False
-
-
-# Define the Server and Port of the Shiny instances (Port is incremented)
-# Change these if Heatmapper is running on a server.
-Server = "http://127.0.0.1"
-Port = 8000
 
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
