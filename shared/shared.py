@@ -346,6 +346,7 @@ def NavBar(current):
 				ui.nav_panel(ui.HTML(f'<a href="{Sources["geocoordinate"]}">Geocoordinate</a>'), value="Geocoordinate"),
 				ui.nav_panel(ui.HTML(f'<a href="{Sources["3d"]}">3D</a>'), value="3D"),
 				ui.nav_panel(ui.HTML(f'<a href="{Sources["spatial"]}">Spatial</a>'), value="Spatial"),
+				ui.nav_panel(ui.HTML("<a href=https://github.com/WishartLab/heatmapper2/wiki>About</a"), value="About"),
 				title="Heatmapper",
 				selected=current,
 		),
