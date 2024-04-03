@@ -66,51 +66,6 @@ def server(input, output, session):
 	DataCache = Cache("3d", DataHandler=HandleData)
 
 
-	def GenerateHeatMap(model, source):
-		"""
-		@brief Generates a heatmap using a model and data source.
-		@param model: The pyvista model to render
-		@param source:	The data source. Can either be:
-										None: The Model is rendered by itself.
-										DataFrame: Content is used as scalar values applied to the model
-										Texture: Texture is applied to model
-		@returns: the HTML ui element that can be embedded within the application.
-		"""
-		pl = Plotter()
-
-		if source is None:
-			pl.add_mesh(
-				model,
-				style=input.Style(),
-				opacity=input.Opacity(),
-				show_edges="Edges" in input.Features(),
-				lighting="Lighting" in input.Features(),
-				interpolate_before_map="Interpolation" in input.Features(),
-				smooth_shading="Smooth Shading" in input.Features(),
-			)
-
-		elif type(source) is DataFrame:
-			values = source[Filter(source.columns, ColumnType.Name, only_one=True)]
-			pl.add_mesh(
-				model,
-				scalars=values,
-				style=input.Style(),
-				cmap=input.ColorMap().lower(),
-				opacity=input.Opacity(),
-				n_colors=input.Colors(),
-				show_edges="Edges" in input.Features(),
-				lighting="Lighting" in input.Features(),
-				interpolate_before_map="Interpolation" in input.Features(),
-				smooth_shading="Smooth Shading" in input.Features(),
-			)
-
-		elif type(source) is plotting.texture.Texture:
-			mesh = model.texture_map_to_plane()
-			pl.add_mesh(mesh, texture=source)
-
-		return ui.HTML(pl.export_html(filename=None).read())
-
-
 	@output
 	@render.data_frame
 	@reactive.event(input.SourceFile, input.File, input.Example, input.File, input.Update, input.Reset)
@@ -121,15 +76,54 @@ def server(input, output, session):
 	@render.ui
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Object, input.Update, input.Reset, input.ColorMap, input.Style, input.Colors, input.Opacity, input.Features)
 	async def Heatmap():
-		model = await DataCache.Load(
-			input,
-			source_file=input.Object(),
-			example_file=Info[input.Example()]["Object"],
-			default=None
-		)
-		source = await DataCache.Load(input, default=None)
-		if model is None: return
-		return GenerateHeatMap(model, source)
+
+		with ui.Progress() as p:
+
+			p.inc(message="Loading input...")
+			model = await DataCache.Load(
+				input,
+				source_file=input.Object(),
+				example_file=Info[input.Example()]["Object"],
+				default=None
+			)
+			source = await DataCache.Load(input, default=None)
+			if model is None: return
+
+			p.inc(message="Plotting...")
+			pl = Plotter()
+
+			if source is None:
+				pl.add_mesh(
+					model,
+					style=input.Style(),
+					opacity=input.Opacity(),
+					show_edges="Edges" in input.Features(),
+					lighting="Lighting" in input.Features(),
+					interpolate_before_map="Interpolation" in input.Features(),
+					smooth_shading="Smooth Shading" in input.Features(),
+				)
+
+			elif type(source) is DataFrame:
+				values = source[Filter(source.columns, ColumnType.Name, only_one=True)]
+				pl.add_mesh(
+					model,
+					scalars=values,
+					style=input.Style(),
+					cmap=input.ColorMap().lower(),
+					opacity=input.Opacity(),
+					n_colors=input.Colors(),
+					show_edges="Edges" in input.Features(),
+					lighting="Lighting" in input.Features(),
+					interpolate_before_map="Interpolation" in input.Features(),
+					smooth_shading="Smooth Shading" in input.Features(),
+				)
+
+			elif type(source) is plotting.texture.Texture:
+				mesh = model.texture_map_to_plane()
+				pl.add_mesh(mesh, texture=source)
+
+			p.inc(message="Exporting...")
+			return ui.HTML(pl.export_html(filename=None).read())
 
 
 	@output
