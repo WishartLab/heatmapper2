@@ -280,9 +280,11 @@ class Cache:
 
 		# So long as row and column are sane, update.
 		if row < row_count and column < column_count:
-			if input.Type() == "Integer": df.iloc[row, column] = int(input.TableVal())
-			elif input.Type() == "Float": df.iloc[row, column] = float(input.TableVal())
-			else: df.iloc[row, column] = input.TableVal()
+			try:
+				if input.Type() == "Integer": df.iloc[row, column] = int(input.TableVal())
+				elif input.Type() == "Float": df.iloc[row, column] = float(input.TableVal())
+				else: df.iloc[row, column] = input.TableVal()
+			except ValueError: pass
 
 
 	async def Purge(self, input, source_file=None, example_file=None, source=None):
