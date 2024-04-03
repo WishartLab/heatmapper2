@@ -20,7 +20,7 @@ Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
 # Define the Server and Port of the Shiny instances (Port is incremented)
 # Change these if Heatmapper is running on a server.
-Server = "http://127.0.0.1"
+Server = "http://35.208.86.138"
 Port = 8000
 
 
