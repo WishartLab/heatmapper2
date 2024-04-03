@@ -131,41 +131,48 @@ def server(input, output, session):
 		@returns the Folium.Map
 		"""
 
-		df = await DataCache.Load(input)
-		geojson = await DataCache.Load(
-			input,
-			source_file=input.JSONUpload(),
-			example_file=input.JSONSelection(),
-			source=URL,
-			input_switch=input.JSONFile(),
-			default=None
-		)
+		with ui.Progress() as p:
 
-		k_col, v_col = input.KeyColumn(), input.ValueColumn()
-		if k_col not in df or v_col not in df: return
+			p.inc(message="Loading input...")
+			df = await DataCache.Load(input)
 
-		# Give a placeholder map if nothing is selected, which should never really be the case.
-		if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
+			p.inc(message="Loading GeoJSON...")
+			geojson = await DataCache.Load(
+				input,
+				source_file=input.JSONUpload(),
+				example_file=input.JSONSelection(),
+				source=URL,
+				input_switch=input.JSONFile(),
+				default=None
+			)
 
-		# Create map
-		map = FoliumMap(tiles=input.MapType())
+			p.inc(message="Formatting...")
+			k_col, v_col = input.KeyColumn(), input.ValueColumn()
+			if k_col not in df or v_col not in df: return
 
-		if type(input.ROI()) is tuple:
-			m, M = df[v_col].min(), df[v_col].max()
-			l, u = input.ROI()[0], input.ROI()[1]
-			if l >= m and u <= M:
-				oob = []
-				for index, row in df.iterrows():
-					v = row[v_col]
-					if v < l or v > u: oob.append(index)
-				df = df.drop(oob)
+			# Give a placeholder map if nothing is selected, which should never really be the case.
+			if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
 
-		# Load the choropleth.
-		if input.Temporal(): await LoadTemporalChoropleth(df, map, geojson, k_col, v_col)
-		else: await LoadChoropleth(df, map, geojson, k_col, v_col)
+			# Create map
+			map = FoliumMap(tiles=input.MapType())
 
-		map.fit_bounds(map.get_bounds())
-		return map
+			if type(input.ROI()) is tuple:
+				m, M = df[v_col].min(), df[v_col].max()
+				l, u = input.ROI()[0], input.ROI()[1]
+				if l >= m and u <= M:
+					oob = []
+					for index, row in df.iterrows():
+						v = row[v_col]
+						if v < l or v > u: oob.append(index)
+					df = df.drop(oob)
+
+			# Load the choropleth.
+			p.inc(message="Plotting...")
+			if input.Temporal(): await LoadTemporalChoropleth(df, map, geojson, k_col, v_col)
+			else: await LoadChoropleth(df, map, geojson, k_col, v_col)
+
+			map.fit_bounds(map.get_bounds())
+			return map
 
 
 	@output
