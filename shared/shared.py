@@ -366,7 +366,7 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	"""
 
 	# If the user needs help with the formatting.
-	return [ui.HTML(f'<a href={URL}/about/site/index.html>Data Format</a>'),
+	return [ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">Data Format</a>'),
 
 	# Specify whether to use example files, or upload one.
 	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected=default, inline=True),
