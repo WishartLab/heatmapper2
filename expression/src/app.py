@@ -89,7 +89,7 @@ def server(input, output, session):
 
 		with ui.Progress() as p:
 
-			p.inc(amount=1, message="Reading input...")
+			p.inc(message="Reading input...")
 			index_labels, x_labels, data = await ProcessData()
 			if data is None: return
 

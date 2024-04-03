@@ -158,15 +158,15 @@ def server(input, output, session):
 		@returns The heatmap
 		"""
 
-		with ui.Progress(min=0, max=3) as p:
+		with ui.Progress() as p:
 
-			p.set(value=1, message="Reading input...")
+			p.inc(message="Reading input...")
 			n, data = await DataCache.Load(input, return_n=True)
 			if data.empty: return
 			if Path(n).suffix not in [".pdb", ".fasta"]: df = ChartMatrix(data)
 			else: df = data
 
-			p.set(value=2, message="Plotting...")
+			p.inc(message="Plotting...")
 			fig, ax = subplots()
 			im = ax.imshow(df, cmap=input.ColorMap().lower(), interpolation=input.Interpolation().lower())
 
@@ -193,7 +193,6 @@ def server(input, output, session):
 						for j in range(df.shape[1]):
 								ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 
-			p.set(value=3, message="Done!")
 			return ax
 
 
