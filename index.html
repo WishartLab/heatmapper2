@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-    <head>
+	<head>
 		<meta charset="UTF-8">
 
 		<title>Heatmapper</title>
@@ -21,13 +21,13 @@
 
 			.logo {
 				/* These options are to prevent anti-aliasing */
-				image-rendering: optimizeSpeed;             /* STOP SMOOTHING, GIVE ME SPEED  */
-				image-rendering: -moz-crisp-edges;          /* Firefox                        */
-				image-rendering: -o-crisp-edges;            /* Opera                          */
+				image-rendering: optimizeSpeed;			 /* STOP SMOOTHING, GIVE ME SPEED  */
+				image-rendering: -moz-crisp-edges;		  /* Firefox						*/
+				image-rendering: -o-crisp-edges;			/* Opera						  */
 				image-rendering: -webkit-optimize-contrast; /* Chrome (and eventually Safari) */
 				image-rendering: pixelated; /* Chrome */
-				image-rendering: optimize-contrast;         /* CSS3 Proposed                  */
-				-ms-interpolation-mode: nearest-neighbor;   /* IE8+                           */
+				image-rendering: optimize-contrast;		 /* CSS3 Proposed				  */
+				-ms-interpolation-mode: nearest-neighbor;   /* IE8+						   */
 			}
 
 			.myTable {
@@ -172,9 +172,9 @@
 		</noscript>
 
 
-    </head>
+	</head>
 
-    <body>
+	<body>
 
 			<nav class="navbar navbar-default navbar-static-top" role="navigation">
 				<div class="navbar-header">
@@ -203,7 +203,10 @@
 							<a id="geocoordinateLink" href="geocoordinate/site/index.html">Geocoordinate</a>
 						</li>
 						<li id="3dTab">
-							<a id="3dLink" href="3d/site/index.html">3D</a>
+							<a id="3dLink" href="http://35.208.86.138:8005">3D</a>
+						</li>
+						<li id="spatialTab">
+							<a id="spatialLink" href="http://35.208.86.138:8006">Spatial</a>
 						</li>
 						</li>
 						<li id="aboutTab">
@@ -538,5 +541,28 @@
 		Questions or comments? Please use our <a href="http://feedback.wishartlab.com/?site=heatmapper" target="_blank">feedback page</a>.
 		License: <a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-BY-SA</a>
 		</div>
-    </body>
+
+		<script>
+			// Function to check for WebAssembly support
+			function isWebAssemblySupported() {
+				try {
+					if (typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function") {
+						return true;
+					}
+				} catch (e) {}
+				return false;
+			}
+
+			// Modify links only if WebAssembly is not supported
+			window.onload = function() {
+				if (!isWebAssemblySupported()) {
+					document.getElementById('expressionLink').href = 'http://35.208.86.138:8000';
+					document.getElementById('pairwiseLink').href = 'http://35.208.86.138:8001';
+					document.getElementById('imageLink').href = 'http://35.208.86.138:8002';
+					document.getElementById('geomapLink').href = 'http://35.208.86.138:8003';
+					document.getElementById('geocoordinateLink').href = 'http://35.208.86.138:8004';
+				}
+			};
+		</script>
+	</body>
 </html>
