@@ -13,6 +13,7 @@ from io import BytesIO
 from sys import modules
 from pathlib import Path
 from enum import Enum
+from os.path import exists
 
 # Used for fetching web resources in a variety of fashions.
 URL = "https://wishartlab.github.io/heatmapper2"
@@ -26,10 +27,9 @@ Port = 8000
 
 # Detect the running environment
 if "pyodide" in modules:
-	from pyodide.http import pyfetch;
+	from pyodide.http import pyfetch
 	Pyodide = True
 else:
-	from os.path import exists;
 	Pyodide = False
 
 

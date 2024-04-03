@@ -157,6 +157,8 @@ def server(input, output, session):
 		"""
 
 		n, data = await DataCache.Load(input, return_n=True)
+		if data.empty: return
+
 		if Path(n).suffix not in [".pdb", ".fasta"]: df = ChartMatrix(data)
 		else: df = data
 
@@ -233,7 +235,11 @@ app_ui = ui.page_fluid(
 		ui.sidebar(
 
 			FileSelection(
-				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3"},
+				examples={
+				"example1.txt": "Example 1", 
+				"example2.txt": "Example 2", 
+				"example3.txt": "Example 3"
+				},
 				types=[".csv", ".txt", ".xlsx", ".pdb", ".dat", ".fasta"]
 			),
 
