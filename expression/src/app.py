@@ -50,7 +50,7 @@ def server(input, output, session):
 		return list(df[name]), x_labels, data
 
 
-	def GenerateDendrogram(data, ax, orientation, labels = [], invert=False):
+	def GenerateDendrogram(data, ax, orientation, progress, labels = [], invert=False):
 		"""
 		@brief General dendrogram generator.
 		@param data: The DataFrame that contains the data to generate the dendrogram from.
@@ -61,7 +61,10 @@ def server(input, output, session):
 		@returns The dendrogram, mostly useful to aligning the Heatmap to the new ordering.
 		"""
 
+		if progress is not None: progress.inc(message="Creating linkage matrix...")
 		matrix = hierarchy.linkage(data.values.T if invert else data.values, method=input.ClusterMethod().lower(), metric=input.DistanceMethod().lower())
+
+		if progress is not None: progress.inc(message="Creating dendrogram...")
 		dendrogram = hierarchy.dendrogram(matrix, ax=ax, orientation=orientation.lower())
 
 		# If there are labels, sort them according to the dendrogram.
@@ -84,70 +87,74 @@ def server(input, output, session):
 		@returns The heatmap
 		"""
 
-		index_labels, x_labels, data = await ProcessData()
-		if data is None: return
+		with ui.Progress() as p:
 
-		# Create a figure with a heatmap and associated dendrograms
-		fig = figure(figsize=(12, 10))
-		gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
+			p.inc(amount=1, message="Reading input...")
+			index_labels, x_labels, data = await ProcessData()
+			if data is None: return
 
-		# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
-		# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
-		# To data, so the order changes when turning the toggle.
-		if "row" in input.Features():
-			ax_row = fig.add_subplot(gs[1, 0])
-			row_dendrogram = GenerateDendrogram(data, ax_row, "Left")
-			ax_row.axis("off")
-			index_labels = [index_labels[i] for i in row_dendrogram["leaves"]]
-			df = data.iloc[row_dendrogram["leaves"]]
-		else:
-			df = data
+			# Create a figure with a heatmap and associated dendrograms
+			p.inc(message="Plotting...")
+			fig = figure(figsize=(12, 10))
+			gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
 
-		# If we render the column dendrogram.
-		if "col" in input.Features():
-			ax_col = fig.add_subplot(gs[0, 1])
-			col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True)
-			ax_col.axis("off")
+			# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
+			# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
+			# To data, so the order changes when turning the toggle.
+			if "row" in input.Features():
+				ax_row = fig.add_subplot(gs[1, 0])
+				row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
+				ax_row.axis("off")
+				index_labels = [index_labels[i] for i in row_dendrogram["leaves"]]
+				df = data.iloc[row_dendrogram["leaves"]]
+			else:
+				df = data
 
-		# Handle normalization
-		if input.ScaleType() == "Row":
-			df = df.div(df.max(axis=1), axis=0)
-		else:
-			df = df.div(df.max(axis=0), axis=1)
+			# If we render the column dendrogram.
+			if "col" in input.Features():
+				ax_col = fig.add_subplot(gs[0, 1])
+				col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
+				ax_col.axis("off")
 
-		# Render the heatmap.
-		ax_heatmap = fig.add_subplot(gs[1, 1])
-		heatmap = ax_heatmap.imshow(
-			df,
-			cmap=input.ColorMap().lower(),
-			interpolation=input.Interpolation().lower(),
-			aspect="auto",
-		)
+			# Handle normalization
+			if input.ScaleType() == "Row":
+				df = df.div(df.max(axis=1), axis=0)
+			else:
+				df = df.div(df.max(axis=0), axis=1)
 
-		# If we render the Y axis.
-		if "y" in input.Features():
-			ax_heatmap.set_yticks(range(len(index_labels)))
-			ax_heatmap.set_yticklabels(index_labels, fontsize=input.TextSize())
-			ax_heatmap.yaxis.tick_right()
-		else:
-			ax_heatmap.set_yticklabels([])
+			# Render the heatmap.
+			ax_heatmap = fig.add_subplot(gs[1, 1])
+			heatmap = ax_heatmap.imshow(
+				df,
+				cmap=input.ColorMap().lower(),
+				interpolation=input.Interpolation().lower(),
+				aspect="auto",
+			)
 
-		# If we render the X axis.
-		if "x" in input.Features():
-			ax_heatmap.set_xticks(range(len(x_labels)))
-			ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=input.TextSize())
-		else:
-			ax_heatmap.set_xticklabels([])
+			# If we render the Y axis.
+			if "y" in input.Features():
+				ax_heatmap.set_yticks(range(len(index_labels)))
+				ax_heatmap.set_yticklabels(index_labels, fontsize=input.TextSize())
+				ax_heatmap.yaxis.tick_right()
+			else:
+				ax_heatmap.set_yticklabels([])
 
-		# If we render the legend.
-		if "legend" in input.Features():
-			ax_cbar = fig.add_subplot(gs[3, 1])
-			cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
+			# If we render the X axis.
+			if "x" in input.Features():
+				ax_heatmap.set_xticks(range(len(x_labels)))
+				ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=input.TextSize())
+			else:
+				ax_heatmap.set_xticklabels([])
 
-		return fig
+			# If we render the legend.
+			if "legend" in input.Features():
+				ax_cbar = fig.add_subplot(gs[3, 1])
+				cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
+
+			return fig
 
 
-	def RenderDendrogram(data, labels, invert):
+	def RenderDendrogram(data, labels, invert, progress):
 		"""
 		@brief Renders a Dendrogram
 		@param data: The DataFrame
@@ -164,7 +171,7 @@ def server(input, output, session):
 		ax.spines["bottom"].set_visible(False)
 		ax.spines["left"].set_visible(False)
 
-		GenerateDendrogram(data, ax, input.Orientation(), labels, invert=invert)
+		GenerateDendrogram(data, ax, input.Orientation(), progress, labels, invert=invert)
 		return fig
 
 
@@ -182,13 +189,19 @@ def server(input, output, session):
 	@output
 	@render.plot
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
-	async def RowDendrogram(): index_labels, _, data = await ProcessData(); return RenderDendrogram(data, index_labels, False)
+	async def RowDendrogram(): 
+		index_labels, _, data = await ProcessData(); 
+		with ui.Progress() as p:
+			return RenderDendrogram(data=data, labels=index_labels, invert=False, progress=p)
 
 
 	@output
 	@render.plot
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
-	async def ColumnDendrogram(): _, x_labels, data = await ProcessData(); return RenderDendrogram(data, x_labels, True)
+	async def ColumnDendrogram():
+	 _, x_labels, data = await ProcessData(); 
+	 with ui.Progress() as p:
+	 	return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 
 
 	@output
