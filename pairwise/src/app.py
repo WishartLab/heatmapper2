@@ -31,7 +31,9 @@ def server(input, output, session):
 	Info = {
 		"example1.txt": "This example dataset represents pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
 		"example2.txt": "This example dataset was generated randomly.",
-		"example3.txt": "This example dataset was generated randomly."
+		"example3.txt": "This example dataset was generated randomly.",
+		"example4.fasta": "An example FASTA file.",
+		"ala_phe_ala.pdb": "An example PDB file.",
 	}
 
 	def HandleData(n, i):
@@ -242,7 +244,9 @@ app_ui = ui.page_fluid(
 				examples={
 				"example1.txt": "Example 1", 
 				"example2.txt": "Example 2", 
-				"example3.txt": "Example 3"
+				"example3.txt": "Example 3",
+				"example4.fasta": "Example 4",
+				"ala_phe_ala.pdb": "Example 5",
 				},
 				types=[".csv", ".txt", ".xlsx", ".pdb", ".dat", ".fasta"]
 			),
