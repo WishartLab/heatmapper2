@@ -156,39 +156,43 @@ def server(input, output, session):
 		@returns The heatmap
 		"""
 
-		n, data = await DataCache.Load(input, return_n=True)
-		if data.empty: return
+		with ui.Progress(min=0, max=3) as p:
 
-		if Path(n).suffix not in [".pdb", ".fasta"]: df = ChartMatrix(data)
-		else: df = data
+			p.set(value=1, message="Reading input...")
+			n, data = await DataCache.Load(input, return_n=True)
+			if data.empty: return
+			if Path(n).suffix not in [".pdb", ".fasta"]: df = ChartMatrix(data)
+			else: df = data
 
-		fig, ax = subplots()
+			p.set(value=2, message="Plotting...")
+			fig, ax = subplots()
+			im = ax.imshow(df, cmap=input.ColorMap().lower(), interpolation=input.Interpolation().lower())
 
-		im = ax.imshow(df, cmap=input.ColorMap().lower(), interpolation=input.Interpolation().lower())
+			# Visibility of features
+			if "legend" in input.Features(): colorbar(im, ax=ax, label="Distance")
 
-		# Visibility of features
-		if "legend" in input.Features(): colorbar(im, ax=ax, label="Distance")
+			if "y" in input.Features():
+				ax.tick_params(axis="y", labelsize=input.TextSize())
+				ax.set_yticks(range(len(df.columns)))
+				ax.set_yticklabels(df.columns)
+			else:
+				ax.set_yticklabels([])
 
-		if "y" in input.Features():
-			ax.tick_params(axis="y", labelsize=input.TextSize())
-			ax.set_yticks(range(len(df.columns)))
-			ax.set_yticklabels(df.columns)
-		else:
-			ax.set_yticklabels([])
+			if "x" in input.Features():
+				ax.tick_params(axis="x", labelsize=input.TextSize())
+				ax.set_xticks(range(len(df.columns)))
+				ax.set_xticklabels(df.columns, rotation=90)
+			else:
+				ax.set_xticklabels([])
 
-		if "x" in input.Features():
-			ax.tick_params(axis="x", labelsize=input.TextSize())
-			ax.set_xticks(range(len(df.columns)))
-			ax.set_xticklabels(df.columns, rotation=90)
-		else:
-			ax.set_xticklabels([])
+			# Annotate each cell with its value
+			if "label" in input.Features():
+				for i in range(df.shape[0]):
+						for j in range(df.shape[1]):
+								ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 
-		# Annotate each cell with its value
-		if "label" in input.Features():
-			for i in range(df.shape[0]):
-					for j in range(df.shape[1]):
-							ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
-		return ax
+			p.set(value=3, message="Done!")
+			return ax
 
 
 	@output
