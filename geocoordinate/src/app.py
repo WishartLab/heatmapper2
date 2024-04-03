@@ -103,41 +103,47 @@ def server(input, output, session):
 		@returns the Folium.Map
 		"""
 
-		df = await DataCache.Load(input)
+		with ui.Progress() as p:
 
-		# Set the Value Column Accordingly (Helper functions handle None)
-		if not input.Uniform():
-			v_col = input.ValueColumn()
-			if v_col not in df: return
-		else:
-			v_col = None
+			p.inc(message="Loading input...")
+			df = await DataCache.Load(input)
+			if df.empty: return
 
-		# Get lat and lon, generate the map
-		lon_col = Filter(df.columns, ColumnType.Longitude, only_one=True)
-		lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
-		map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
+			# Set the Value Column Accordingly (Helper functions handle None)
+			p.inc(message="Formatting...")
+			if not input.Uniform():
+				v_col = input.ValueColumn()
+				if v_col not in df: return
+			else:
+				v_col = None
 
-		# IF ROI is defined, and we have a column of values to work with.
-		if type(input.ROI()) is tuple and v_col is not None:
+			# Get lat and lon, generate the map
+			lon_col = Filter(df.columns, ColumnType.Longitude, only_one=True)
+			lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
+			map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
 
-			# Get the min and max of the data, and the lower and upper bound
-			m, M = df[v_col].min(), df[v_col].max()
-			l, u = input.ROI()[0], input.ROI()[1]
+			# IF ROI is defined, and we have a column of values to work with.
+			if type(input.ROI()) is tuple and v_col is not None:
 
-			# Avoid race condition of new data being uploaded, but the ROI not being updated in tandem.
-			if l >= m and u <= M:
+				# Get the min and max of the data, and the lower and upper bound
+				m, M = df[v_col].min(), df[v_col].max()
+				l, u = input.ROI()[0], input.ROI()[1]
 
-				# Get values outside the upper and lower bound, drop them.
-				oob = []
-				for index, row in df.iterrows():
-					v = row[v_col]
-					if v < l or v > u: oob.append(index)
-				df = df.drop(oob)
+				# Avoid race condition of new data being uploaded, but the ROI not being updated in tandem.
+				if l >= m and u <= M:
 
-		# Generate the right heatmap.
-		if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
-		else: GenerateMap(df, map, v_col, lon_col, lat_col)
-		return map
+					# Get values outside the upper and lower bound, drop them.
+					oob = []
+					for index, row in df.iterrows():
+						v = row[v_col]
+						if v < l or v > u: oob.append(index)
+					df = df.drop(oob)
+
+			# Generate the right heatmap.
+			p.inc(message="Plotting...")
+			if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
+			else: GenerateMap(df, map, v_col, lon_col, lat_col)
+			return map
 
 
 	@output
