@@ -317,9 +317,11 @@ def TableValueUpdate(df, input):
 
 	if not df.empty:
 		rows, columns = df.shape
-		row, column = int(input.TableRow()), int(input.TableCol())
-		if 0 <= row <= rows and 0 <= column <= columns:
-			ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")")
+		try:
+			row, column = int(input.TableRow()), int(input.TableCol())
+			if 0 <= row <= rows and 0 <= column <= columns:
+				ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")")
+		except TypeError: pass
 
 
 def NavBar(current):
