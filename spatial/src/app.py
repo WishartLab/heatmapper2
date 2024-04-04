@@ -35,7 +35,9 @@ def server(input, output, session):
 
 	# Information regarding example files.
 	Info = {
-		"example1.h5ad": "Adult Mouse Brain Section 2, from https://support.10xgenomics.com/spatial-gene-expression/datasets/1.1.0/V1_Adult_Mouse_Brain_Coronal_Section_2?",
+		"visium_hne_adata.h5ad": "Pre-processed example files provided by SquidPy",
+		"seqfish.h5ad": "Pre-processed example files provided by SquidPy",
+		"imc.h5ad": "Pre-processed example files provided by SquidPy",
 	}
 
 	# The DataCache holds our H5AD files, but DataCache serves as a Cache to conserve
@@ -136,91 +138,119 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def Heatmap():
-		adata = Load()
-		if adata is None: return
-		genes = adata[:, adata.var.highly_variable].var_names.values[:100]
+
+		with ui.Progress() as p:
+
+			p.inc(message="Loading input...")
+			adata = Load()
+			if adata is None: return
+
+			try:
+				genes = adata[:, adata.var.highly_variable].var_names.values[:100]
+			except AttributeError:
+				genes=None
 
 
-		stat = input.Statistic()
-		if stat == "sepal":
-			gr.sepal(
+			p.inc(message="Computing statistic...")
+			stat = input.Statistic()
+			if stat == "sepal":
+				gr.sepal(
+					adata,
+					genes=genes,
+					max_neighs=6,
+					n_jobs=Jobs,
+					show_progress_bar=False,
+
+				)
+			else:
+				gr.spatial_autocorr(
+					adata,
+					genes=genes,
+					mode=stat,
+					n_perms=input.Perm(),
+					two_tailed=input.P() == "Two-Tailed",
+					corr_method=input.Correlation()
+				)
+
+			p.inc(message="Plotting...")
+			pl.spatial_scatter(
 				adata,
-				genes=genes,
-				max_neighs=6,
-				n_jobs=Jobs,
-				show_progress_bar=False,
-
+				color=input.Keys(),
+				shape=input.Shape().lower(),
+				img="Image" in input.Features(),
+				img_alpha=input.ImgOpacity(),
+				cmap=get_cmap(input.ColorMap().lower()),
+				alpha=input.Opacity(),
+				colorbar=False
 			)
-		else:
-			gr.spatial_autocorr(
-				adata,
-				genes=genes,
-				mode=stat,
-				n_perms=input.Perm(),
-				two_tailed=input.P() == "Two-Tailed",
-				corr_method=input.Correlation()
-			)
-
-		pl.spatial_scatter(
-			adata,
-			color=input.Keys(),
-			shape=input.Shape().lower(),
-			img="Image" in input.Features(),
-			img_alpha=input.ImgOpacity(),
-			cmap=get_cmap(input.ColorMap().lower()),
-			alpha=input.Opacity(),
-			colorbar=False
-		)
 
 
 	@output
 	@render.plot
 	def Centrality():
-		adata = Load()
-		if adata is None: return
+		with ui.Progress() as p:
 
-		gr.centrality_scores(
-			adata,
-			cluster_key=input.Key(),
-			n_jobs=Jobs,
-			show_progress_bar=False
-		)
-		pl.centrality_scores(adata, input.Key())
+			p.inc(message="Loading input...")
+			adata = Load()
+			if adata is None: return
+
+			p.inc(message="Computing scores...")
+			gr.centrality_scores(
+				adata,
+				cluster_key=input.Key(),
+				n_jobs=Jobs,
+				show_progress_bar=False
+			)
+
+			p.inc(message="Plotting...")
+			pl.centrality_scores(adata, input.Key())
 
 
 	@output
 	@render.plot
 	def Ripley():
-		adata = Load()
-		if adata is None: return
-		gr.ripley(
-			adata,
-			cluster_key=input.Key(),
-			mode=input.Function(),
-			metric=input.Distance().lower(),
-		)
-		pl.ripley(adata, cluster_key=input.Key(), mode=input.Function())
+		with ui.Progress() as p:
+
+			p.inc(message="Loading input...")
+			adata = Load()
+			if adata is None: return
+
+			p.inc(message="Generating function...")
+			gr.ripley(
+				adata,
+				cluster_key=input.Key(),
+				mode=input.Function(),
+				metric=input.Distance().lower(),
+			)
+
+			p.inc(message="Plotting...")
+			pl.ripley(adata, cluster_key=input.Key(), mode=input.Function())
 
 
 	@output
 	@render.plot
 	def Occurrence():
-		adata = Load()
-		if adata is None: return
+		with ui.Progress() as p:
 
-		gr.co_occurrence(
-			adata,
-			cluster_key=input.Key(),
-			interval=input.Interval(),
-			n_splits=None if input.Splits() == 0 else input.Splits(),
-			show_progress_bar=False,
-			n_jobs=Jobs,
-		)
+			p.inc(message="Loading input...")
+			adata = Load()
+			if adata is None: return
 
-		if input.OccurrenceGraph() == "Line" and input.Cluster() is not None:
-			pl.co_occurrence(adata, cluster_key=input.Key(), clusters=input.Cluster())
-		else:
-			pl.spatial_scatter(adata, color=input.Key(), size=10, shape=None)
+			p.inc(message="Calculating...")
+			gr.co_occurrence(
+				adata,
+				cluster_key=input.Key(),
+				interval=input.Interval(),
+				n_splits=None if input.Splits() == 0 else input.Splits(),
+				show_progress_bar=False,
+				n_jobs=Jobs,
+			)
+
+			p.inc(message="Plotting...")
+			if input.OccurrenceGraph() == "Line" and input.Cluster() is not None:
+				pl.co_occurrence(adata, cluster_key=input.Key(), clusters=input.Cluster())
+			else:
+				pl.spatial_scatter(adata, color=input.Key(), size=10, shape=None)
 
 
 	@output
@@ -244,7 +274,10 @@ def server(input, output, session):
 		if key is not None:
 			Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
 		if not input.Keys():
-			ui.update_select(id="Keys", label="Annotation Keys", choices=adata.var.gene_ids.index.drop_duplicates().to_list())
+			try:
+				ui.update_select(id="Keys", label="Annotation Keys", choices=adata.var.gene_ids.index.drop_duplicates().to_list())
+			except AttributeError:
+				pass
 
 
 app_ui = ui.page_fluid(
@@ -256,8 +289,9 @@ app_ui = ui.page_fluid(
 			FileSelection(
 				upload_label="Upload Files",
 				examples={
-					"seqfish.h5ad": "Example 1",
-					"imc.h5ad": "Example 2",
+					"visium_hne_adata.h5ad": "Example 1",
+					"seqfish.h5ad": "Example 2",
+					"imc.h5ad": "Example 3",
 				},
 				types=[".h5", ".png", ".csv", ".json", ".h5ad"],
 				multiple=True,
