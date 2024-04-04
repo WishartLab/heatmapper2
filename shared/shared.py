@@ -292,6 +292,7 @@ class Cache:
 		@param input: The Shiny input. See N() for required objects.
 		@param source_file: The source ID, defaults to input.File()
 		@param example_file: The example ID, defaults to input.Example()
+		@param source: The path that should be appending to the path for fetching. 
 		@info This function should be called on a reactive hook for a "Reset" button.
 		"""
 
@@ -359,11 +360,17 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	@brief Returns the file selection dialog for the user to upload/select an example
 	@param examples: Either a list of example file names, or a dictionary mapping
 	@param types: The valid file extensions for user uploaded files.
+	@param upload_label: The label for the upload input. Useful to define specifically what kind of files are needed
+	@param multiple: Whether to accept multiple files. 
+	@param default: Whether to start on the example, or upload dialog
 	@returns A list, containing the necessary ui components for uploading/selecting
 	@info The returns elements are named:
 		input.SourceFile: The ui.input_radio_buttons for whether the user wants to choose an "Example" or "Upload"
 		input.File: The ui.input_file for user uploaded files.
 		input.Example: The ui.input_select for an example file selection
+	@info multiple=True is not handled properly by the Cache. You will need to create a function that properly handles
+		each file (See spatial for an implementation)
+	@info If you're examples are large files, or require significant computation, you may want to switch it to Upload instead.
 	"""
 
 	# If the user needs help with the formatting.

@@ -54,7 +54,14 @@ def server(input, output, session):
 
 
 	async def LoadChoropleth(df, map, geojson, k_col, v_col):
-		# Add the heatmap and return.
+		"""
+		@brief Applies a Choropleth to a Folium Map
+		@param df: The DataFrame that contains information to plot
+		@param map: The Folium map
+		@param geojson: The geojson information that contains territory information
+		@param k_vol: The name of the column within df that contains names
+		@param v_col: the name of the column within df that contains the values to plot.
+		"""
 		Choropleth(
 				geo_data=geojson,
 				name="choropleth",
@@ -70,6 +77,15 @@ def server(input, output, session):
 
 
 	async def LoadTemporalChoropleth(df, map, geojson, k_col, v_col):
+		"""
+		@brief Applies a TimeSliderChoropleth to a Folium map
+		@param df: The DataFrame that contains data to plot
+		@param map: The Folium map
+		@param geojson: The geojson information that contains territory information
+		@param k_col: The name of the column within df that contains names
+		@param v_col: The name of the column within df that contains the values to plot.
+		@info df can either contain a Time column, or all non key-columns will be handled as time columns.
+		"""
 		# Check if we have a dedicated time column, or separate columns for each time slot.
 		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True, reject_unknown=True)
 		values = v_col if column else df.columns[1:]

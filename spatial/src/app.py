@@ -25,8 +25,6 @@ from shiny.types import FileInfo
 from anndata import AnnData
 from scanpy import pp, tl
 
-# scikit-misc needed for highly_variable_genes
-
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
 
@@ -76,6 +74,8 @@ def server(input, output, session):
 	def Load():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
+		@info SquidPy's Visium Reader expect a directory, so Spatial will accept multiple files
+			and then parse them into the correct structure.
 		"""
 
 		if input.SourceFile() == "Upload":
