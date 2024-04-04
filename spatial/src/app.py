@@ -153,7 +153,7 @@ def server(input, output, session):
 
 			p.inc(message="Computing statistic...")
 			stat = input.Statistic()
-			if stat == "sepal":
+			if stat == "sepal" and "sepal_score" not in adata.uns:
 				gr.sepal(
 					adata,
 					genes=genes,
@@ -162,7 +162,7 @@ def server(input, output, session):
 					show_progress_bar=False,
 
 				)
-			else:
+			elif (stat == "moran" and "moranI" not in adata.uns) or (stat == "geary" and "gearyC" not in adata.uns):
 				gr.spatial_autocorr(
 					adata,
 					genes=genes,
@@ -197,13 +197,14 @@ def server(input, output, session):
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
 
 			p.inc(message="Computing score...")
-			gr.centrality_scores(
-				adata,
-				cluster_key=key,
-				score=input.Score(),
-				n_jobs=Jobs,
-				show_progress_bar=False
-			)
+			if f"{key}_centrality_scores" not in adata.uns:
+				gr.centrality_scores(
+					adata,
+					cluster_key=key,
+					score=input.Score(),
+					n_jobs=Jobs,
+					show_progress_bar=False
+				)
 
 			p.inc(message="Plotting...")
 			pl.centrality_scores(adata, key)
@@ -221,12 +222,13 @@ def server(input, output, session):
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
 
 			p.inc(message="Generating function...")
-			gr.ripley(
-				adata,
-				cluster_key=key,
-				mode=input.Function(),
-				metric=input.Distance().lower(),
-			)
+			if f"{key}_ripley_{input.Function()}" not in adata.uns:
+				gr.ripley(
+					adata,
+					cluster_key=key,
+					mode=input.Function(),
+					metric=input.Distance().lower(),
+				)
 
 			p.inc(message="Plotting...")
 			pl.ripley(adata, cluster_key=key, mode=input.Function())
@@ -244,14 +246,16 @@ def server(input, output, session):
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
 
 			p.inc(message="Calculating...")
-			gr.co_occurrence(
-				adata,
-				cluster_key=key,
-				interval=input.Interval(),
-				n_splits=None if input.Splits() == 0 else input.Splits(),
-				show_progress_bar=False,
-				n_jobs=Jobs,
-			)
+
+			if f"{key}_co_occurrence" not in adata.uns:
+				gr.co_occurrence(
+					adata,
+					cluster_key=key,
+					interval=input.Interval(),
+					n_splits=None if input.Splits() == 0 else input.Splits(),
+					show_progress_bar=False,
+					n_jobs=Jobs,
+				)
 
 			p.inc(message="Plotting...")
 			if input.OccurrenceGraph() == "Line" and input.Cluster() is not None:
