@@ -4,3 +4,5 @@ vtk
 trame-vtk
 meshio
 pywebview
+trame-vuetify
+nest_asyncio

@@ -13,17 +13,11 @@
 #
 
 from shiny import App, reactive, render, ui
-from numpy import zeros, array, linspace
-from matplotlib.pyplot import get_cmap
-from matplotlib.colors import Normalize
-from scipy.interpolate import interp1d
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from pandas import DataFrame
-
-from pyvista import Plotter, MultiBlock, PolyData, plotting, read_texture, read as VistaRead
-# Requires trame-vtk, trame-vuetify, nest_asyncio
+from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
@@ -79,6 +73,7 @@ def server(input, output, session):
 
 		with ui.Progress() as p:
 
+			# Get the model and data. 
 			p.inc(message="Loading input...")
 			model = await DataCache.Load(
 				input,
@@ -87,6 +82,8 @@ def server(input, output, session):
 				default=None
 			)
 			source = await DataCache.Load(input, default=None)
+
+			# We support just rendering a model without data, but we need the model
 			if model is None: return
 
 			p.inc(message="Plotting...")
