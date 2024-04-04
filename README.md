@@ -9,7 +9,7 @@ If you’ve used the legacy Heatmapper, you may want to look at [Running](https:
 
 If your browser and system supports it, Heatmapper will run as a client-side, WASM application within your browser by default. Some applications, such as the Spatial Heatmapper, can only be run on the server, but Heatmapper will automatically switch the source based on the selected application and capabilities of the system.
 
-If you’re looking for documentation, it’s[here](https://github.com/WishartLab/heatmapper2/wiki). For each heatmap, you can find general information about the heatmap is for, the input files that it supports, and a description of the settings and features that can be modified within the interface. For an outline of the interface, and an explanation of the various settings for each application, see [Interface](https://github.com/WishartLab/heatmapper2/wiki/Interface). For an outline of the support file formats each application supports, see [Format](https://github.com/WishartLab/heatmapper2/wiki/Format).
+If you’re looking for documentation, it’s [here](https://github.com/WishartLab/heatmapper2/wiki). For each heatmap, you can find general information about the heatmap is for, the input files that it supports, and a description of the settings and features that can be modified within the interface. For an outline of the interface, and an explanation of the various settings for each application, see [Interface](https://github.com/WishartLab/heatmapper2/wiki/Interface). For an outline of the support file formats each application supports, see [Format](https://github.com/WishartLab/heatmapper2/wiki/Format).
 
 ## Heatmap Overview
 
