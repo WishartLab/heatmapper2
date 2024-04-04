@@ -67,7 +67,9 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	@reactive.event(input.SourceFile, input.File, input.Example, input.File, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
+	async def LoadedTable(): 
+		df = await DataCache.Load(input)
+		if type(df) is DataFrame: return df
 
 
 	@output
