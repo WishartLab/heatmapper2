@@ -137,13 +137,13 @@ def server(input, output, session):
 			try:
 				float(df.iloc[0,0])
 				coordinates = df.values
+				point_names = df.columns
 
 			# Otherwise, we assume the first row/column define the axis names.
 			except ValueError:
 				coordinates = df.iloc[:, 1:].values
-
-			point_names = df.columns
-
+				point_names = df.columns[1:]
+				
 		# Calculate a distant matrix, and return it
 		if input.MatrixType() == "Distance":
 			distances = pdist(coordinates, metric=input.DistanceMethod().lower())
