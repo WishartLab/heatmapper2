@@ -43,7 +43,7 @@ def server(input, output, session):
 		"""
 
 		suffix = Path(n).suffix
-		if suffix == ".png" or suffix == ".jpg":
+		if suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]:
 			return Image.open(i)
 		else:
 			return DataCache.DefaultHandler(n, i)
@@ -156,9 +156,11 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".xlsx", ".xls", ".odf"]),
+			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"]),
 
-			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", accept=[".png", ".jpg"], multiple=False)),
+			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", 
+				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"], 
+				multiple=False)),
 
 			# Customize the text size of the axes.
 			ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),

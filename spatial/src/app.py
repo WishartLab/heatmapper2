@@ -266,11 +266,12 @@ def server(input, output, session):
 	def ExampleInfo(): return Info[input.Example()]
 
 
-	@render.download(filename="table.csv")
+	@render.download(filename="adata.h5ad")
 	def DownloadTable():
-		df = Load().to_df();
-		if df is not None:
-			yield df.to_string()
+		adata = Load()
+		temp = NamedTemporaryFile(); 
+		adata.write(temp.name)
+		yield open(temp.name, "rb").read()
 
 
 	@reactive.Effect

@@ -122,7 +122,7 @@ def server(input, output, session):
 		name_col = Filter(df.columns, ColumnType.Name, only_one=True, reject_unknown=True)
 		if name_col: point_names = df[name_col]
 
-		# If explicit coordinates ar eprovided, use them, with the final column used as labels.
+		# If explicit coordinates are provided, use them, with the final column used as labels.
 		x_col = Filter(df.columns, ColumnType.X, only_one=True, reject_unknown=True)
 		y_col = Filter(df.columns, ColumnType.Y, only_one=True, reject_unknown=True)
 		z_col = Filter(df.columns, ColumnType.Z, only_one=True, reject_unknown=True)
@@ -142,7 +142,7 @@ def server(input, output, session):
 			except ValueError:
 				coordinates = df.iloc[:, 1:].values
 
-			point_names = None
+			point_names = df.columns
 
 		# Calculate a distant matrix, and return it
 		if input.MatrixType() == "Distance":
@@ -247,7 +247,7 @@ app_ui = ui.page_fluid(
 				"example4.fasta": "Example 4",
 				"ala_phe_ala.pdb": "Example 5",
 				},
-				types=[".csv", ".txt", ".xlsx", ".xls", ".odf", ".pdb", ".dat", ".fasta"]
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".pdb", ".dat", ".fasta"]
 			),
 
 			# Specify Matrix Type
