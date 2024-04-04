@@ -194,16 +194,19 @@ def server(input, output, session):
 			adata = Load()
 			if adata is None: return
 
-			p.inc(message="Computing scores...")
+			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+
+			p.inc(message="Computing score...")
 			gr.centrality_scores(
 				adata,
-				cluster_key=input.Key(),
+				cluster_key=key,
+				score=input.Score(),
 				n_jobs=Jobs,
 				show_progress_bar=False
 			)
 
 			p.inc(message="Plotting...")
-			pl.centrality_scores(adata, input.Key())
+			pl.centrality_scores(adata, key)
 
 
 	@output
@@ -215,16 +218,18 @@ def server(input, output, session):
 			adata = Load()
 			if adata is None: return
 
+			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+
 			p.inc(message="Generating function...")
 			gr.ripley(
 				adata,
-				cluster_key=input.Key(),
+				cluster_key=key,
 				mode=input.Function(),
 				metric=input.Distance().lower(),
 			)
 
 			p.inc(message="Plotting...")
-			pl.ripley(adata, cluster_key=input.Key(), mode=input.Function())
+			pl.ripley(adata, cluster_key=key, mode=input.Function())
 
 
 	@output
@@ -236,10 +241,12 @@ def server(input, output, session):
 			adata = Load()
 			if adata is None: return
 
+			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+
 			p.inc(message="Calculating...")
 			gr.co_occurrence(
 				adata,
-				cluster_key=input.Key(),
+				cluster_key=key,
 				interval=input.Interval(),
 				n_splits=None if input.Splits() == 0 else input.Splits(),
 				show_progress_bar=False,
@@ -248,9 +255,9 @@ def server(input, output, session):
 
 			p.inc(message="Plotting...")
 			if input.OccurrenceGraph() == "Line" and input.Cluster() is not None:
-				pl.co_occurrence(adata, cluster_key=input.Key(), clusters=input.Cluster())
+				pl.co_occurrence(adata, cluster_key=key, clusters=input.Cluster())
 			else:
-				pl.spatial_scatter(adata, color=input.Key(), size=10, shape=None)
+				pl.spatial_scatter(adata, color=key, size=10, shape=None)
 
 
 	@output
@@ -270,9 +277,10 @@ def server(input, output, session):
 	async def UpdateColumnSelection():
 		adata = Load()
 		if adata is None: return
-		key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True, ui_element="Key")
-		if key is not None:
-			Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
+		if input.MainTab() == "Occurrence":
+			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+			if key is not None:
+				Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
 		if not input.Keys():
 			try:
 				ui.update_select(id="Keys", label="Annotation Keys", choices=adata.var.gene_ids.index.drop_duplicates().to_list())
@@ -297,10 +305,6 @@ app_ui = ui.page_fluid(
 				multiple=True,
 				default="Upload"
 			),
-
-			ui.input_select(id="Key", label="Key", choices=[], selected=None),
-			ui.input_select(id="Cluster", label="Cluster", choices=[], selected=None),
-
 
 			ui.panel_conditional(
 				"input.MainTab === 'Interactive'",
@@ -327,12 +331,18 @@ app_ui = ui.page_fluid(
 				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=["Image"], selected=["Image"]),
 			),
 
+
 			ui.panel_conditional(
-				"input.MainTab === 'Neighbors'",
-				ui.HTML("<b>Spatial Neighbors Settings</b>"),
+				"input.MainTab === 'Centrality'",
+				ui.HTML("<b>Centrality Settings</b>"),
+				ui.input_select(id="Score", label="Score", choices={
+					"closeness_centrality": "Closeness Centrality",
+					"average_clustering": "Average Clustering",
+					"degree_centrality": "Degree Centrality"
+					}),
 			),
 
-
+	
 			ui.panel_conditional(
 				"input.MainTab === 'Ripley'",
 				ui.HTML("<b>Ripley Settings</b>"),
@@ -344,6 +354,11 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'Occurrence'",
 				ui.HTML("<b>Co-occurrence Settings</b>"),
 				ui.input_radio_buttons(id="OccurrenceGraph", label="Graph Type", choices=["Scatter", "Line"], inline=True),
+
+				ui.panel_conditional(
+					"input.OccurrenceGraph === 'Line'",
+					ui.input_select(id="Cluster", label="Cluster", choices=[], selected=None),
+				),
 
 				ui.input_slider(id="Interval", label="Distance Interval", value=50, min=1, max=100, step=1),
 				ui.input_slider(id="Splits", label="Splits (0 = auto)", value=0, min=0, max=10, step=0),
