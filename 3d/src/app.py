@@ -89,6 +89,7 @@ def server(input, output, session):
 			p.inc(message="Plotting...")
 			pl = Plotter()
 
+			# If there's no source, just render the model
 			if source is None:
 				pl.add_mesh(
 					model,
@@ -100,6 +101,7 @@ def server(input, output, session):
 					smooth_shading="Smooth Shading" in input.Features(),
 				)
 
+			# If are data source is a table, render it as a heatmap.
 			elif type(source) is DataFrame:
 				values = source[Filter(source.columns, ColumnType.Name, only_one=True)]
 				pl.add_mesh(
@@ -115,10 +117,12 @@ def server(input, output, session):
 					smooth_shading="Smooth Shading" in input.Features(),
 				)
 
+			# If we have a texture, map it.
 			elif type(source) is plotting.texture.Texture:
 				mesh = model.texture_map_to_plane()
 				pl.add_mesh(mesh, texture=source)
 
+			# Exporting as None returns the HTML as a file handle, which we read.
 			p.inc(message="Exporting...")
 			return ui.HTML(pl.export_html(filename=None).read())
 
