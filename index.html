@@ -85,95 +85,7 @@
 				border-color: #c9b1ff;
 			}
 		</style>
-
-		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-		<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
-
-		<script type="text/javascript" src="www/js/google-analytics.js"></script>
-
-		<script>
-			function ChangeButton(button_id){
-				var text = document.getElementById(button_id).firstChild;
-   				text.data = text.data == "Show Details" ? "Hide Details" : "Show Details";
-			}
-
-		</script>
-
-		<noscript>
-			<div class="alert alert-danger" style="margin: 1em;">
-				<strong>JavaScript not enabled!</strong> Heatmapper requires JavaScript to be
-				enabled in your browser in order to function. To enable JavaScript, do one of the
-				following:<br /><br />
-
-				<div style="font-size: small;">
-
-				<table>
-
-				<tr>
-				<td>
-
-				<i>In Google Chrome:</i>
-				<ol>
-				<li>Click the Chrome menu icon <img src="www/images/GoogleChromeMenuIcon.png"> on the browser toolbar.</li>
-				<li>Select <b>Settings</b>.</li>
-				<li>On the "Settings" page, click the <b>Show advanced settings...</b> link at the bottom.</li>
-				<li>In the "Privacy" section, click <b>Content settings...</b></li>
-				<li>Select <b>Allow all sites to run JavaScript (recommended)</b> in the "JavaScript" section.</li>
-				<li>Click <b>Done.</b></li>
-				<li>Refresh your Heatmapper page.</li>
-				</ol>
-
-				</td>
-				<td>
-
-				<i>In Windows Internet Explorer:</i>
-				<ol>
-					<li>On the <b>Tools</b> menu, click <b>Internet Options</b>, and then click the <b>Security</b> tab.</li>
-					<li>Click the <b>Internet</b> zone.</li>
-					<li>If you do not have to customize your Internet security settings, click <b>Default Level</b>. Then do step 4.<br /><br />
-					If you have to customize your Internet security settings, follow these steps:</li>
-					<ol type="a">
-					<li>Click <b>Custom Level</b>.</li>
-					<li>In the <b>Security Settings – Internet Zone</b> dialog box, click <b>Enable</b> for <b>Active Scripting</b> in the <b>Scripting</b> section.</li>
-					</ol>
-					<br />
-					<li>Click the <b>Back</b> button to return to the previous page, and then click the <b>Refresh</b> button to refresh Heatmapper.</li>
-				</ol>
-
-				</td>
-				</tr>
-				<tr>
-
-				<td>
-
-				<i>In Mozilla Firefox:</i><br />
-				<ul><li>In Firefox, JavaScript is enabled by default, but may be blocked if a privacy extension
-				such as NoScript or Ghostery was installed. Please edit the settings for the
-				particular extension you have installed to un-block Heatmapper.</li></ul><br /><br />
-
-				</td>
-				<td>
-
-				<i>In Apple Safari:</i>
-				<ol>
-					<li>From the <b>Safari</b> (on Mac) or <b>Edit</b> (on Windows) drop-down menu, select <b>Preferences...</b></li>
-					<li>Select the <b>Security</b> icon/tab at the top on the window.</li>
-					<li>Then, check the <b>Enable JavaScript</b> checkbox.</li>
-					<li>Refresh your Heatmapper page.</li>
-				</ol>
-
-				</td>
-				</tr>
-				</table>
-
-				</div>
-
-			</div>
-		</noscript>
-
-
 	</head>
-
 	<body>
 
 			<nav class="navbar navbar-default navbar-static-top" role="navigation">
@@ -222,25 +134,12 @@
 				<div class="notice-holder">
 					<div class="notice"">
 						<p style="text-align:justify; width:100%;">
-							In response to COVID-19, Heatmapper has been adapted to
-							map cold- and flu-like symptoms in Colombia, South America, to enable officials
-							to better respond to the crisis. People in Colombia can self-report symptoms at
-							<a href="https://cov19col.herokuapp.com" target="_blank">cov19col.herokuapp.com</a>.
-							Please help get the word out!
-						</p>
-						<p style="text-align:justify; width:100%;">
-							The project is open source, for both the
-							<a href="https://github.com/WishartLab/heatmapper/tree/symptom_mapping" target="_blank">heatmapping</a>
-							and
-							<a href="https://github.com/Marco8301/QT-Cov19-OS" target="_blank">self-reporting</a>
-							apps.
-						</p>
-						<p style="text-align:justify; width:100%;">
-							We will also soon be launching a separate site for mapping COVID-19 data.
+							Heatmapper has been re-written in Python! This new version brings many new changes, including
+							WebAssembly support, speed improvements, and more features. The old, R-Based Heatmapper is 
+							still available <a href=https://heatmapper.ca>here</a>. Checkout the <a href=https://github.com/WishartLab/heatmapper2/wiki>Wiki</a> for more information!
 						</p>
 					</div>
 				</div>
-
 			<div class="myRow" style="width:67%;">
 
 <!--
@@ -250,10 +149,10 @@
 
 				<div class="myCol" style="display:table-cell; width:67%; padding-left:3em; padding-right:3em;">
 
-				<img src="www/images/logo.png" class="logo" style="width:240px; padding-left:1em; padding-bottom:1em; float:right;">
+				<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/logo.png?raw=true" class="logo" style="width:240px; padding-left:1em; padding-bottom:1em; float:right;">
 
 				<div style="width:57%; border: 2px solid #002aff; background-color: #deffce; padding-top:0.6em; padding-left:0.6em; margin:0.25em; margin-bottom:1em;">
-					<img src="www/images/arrow.png" style="width:48px; padding-left:0.2em; padding-right:0.8em; padding-top:0.1em; float:left;">
+					<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/arrow.png?raw=true" style="width:48px; padding-left:0.2em; padding-right:0.8em; padding-top:0.1em; float:left;">
 
 					<p style="text-align:left;">
 					<i>Click in the menu above or on the buttons below to start making your heat map!</i>
@@ -285,7 +184,6 @@
 				<div class="well" style="display:table-cell; width:100%; float:right; ">
  -->
 
-
 				<div class="myCol well" style="display:table-cell; width:33%;">
 				<h5>Please cite:</h5>
 				<p>
@@ -300,11 +198,11 @@
 
 				<p>
 					<a href="http://www.cihr-irsc.gc.ca" target="_blank">
-						<img src="www/images/cihr.png" style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
+						<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/cihr.png?raw=true" style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
 					</a>
 
 					<a href="http://genomealberta.ca" target="_blank">
-						<img src="www/images/galberta.png" style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
+						<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/galberta.png?raw=true" style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
 					</a>
 				</p>
 
@@ -316,225 +214,89 @@
 		<div class="myTable" style="display:table;">
 
 			<div class="myRow">
-
 				<div class="well myCol">
 					<figure>
-
-						<a href="/expression">
-							<img src="www/images/expression.png" alt="Expression" class="border-img">
+						<a id="expressionImg" href="expression/site/index.html">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Expression.png" alt="Expression" class="border-img">
 						</a>
-
-						<figcaption>
-							<div style="margin-top:5px; margin-bottom:10px;">
-								<span class="heatmapTitle">Expression</span>
-								<button type="button" class="btn btn-primary" style="margin-left:20px;" onclick="heatmapperLink('expression');return false;">Try it!</button>
-							</div>
-
-							<a id="exp_btn" data-toggle="collapse" data-target="#exp" onClick="ChangeButton('exp_btn');">Show Details</a>
-							<div id="exp" class="collapse">
-								<br />
-								<em>
-									Displays unclustered expression data, such as from a <a href="https://en.wikipedia.org/wiki/Microarray" target="_blank">microarray</a> experiment, as a heatmap.
-									Hierarchical clustering can also be performed on the data and the resulting dendrogram can be viewed.
-								</em>
-
-								<div class = "sectionStats">
-									<br />
-									<strong>Input Formats:</strong> Comma-Separated Values (.csv), Tab Delimited (.txt, .dat, .tsv, .tab), or Microsoft Excel (.xls, .xlsx).
-									<br />
-									<strong>Example Usage:</strong> Cluster and visualize the results of a DNA microarray experiment to analyze gene expression levels
-									<br />
-									<strong>Number of Features:</strong> 18
-								</div>
-							<div>
-
-						</figcaption>
-
+						<p style="text-align:center;">
+							<i>Expression</i>
+						</p>
 					 </figure>
 				</div>
-
 				<div class="well myCol">
 					<figure>
-
-						<a href="/pairwise">
-							<img src="www/images/pairwise.jpg" alt="pairwise comparison" class="border-img">
+						<a id="pairwiseImg" href="pairwise/site/index.html">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Pairwise.png" alt="Pairwise" class="border-img">
 						</a>
-
-						<figcaption>
-							<div style="margin-top:5px; margin-bottom:10px;">
-								<span class="heatmapTitle">Pairwise Comparison</span>
-								<button type="button" class="btn btn-primary" style="margin-left:20px;" onclick="heatmapperLink('pairwise');return false;">Try it!</button>
-							</div>
-
-							<a id="pair_btn" data-toggle="collapse" data-target="#pair" onClick="ChangeButton('pair_btn');">Show Details</a>
-
-							<div id="pair" class="collapse">
-								<br />
-								<em>
-									Displays heatmap of user data either as a <a href=" https://en.wikipedia.org/wiki/Distance_matrix"  target="_blank">distance matrix</a>,
-									as a <a href="https://en.wikipedia.org/wiki/Correlation_and_dependence#Correlation_matrices" target="_blank">correlation matrix</a>, or as-is.
-								</em>
-
-								<div class = "sectionStats">
-									<br />
-									<strong>Input Formats:</strong> Comma-Separated Values (.csv), Tab Delimited (.txt, .dat, .tsv, .tab), Microsoft Excel (.xls, .xlsx), or Protein Data Bank format (.pdb).
-									<br />
-									<strong>Example Usage:</strong> Visualize pairwise distances for predicting protein structure
-									<br />
-									<strong>Number of Features:</strong> 14
-								</div>
-							</div>
-						</figcaption>
-
+						<p style="text-align:center;">
+							<i>Pairwise</i>
+						</p>
 					 </figure>
 				</div>
-
 				<div class="well myCol">
 					<figure>
-
-						<a href="/image">
-							<img src="www/images/image.jpg" alt="image overlay" class="border-img">
-
+						<a id="imageImg" href="image/site/index.html">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Image.png" alt="Image" class="border-img">
 						</a>
-
-						<figcaption>
-							<div style="margin-top:5px; margin-bottom:10px;">
-								<span class="heatmapTitle">Image Overlay</span>
-								<button type="button" class="btn btn-primary" style="margin-left:20px;" onclick="heatmapperLink('image');return false;">Try it!</button>
-							</div>
-
-							<a id="img_btn" data-toggle="collapse" data-target="#img" onClick="ChangeButton('img_btn');">Show Details</a>
-							<div id="img" class="collapse">
-								<br />
-								<em>
-									Displays a heatmap of densities based on values at plot coordinates corresponding to an image.
-								</em>
-
-								<div class = "sectionStats">
-									<br />
-									<strong>Input Formats:</strong>
-									Comma-Separated Values (.csv), Tab Delimited (.txt, .dat, .tsv, .tab), or Microsoft Excel (.xls, .xlsx) for the data values.
-									For the image upload, PNG (.png), JPEG (.jpeg or .jpg) or TIFF (.tiff or .tif) formats are supported.
-									<br />
-									<strong>Example Usage:</strong> Create a custom heatmap of measured bacterial presence and abundance on different parts of the body
-									<br />
-									<strong>Number of Features:</strong> 18
-								</div>
-							</div>
-						</figcaption>
-
+						<p style="text-align:center;">
+							<i>Image</i>
+						</p>
+					 </figure>
+				</div>
+				<div class="well myCol">
+					<figure>
+						<a id="geomapImg" href="geomap/site/index.html">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geomap.png" alt="Geomap" class="border-img">
+						</a>
+						<p style="text-align:center;">
+							<i>Geomap</i>
+						</p>
 					 </figure>
 				</div>
 			</div>
-
-			<div class="myRow">
+				<div class="myRow">
 				<div class="well myCol">
 					<figure>
-
-						<a href="/geomap">
-							<img src="www/images/geomap.png" alt="geomap" class="border-img">
+						<a id="geocoordinateImg" href="geocoordinate/site/index.html">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geocoordinate.png" alt="Geocoordinate" class="border-img">
 						</a>
-
-						<figcaption>
-							<div style="margin-top:5px; margin-bottom:10px;">
-								<span class="heatmapTitle">Geomap</span>
-								<button type="button" class="btn btn-primary" style="margin-left:20px;" onclick="heatmapperLink('geomap');return false;">Try it!</button>
-							</div>
-
-							<a id="map_btn" data-toggle="collapse" data-target="#map" onClick="ChangeButton('map_btn');">Show Details</a>
-							<div id="map" class="collapse">
-								<br />
-								<em>
-									Displays a <a href="https://en.wikipedia.org/wiki/Choropleth_map" target="_blank">choropleth</a>
-									heatmap specified by values assigned to locations based on political boundaries.
-								</em>
-
-								<div class = "sectionStats">
-									<br />
-									<strong>Input Formats:</strong> Comma-Separated Values (.csv), Tab Delimited (.txt, .dat, .tsv, .tab), or Microsoft Excel (.xls, .xlsx).
-									<br />
-									<strong>Example Usage:</strong> Visualize disease prevalence by country
-									<br />
-									<strong>Number of Features:</strong> 12
-								</div>
-							</div>
-						</figcaption>
-
-					 </figure>
-				</div>
-
-				<div class="well myCol">
-					<figure>
-
-						<a href="/geocoordinate">
-							<img src="www/images/geocoordinate.jpg" alt="Geocoordinate" class="border-img">
-						</a>
-
-						<figcaption>
-							<div style="margin-top:5px; margin-bottom:10px;">
-								<span class="heatmapTitle">Geocoordinate</span>
-								<button type="button" class="btn btn-primary" style="margin-left:20px;" onclick="heatmapperLink('geocoordinate');return false;">Try it!</button>
-							</div>
-
-							<a id="geo_btn" data-toggle="collapse" data-target="#geo" onClick="ChangeButton('geo_btn');">Show Details</a>
-							<div id="geo" class="collapse">
-								<br />
-								<em>
-									Displays a heatmap of densities based on values assigned to locations specified by latitude and longitude coordinates.
-									Density estimation calculation can be performed based on density of points or weighted by values specified for each coordinate.
-								</em>
-
-								<div class = "sectionStats">
-									<br />
-									<strong>Input Formats:</strong> Comma-Separated Values (.csv), Tab Delimited (.txt, .dat, .tsv, .tab), or Microsoft Excel (.xls, .xlsx).
-									<br />
-									<strong>Example Usage:</strong> Visualize observed animal population densities in a region
-									<br />
-									<strong>Number of Features:</strong> 13
-								</div>
-							</div>
-						</figcaption>
-
+						<p style="text-align:center;">
+							<i>Geocoordinate</i>
+						</p>
 					 </figure>
 				</div>
 				<div class="well myCol">
 					<figure>
-
-						<a href="/about/instructions">
-							<img src="www/images/about.png" alt="about" class="border-img">
-
+						<a id="3dImg" href="http://35.208.86.138:8005">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/3D.png" alt="3D" class="border-img">
 						</a>
-						<figcaption>
-							<h4>About</h4>
-							<a id="about_btn" data-toggle="collapse" data-target="#about" onClick="ChangeButton('about_btn');">Show Details</a>
-							<div id="about" class="collapse">
-							<br />
-							<em>
-								Provides information about heatmapper.ca.
-								The about section contains four subsections: Instructions, Gallery, Contact, and GitHub.
-							</em>
-
-						<div class = "sectionStats">
-							<br />
-							<strong>Instructions:</strong>
-							View instructions on how to use each section
-							<br />
-							<strong>Gallery:</strong>
-							View a gallery of examples
-							<br />
-							<strong>Contact:</strong>
-							Get the contact information for the author of heatmapper.ca and additional information about the project
-							<br />
-							<strong>GitHub:</strong>
-							View the project source code
-						</div>
-						</div>
-					</figcaption>
-
+						<p style="text-align:center;">
+							<i>3D</i>
+						</p>
+					 </figure>
+				</div>
+				<div class="well myCol">
+					<figure>
+						<a id="spatialImg" href="http://35.208.86.138:8006">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spatial.png" alt="Spatial" class="border-img">
+						</a>
+						<p style="text-align:center;">
+							<i>Spatial</i>
+						</p>
+					 </figure>
+				</div>
+				<div class="well myCol">
+					<figure>
+						<a id="aboutImg" href="https://github.com/WishartLab/heatmapper2/wiki">
+							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/About.png" alt="About" class="border-img">
+						</a>
+						<p style="text-align:center;">
+							<i>About</i>
+						</p>
 					 </figure>
 				</div>
 			</div>
-
 		</div>
 
 		<div style="font-size: small; text-align:center;">
@@ -560,7 +322,12 @@
 					document.getElementById('pairwiseLink').href = 'http://35.208.86.138:8001';
 					document.getElementById('imageLink').href = 'http://35.208.86.138:8002';
 					document.getElementById('geomapLink').href = 'http://35.208.86.138:8003';
-					document.getElementById('geocoordinateLink').href = 'http://35.208.86.138:8004';
+					document.getElementById('geocoordinateImg').href = 'http://35.208.86.138:8004';
+					document.getElementById('expressionImg').href = 'http://35.208.86.138:8000';
+					document.getElementById('pairwiseImg').href = 'http://35.208.86.138:8001';
+					document.getElementById('imageImg').href = 'http://35.208.86.138:8002';
+					document.getElementById('geomapImg').href = 'http://35.208.86.138:8003';
+					document.getElementById('geocoordinateImg').href = 'http://35.208.86.138:8004';
 				}
 			};
 		</script>
