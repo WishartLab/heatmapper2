@@ -329,11 +329,11 @@ def NavBar(current):
 	"""
 
 	Sources = {
-		"expression": URL if Pyodide else f"{Server}:{Port}",
-		"pairwise": URL if Pyodide else f"{Server}:{Port + 1}",
-		"image": URL if Pyodide else f"{Server}:{Port + 2}",
-		"geomap": URL if Pyodide else f"{Server}:{Port + 3}",
-		"geocoordinate": URL if Pyodide else f"{Server}:{Port + 4}",
+		"expression": f"{URL}/expression/site/index.html" if Pyodide else f"{Server}:{Port}",
+		"pairwise": f"{URL}/pairwise/site/index.html" if Pyodide else f"{Server}:{Port + 1}",
+		"image": f"{URL}/image/site/index.html" if Pyodide else f"{Server}:{Port + 2}",
+		"geomap": f"{URL}/geomap/site/index.html" if Pyodide else f"{Server}:{Port + 3}",
+		"geocoordinate": f"{URL}/geocoordinate/site/index.html" if Pyodide else f"{Server}:{Port + 4}",
 		"3d": f"{Server}:{Port + 5}",
 		"spatial": f"{Server}:{Port + 6}",
 	}
