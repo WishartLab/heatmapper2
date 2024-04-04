@@ -242,7 +242,7 @@ app_ui = ui.page_fluid(
 					"example21.csv": "Example 5",
 					"example3.csv": "Example 6"
 				},
-				types=[".csv", ".txt", ".xlsx"]
+				types=[".csv", ".txt", ".xlsx", ".xls", ".odf"]
 			),
 
 			ui.input_checkbox(id="Temporal", label="Temporal Heatmap"),

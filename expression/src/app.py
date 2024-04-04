@@ -243,7 +243,7 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3"},
-				types=[".csv", ".txt", ".xlsx", ".pdb", ".dat"]
+				types=[".csv", ".txt", ".xlsx", ".xls", ".odf", ".pdb", ".dat"]
 			),
 
 			# The column that holds names for the data.

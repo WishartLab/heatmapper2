@@ -247,7 +247,7 @@ app_ui = ui.page_fluid(
 				"example4.fasta": "Example 4",
 				"ala_phe_ala.pdb": "Example 5",
 				},
-				types=[".csv", ".txt", ".xlsx", ".pdb", ".dat", ".fasta"]
+				types=[".csv", ".txt", ".xlsx", ".xls", ".odf", ".pdb", ".dat", ".fasta"]
 			),
 
 			# Specify Matrix Type

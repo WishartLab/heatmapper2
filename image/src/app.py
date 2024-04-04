@@ -156,7 +156,7 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".xlsx"]),
+			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".xlsx", ".xls", ".odf"]),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", accept=[".png", ".jpg"], multiple=False)),
 

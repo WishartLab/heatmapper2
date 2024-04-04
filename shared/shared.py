@@ -24,7 +24,6 @@ Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 Server = "http://35.208.86.138"
 Port = 8000
 
-
 # Detect the running environment
 if "pyodide" in modules:
 	from pyodide.http import pyfetch
@@ -129,7 +128,7 @@ class Cache:
 
 		suffix = Path(n).suffix
 		if suffix == ".csv": return Cache.HandleDataFrame(i, read_csv)
-		elif suffix == ".xlsx": return Cache.HandleDataFrame(i, read_excel)
+		elif suffix == ".xlsx" or suffix == ".xls" or suffix == ".odf": return Cache.HandleDataFrame(i, read_excel)
 		else: return Cache.HandleDataFrame(i, read_table)
 
 
