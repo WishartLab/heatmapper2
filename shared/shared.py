@@ -10,7 +10,6 @@ from shiny import ui
 from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
 from io import BytesIO
-from tempfile import NamedTemporaryFile
 from sys import modules
 from pathlib import Path
 from enum import Enum
@@ -97,7 +96,7 @@ class Cache:
 	"""
 
 	@staticmethod
-	def HandleDataFrame(path, function):
+	def HandleDataFrame(i, function):
 		"""
 		@brief Handle DataFrame's
 		@param i: The binary of the file
@@ -106,29 +105,31 @@ class Cache:
 		"""
 
 		# Read the table once.
-		df = function(path.resolve()).fillna(0)
+		df = function(i).fillna(0)
 
 		# If the first column value is a float, we assume it's data, and not column names.
 		# Re-read the DataFrame with generic column names instead
 		try:
 			float(df.columns[0])
-			df = function(path.resolve(), header=None, names=[f"Column {i}" for i in range(df.shape[1])])
+			i.seek(0)
+			df = function(i, header=None, names=[f"Column {i}" for i in range(df.shape[1])])
 		except ValueError: pass
 		return df
 
 
 	@staticmethod
-	def DefaultHandler(path):
+	def DefaultHandler(n, i):
 		"""
 		@brief The default handler. It can handle csv, xlsx, and defaults all other files to read_table
-		@param n: The path to the file
+		@param n: The name of the file. We use this for pattern matching against the suffix.
+		@param i: The binary of the file (Either via read() or BytesIO())
 		@returns: An object, if the provided file is supported, None otherwise.
 		"""
 
-		suffix = path.suffix
-		if suffix == ".csv": return Cache.HandleDataFrame(path, read_csv)
-		elif suffix == ".xlsx" or suffix == ".xls" or suffix == ".odf": return Cache.HandleDataFrame(path, read_excel)
-		else: return Cache.HandleDataFrame(path, read_table)
+		suffix = Path(n).suffix
+		if suffix == ".csv": return Cache.HandleDataFrame(i, read_csv)
+		elif suffix == ".xlsx" or suffix == ".xls" or suffix == ".odf": return Cache.HandleDataFrame(i, read_excel)
+		else: return Cache.HandleDataFrame(i, read_table)
 
 
 	async def _remote(self, url):
@@ -141,12 +142,16 @@ class Cache:
 
 	async def _local(self, url):
 		if not exists(url): return None
-		return Path(url)
+		elif url not in self._primary:
+			self._primary[url] = open(url, "rb").read()
+		return self._primary[url]
 
 
 	def _local_sync(self, url):
 		if not exists(url): return None
-		return Path(url)
+		elif url not in self._primary:
+			self._primary[url] = open(url, "rb").read()
+		return self._primary[url]
 
 
 	def __init__(self, project, DataHandler = DefaultHandler):
@@ -197,16 +202,16 @@ class Cache:
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
 			n = str(file[0]["datapath"])
-			path = Path(n)
+			raw = self._local_sync(n)
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
 			n = str(source + example_file)
-			path = self._local_sync(n)
-		
+			raw = self._local_sync(n)
+
 		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
 		if n not in self._secondary:
-			self._secondary[n] = self._handler(path)
+			self._secondary[n] = self._handler(n, BytesIO(raw))
 
 		return (n, self._secondary[n]) if return_n else self._secondary[n]
 
@@ -241,20 +246,16 @@ class Cache:
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
 			n = str(file[0]["datapath"])
-			path = Path(n)
+			raw = await self._local(n)
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
 			n = str(source + example_file)
 			raw = await self._download(n)
-			if type(raw) is bytes:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read())
-				path = Path(temp.name)
-			else: path = raw
 
 		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
 		if n not in self._secondary:
-			self._secondary[n] = self._handler(path)
+			self._secondary[n] = self._handler(n, BytesIO(raw))
 
 		return (n, self._secondary[n]) if return_n else self._secondary[n]
 

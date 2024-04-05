@@ -15,7 +15,8 @@
 from shiny import App, reactive, render, ui
 from io import BytesIO
 from matplotlib.pyplot import get_cmap
-from tempfile import TemporaryDirectory
+from pathlib import Path
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from pandas import DataFrame
 from numpy import append
 from anndata import read_h5ad
@@ -46,23 +47,27 @@ def server(input, output, session):
 	Jobs = 8
 
 
-	def HandleData(path):
+	def HandleData(n, i):
 		"""
 		@brief A custom Data Handler for the Cache.
-		@param path: the Path to the file
+		@param n: The name of the file
+		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
 		@returns A data object from the cache.
 		@info This Data Handler supports h5ad files via scanpy.
 		"""
 
-		suffix = path.suffix
+		suffix = Path(n).suffix
 		if suffix == ".h5ad":
-			adata = read_h5ad(path.resolve())
+			if type(i) is BytesIO:
+				temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
+				i = temp.name
+			adata = read_h5ad(i)
 			gr.spatial_neighbors(adata)
 			return adata
 
 		# Pass loading .h5, we deal with them in Load()
 		elif suffix == ".h5": return None
-		else: return DataCache.DefaultHandler(path)
+		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("spatial", DataHandler=HandleData)
 
 

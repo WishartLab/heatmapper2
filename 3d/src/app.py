@@ -13,6 +13,9 @@
 #
 
 from shiny import App, reactive, render, ui
+from io import BytesIO
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from pandas import DataFrame
 from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
@@ -35,18 +38,29 @@ def server(input, output, session):
 	}
 
 
-	def HandleData(path):
+	def HandleData(n, i):
 		"""
 		@brief A custom Data Handler for the Cache.
-		@param n: The Path object to the file.
+		@param n: The name of the file
+		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
 		@returns A data object from the cache.
 		@info This Data Handler supports object files, and images as textures.
 		"""
 
-		suffix = path.suffix
-		if suffix == ".obj": return VistaRead(path.resolve())
-		if suffix == ".png" or suffix == ".jpg": return read_texture(path.resolve())
-		else: return DataCache.DefaultHandler(path)
+		suffix = Path(n).suffix
+		if suffix == ".obj":
+				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
+				if type(i) is BytesIO:
+					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
+					i = temp.name
+				return VistaRead(i)
+		if suffix == ".png" or suffix == ".jpg":
+				# If the file is sourced from a BytesIO, we need to store it in a file temporarily.
+				if type(i) is BytesIO:
+					temp = NamedTemporaryFile(suffix=suffix); temp.write(i.read())
+					i = temp.name
+				return read_texture(i)
+		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("3d", DataHandler=HandleData)
 
 

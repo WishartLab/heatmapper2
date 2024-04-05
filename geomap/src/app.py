@@ -38,15 +38,18 @@ def server(input, output, session):
 		"example6.csv": "COVID 19 information reported by the Canadian Government, available at https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291"
 	}
 
-	def HandleData(path):
+	def HandleData(n, i):
 		"""
 		@brief A custom Data Handler for the Cache.
-		@param path: Path to the file
+		@param n: The name of the file
+		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
 		@returns A data object from the cache.
 		@info This Data Handler supports geojson files as json
 		"""
-		if path.suffix == ".geojson": return loads(path.resolve())
-		else: return DataCache.DefaultHandler(path)
+		if Path(n).suffix == ".geojson":
+			return loads(i.read())
+		else:
+			return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("geomap", DataHandler=HandleData)
 
 
