@@ -141,16 +141,12 @@ class Cache:
 
 	async def _local(self, url):
 		if not exists(url): return None
-		elif url not in self._primary:
-			self._primary[url] = open(url, "rb").read()
-		return self._primary[url]
+		return Path(url)
 
 
 	def _local_sync(self, url):
 		if not exists(url): return None
-		elif url not in self._primary:
-			self._primary[url] = open(url, "rb").read()
-		return self._primary[url]
+		return Path(url)
 
 
 	def __init__(self, project, DataHandler = DefaultHandler):
@@ -206,10 +202,8 @@ class Cache:
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
 			n = str(source + example_file)
-			raw = self._local_sync(n)
-			temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read())
-			path = Path(temp.name)
-
+			path = self._local_sync(n)
+		
 		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
 		if n not in self._secondary:
 			self._secondary[n] = self._handler(path)
@@ -253,8 +247,10 @@ class Cache:
 		else:
 			n = str(source + example_file)
 			raw = await self._download(n)
-			temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read())
-			path = Path(temp.name)
+			if type(raw) is bytes:
+				temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read())
+				path = Path(temp.name)
+			else: path = raw
 
 		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
 		if n not in self._secondary:
