@@ -36,11 +36,11 @@ def server(input, output, session):
 		"ala_phe_ala.pdb": "An example PDB file.",
 	}
 
-	def HandleData(n, i):
-		suffix = Path(n).suffix
-		if suffix == ".pdb": return PDBMatrix(n)
-		elif suffix == ".fasta": return FASTAMatrix(n)
-		else: return DataCache.DefaultHandler(n, i)
+	def HandleData(path):
+		suffix = path.suffix
+		if suffix == ".pdb": return PDBMatrix(path.resolve())
+		elif suffix == ".fasta": return FASTAMatrix(path.resolve())
+		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("pairwise", HandleData)
 
 
