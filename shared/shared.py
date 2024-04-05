@@ -248,7 +248,7 @@ class Cache:
 			n = str(source + example_file)
 			raw = await self._download(n)
 			if type(raw) is bytes:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read())
+				temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read()); temp.seek(0)
 				path = Path(temp.name)
 			else: path = raw
 
