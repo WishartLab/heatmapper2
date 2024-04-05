@@ -41,7 +41,7 @@ def server(input, output, session):
 		@info This Data Handler supports png and jpg images as PIL.Image objects
 		"""
 		if path.suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]: return Image.open(path.resolve())
-		else: return DataCache.DefaultHandler(n, i)
+		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("image", DataHandler=HandleData)
 
 

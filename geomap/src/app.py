@@ -45,7 +45,7 @@ def server(input, output, session):
 		@returns A data object from the cache.
 		@info This Data Handler supports geojson files as json
 		"""
-		if path.suffix == ".geojson": return loads(path.resolve())
+		if path.suffix == ".geojson": return loads(path.open().read())
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("geomap", DataHandler=HandleData)
 
