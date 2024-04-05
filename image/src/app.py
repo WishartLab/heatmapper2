@@ -33,20 +33,15 @@ def server(input, output, session):
 		}
 	}
 
-	def HandleData(n, i):
+	def HandleData(path):
 		"""
 		@brief A custom Data Handler for the Cache.
-		@param n: The name of the file
-		@param i: The source of the file. It can be a path to a file (string) or a BytesIO object.
+		@param path: The path to the file
 		@returns A data object from the cache.
 		@info This Data Handler supports png and jpg images as PIL.Image objects
 		"""
-
-		suffix = Path(n).suffix
-		if suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]:
-			return Image.open(i)
-		else:
-			return DataCache.DefaultHandler(n, i)
+		if path.suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]: return Image.open(path.resolve())
+		else: return DataCache.DefaultHandler(n, i)
 	DataCache = Cache("image", DataHandler=HandleData)
 
 
