@@ -15,7 +15,7 @@
 from shiny import App, reactive, render, ui
 from io import BytesIO
 from matplotlib.pyplot import get_cmap
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, NamedTemporaryFile
 from pandas import DataFrame
 from numpy import append
 from anndata import read_h5ad
