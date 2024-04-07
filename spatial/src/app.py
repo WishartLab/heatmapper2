@@ -132,6 +132,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Statistic, input.Perm, input.P, input.Correlation, input.Keys, input.Shape, input.Features, input.ImgOpacity, input.ColorMap, input.Opacity)
 	def Heatmap():
 
 		with ui.Progress() as p:
@@ -182,6 +183,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab)
 	def Centrality():
 		with ui.Progress() as p:
 
@@ -196,7 +198,6 @@ def server(input, output, session):
 				gr.centrality_scores(
 					adata,
 					cluster_key=key,
-					score=input.Score(),
 					n_jobs=Jobs,
 					show_progress_bar=False
 				)
@@ -207,6 +208,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Function, input.Distance)
 	def Ripley():
 		with ui.Progress() as p:
 
@@ -231,6 +233,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Interval, input.Splits, input.Cluster, input.OccurrenceGraph)
 	def Occurrence():
 		with ui.Progress() as p:
 
@@ -274,6 +277,7 @@ def server(input, output, session):
 
 
 	@reactive.Effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Keys)
 	async def UpdateColumnSelection():
 		adata = Load()
 		if adata is None: return
@@ -329,17 +333,6 @@ app_ui = ui.page_fluid(
 				ui.input_slider(id="Opacity", label="Data Opacity", value=1, min=0.0, max=1.0, step=0.1),
 
 				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=["Image"], selected=["Image"]),
-			),
-
-
-			ui.panel_conditional(
-				"input.MainTab === 'Centrality'",
-				ui.HTML("<b>Centrality Settings</b>"),
-				ui.input_select(id="Score", label="Score", choices={
-					"closeness_centrality": "Closeness Centrality",
-					"average_clustering": "Average Clustering",
-					"degree_centrality": "Degree Centrality"
-					}),
 			),
 
 	
