@@ -18,6 +18,7 @@ from matplotlib.pyplot import get_cmap
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from pandas import DataFrame
 from numpy import append
+from pathlib import Path
 from anndata import read_h5ad
 from squidpy import gr, pl, read
 from shiny.types import FileInfo
