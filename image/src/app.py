@@ -14,7 +14,7 @@
 #
 
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import figure, colorbar
+from matplotlib.pyplot import subplots, colorbar
 from scipy.interpolate import interp2d
 from numpy import arange, meshgrid, linspace
 from PIL import Image
@@ -62,35 +62,27 @@ def server(input, output, session):
 
 			# Wrangle into an acceptable format.
 			p.inc(message="Formatting...")
-			hash = DataCache.GetHash(input.File(), input.Example(), input.Smoothing(), input.Interpolation())
-			obj = DataCache.Hashed(hash)
-			if obj is None:
-				print("Hashing")
-				v_col = Filter(df.columns, ColumnType.Value, only_one=True, reject_unknown=True)
-				x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
-				y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
+			v_col = Filter(df.columns, ColumnType.Value, only_one=True, reject_unknown=True)
+			x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
+			y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
 
-				if {v_col, x_col, y_col}.issubset(df.columns):
-					df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
+			if {v_col, x_col, y_col}.issubset(df.columns):
+				df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
 
-				# Expand the data for more refined points
-				x = arange(df.shape[1])
-				y = arange(df.shape[0])
-				x_new = linspace(0, df.shape[1] - 1, input.Smoothing())
-				y_new = linspace(0, df.shape[0] - 1, input.Smoothing())
-				interp_func = interp2d(x, y, df, kind=input.Interpolation().lower())
-				data_interp = interp_func(x_new, y_new)
-				X_new, Y_new = meshgrid(x_new, y_new)
-				DataCache.Hash(hash, (X_new, Y_new, data_interp))
-			else:
-				X_new, Y_new, data_interp = obj
+			# Expand the data for more refined points
+			x = arange(df.shape[1])
+			y = arange(df.shape[0])
+			x_new = linspace(0, df.shape[1] - 1, input.Smoothing())
+			y_new = linspace(0, df.shape[0] - 1, input.Smoothing())
+			interp_func = interp2d(x, y, df, kind=input.Interpolation().lower())
+			data_interp = interp_func(x_new, y_new)
+			X_new, Y_new = meshgrid(x_new, y_new)
 
 			p.inc(message="Plotting...")
-			fig = figure(clear=True)
-			ax = fig.add_subplot(111)
+			fig, ax = subplots()
 
 			# Add the image as an overlay, if we have one.
-			if img is not None: ax.imshow(img, extent=[X_new.min(), X_new.max(), Y_new.min(), Y_new.max()], aspect="auto",zorder=0)
+			if img is not None: ax.imshow(img, extent=[x_new.min(), x_new.max(), y_new.min(), y_new.max()], aspect="auto",zorder=0)
 
 			im = ax.contourf(
 				X_new, Y_new, data_interp,
@@ -112,7 +104,8 @@ def server(input, output, session):
 		if "x" in input.Features(): ax.tick_params(axis="x", labelsize=input.TextSize())
 		else: ax.set_xticklabels([])
 
-		return fig
+		return ax
+
 
 	@output
 	@render.data_frame
