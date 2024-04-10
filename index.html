@@ -21,13 +21,13 @@
 
 			.logo {
 				/* These options are to prevent anti-aliasing */
-				image-rendering: optimizeSpeed;			 /* STOP SMOOTHING, GIVE ME SPEED  */
-				image-rendering: -moz-crisp-edges;		  /* Firefox						*/
-				image-rendering: -o-crisp-edges;			/* Opera						  */
+				image-rendering: optimizeSpeed;			 /* STOP SMOOTHING, GIVE ME SPEED	*/
+				image-rendering: -moz-crisp-edges;			/* Firefox						*/
+				image-rendering: -o-crisp-edges;			/* Opera							*/
 				image-rendering: -webkit-optimize-contrast; /* Chrome (and eventually Safari) */
 				image-rendering: pixelated; /* Chrome */
-				image-rendering: optimize-contrast;		 /* CSS3 Proposed				  */
-				-ms-interpolation-mode: nearest-neighbor;   /* IE8+						   */
+				image-rendering: optimize-contrast;		 /* CSS3 Proposed					*/
+				-ms-interpolation-mode: nearest-neighbor;	 /* IE8+							 */
 			}
 
 			.myTable {
@@ -87,15 +87,27 @@
 		</style>
 
 		<!-- -Load a WebAssembly site in the background to cache it. -->
-		 <script>
-        function preloadSubPage() {
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = 'expression/site/index.html'; // Set the path to the sub-page index.html
-            document.body.appendChild(iframe);
-        }
-        window.addEventListener('load', preloadSubPage);
-    </script>
+		<script>
+			var appUrls = [
+					'expression/site/index.html',
+					'pairwise/site/index.html',
+					'geocoordinate/site/index.html',
+					'geomap/site/index.html',
+					'image/site/index.html'
+			];
+
+			function preloadApplications() {
+				// Loop through each URL in appUrls array
+				appUrls.forEach(function(url) {
+						// Create a new iframe element
+						var iframe = document.createElement('iframe');
+						iframe.style.display = 'none';
+						iframe.src = url; // Set the source to the current URL in the loop
+						document.body.appendChild(iframe); // Append iframe to the document body
+				});
+			}
+			window.addEventListener('load', preloadApplications);
+		</script>
 	</head>
 	<body>
 
