@@ -149,7 +149,7 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"example1.csv": "Example 1", "texture.jpg": "Example 2"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"]),
+			FileSelection(examples={"example1.csv": "Example 1", "texture.jpg": "Example 2"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"], project="3D"),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Object", "Choose an Object File", accept=[".obj"], multiple=False)),
 

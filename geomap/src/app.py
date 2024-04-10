@@ -274,7 +274,8 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3", "example6.csv": "Example 4"},
-				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"]
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
+				project="Geomap"
 			),
 
 			ui.input_radio_buttons(id="JSONFile", label="Specify a GeoJSON File", choices=["Provided", "Upload"], selected="Provided", inline=True),

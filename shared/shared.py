@@ -358,7 +358,7 @@ def NavBar(current):
 	)
 
 
-def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Example"):
+def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Example", project="Overview"):
 	"""
 	@brief Returns the file selection dialog for the user to upload/select an example
 	@param examples: Either a list of example file names, or a dictionary mapping
@@ -366,6 +366,7 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	@param upload_label: The label for the upload input. Useful to define specifically what kind of files are needed
 	@param multiple: Whether to accept multiple files. 
 	@param default: Whether to start on the example, or upload dialog
+	@param project: The name of a project, to specify a specified header within the Interface documentation
 	@returns A list, containing the necessary ui components for uploading/selecting
 	@info The returns elements are named:
 		input.SourceFile: The ui.input_radio_buttons for whether the user wants to choose an "Example" or "Upload"
@@ -396,7 +397,11 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 			ui.popover(ui.input_action_link(id="ExampleInfoButton", label="Info"), ui.output_text("ExampleInfo")),
 			col_widths=[8,2],
 		)
-	)]
+	),
+
+	ui.br(),
+	ui.HTML(f"<a href='https://github.com/WishartLab/heatmapper2/wiki/Interface#{project}' target='_blank' rel='noopener noreferrer'>Info on Settings</a>"),
+	]
 
 
 def MainTab(*args, m_type=ui.output_plot):

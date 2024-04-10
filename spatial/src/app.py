@@ -308,7 +308,8 @@ app_ui = ui.page_fluid(
 				},
 				types=[".h5", ".png", ".csv", ".json", ".h5ad"],
 				multiple=True,
-				default="Upload"
+				default="Upload",
+				project="Spatial"
 			),
 
 			ui.panel_conditional(
