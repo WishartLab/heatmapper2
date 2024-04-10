@@ -151,6 +151,10 @@ class Cache:
 		return Path(url)
 
 
+	@staticmethod
+	def GetHash(*args): return "".join([str(option) for option in args])
+
+
 	def __init__(self, project, DataHandler = DefaultHandler):
 		"""
 		@brief Initialize an instance of the Cache object.
@@ -307,6 +311,28 @@ class Cache:
 			n = file[0]["datapath"]
 		else: n = source + example_file
 		del self._secondary[n]
+
+
+	def Hash(self, hash, data):
+		"""
+		@brief Stores an object with a group of options
+		@param hash: The hash created by Cache.GetHash()
+		@param data: The object that should be stored in the cache.
+		"""
+		self._secondary[hash] = data
+
+
+	def Hashed(self, hash):
+		"""
+		@brief Checks if a particular set of options are cached.
+		@param hash: The hash created by Cache.GetHash()
+		@returns The object, if it exists, None otherwise.
+		"""
+		if hash in self._secondary:
+			return self._secondary[hash]
+		else:
+			return None
+
 
 
 def TableValueUpdate(df, input):
