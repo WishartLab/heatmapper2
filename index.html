@@ -85,6 +85,17 @@
 				border-color: #c9b1ff;
 			}
 		</style>
+
+		<!-- -Load a WebAssembly site in the background to cache it. -->
+		 <script>
+        function preloadSubPage() {
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'expression/site/index.html'; // Set the path to the sub-page index.html
+            document.body.appendChild(iframe);
+        }
+        window.addEventListener('load', preloadSubPage);
+    </script>
 	</head>
 	<body>
 
