@@ -86,12 +86,11 @@
 			}
 		</style>
 
-		<!-- -Load a WebAssembly site in the background to cache it. -->
+		<!-- -Load a WebAssembly site in the background to cache it. These three
+			contain all WASM dependencies, so should cache everything. -->
 		<script>
 			var appUrls = [
-					'expression/site/index.html',
 					'pairwise/site/index.html',
-					'geocoordinate/site/index.html',
 					'geomap/site/index.html',
 					'image/site/index.html'
 			];
