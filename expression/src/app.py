@@ -16,9 +16,12 @@
 
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import figure, subplots, colorbar
+from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
+from sklearn.preprocessing import StandardScaler
+from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate, Colors
 
 
 def server(input, output, session):
@@ -46,7 +49,6 @@ def server(input, output, session):
 		# Drop the naming columns before linkage.
 		data = df.drop(columns=Filter(df.columns, ColumnType.Name))
 		x_labels = ["X" + name if list(data.columns).count(name) == 1 else "X" + name + f".{i+1}" for i, name in enumerate(data.columns)]
-
 		return list(df[name]), x_labels, data
 
 
@@ -105,8 +107,11 @@ def server(input, output, session):
 				ax_row = fig.add_subplot(gs[1, 0])
 				row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
 				ax_row.axis("off")
-				index_labels = [index_labels[i] for i in row_dendrogram["leaves"]]
-				df = data.iloc[row_dendrogram["leaves"]]
+				leaves = row_dendrogram["leaves"]
+				leaves.reverse()
+
+				index_labels = [index_labels[i] for i in leaves]
+				df = data.iloc[leaves]
 			else:
 				df = data
 
@@ -116,17 +121,22 @@ def server(input, output, session):
 				col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
 				ax_col.axis("off")
 
-			# Handle normalization
-			if input.ScaleType() == "Row":
-				df = df.div(df.max(axis=1), axis=0)
-			else:
-				df = df.div(df.max(axis=0), axis=1)
+			# Handle scaling
+			if input.ScaleType() != "None":
+				scaler = StandardScaler()
+				df = DataFrame(scaler.fit_transform(df.T).T if input.ScaleType() == "Row" else scaler.fit_transform(df), columns=df.columns, index=df.index)
 
 			# Render the heatmap.
 			ax_heatmap = fig.add_subplot(gs[1, 1])
+
+			if input.ColorMap() == "Custom":
+				colors = [input.Low().lower(), input.Mid().lower(), input.High().lower()]
+			else:
+				colors = input.ColorMap().split("/")
+
 			heatmap = ax_heatmap.imshow(
 				df,
-				cmap=input.ColorMap().lower(),
+				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()),
 				interpolation=input.Interpolation().lower(),
 				aspect="auto",
 			)
@@ -182,7 +192,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Features)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Low, input.Mid, input.High, input.Bins, input.Features)
 	async def Heatmap(): return await GenerateHeatmap()
 
 
@@ -264,13 +274,36 @@ app_ui = ui.page_fluid(
 				ui.br(),
 
 				# Define how the colors are scaled.
-				ui.input_select(id="ScaleType", label="Scale Type", choices=["Row", "Column", "None"], selected="None"),
+				ui.input_select(id="ScaleType", label="Scale Type", choices=["Row", "Column", "None"], selected="Row"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
 				ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
 
-				# Set the ColorMap used.
-				ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
+				ui.br(),
+
+				# Set the ColorMap used. Our parsers just splits by slashes
+				ui.input_select(id="ColorMap", label="Color Map", choices={
+						"Custom": "Custom", 
+						"Blue/White/Yellow": "Blue/Yellow",
+						"Red/Black/Green": "Red/Green",
+						"Pink/White/Green": "Pink/Green",
+						"Blue/Green/Yellow": "Blue/Green/Yellow",
+						"Black/Gray/White": "Grayscale",
+						"Red/Orange/Yellow/Green/Blue/Indigo/Violet": "Rainbow",
+					}
+				),
+
+				ui.panel_conditional(
+					"input.ColorMap === 'Custom'",
+					ui.HTML("Low/Mid/High Colors"),
+					ui.input_select(id="Low", label=None, choices=Colors, selected="Blue"),
+					ui.input_select(id="Mid", label=None, choices=Colors, selected="White"),
+					ui.input_select(id="High", label=None, choices=Colors, selected="Yellow"),
+				),
+
+				ui.br(),
+
+				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
 
 				# Toggle rendering features. All are on by default.
 				ui.input_checkbox_group(id="Features", label="Heatmap Features",

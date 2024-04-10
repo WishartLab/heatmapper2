@@ -32,6 +32,8 @@ if "pyodide" in modules:
 else:
 	Pyodide = False
 
+# MatPlotLib Colors
+Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "Olive", "Cyan", "White", "Yellow"]
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
 Columns = {

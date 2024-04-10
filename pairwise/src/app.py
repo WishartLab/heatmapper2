@@ -17,12 +17,13 @@
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import subplots, colorbar
 from scipy.spatial.distance import pdist, squareform
+from matplotlib.colors import LinearSegmentedColormap
 from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
 from pathlib import Path
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableValueUpdate
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableValueUpdate, Colors
 
 
 def server(input, output, session):
@@ -168,7 +169,17 @@ def server(input, output, session):
 
 			p.inc(message="Plotting...")
 			fig, ax = subplots()
-			im = ax.imshow(df, cmap=input.ColorMap().lower(), interpolation=input.Interpolation().lower())
+
+			if input.ColorMap() == "Custom":
+				colors = [input.Low().lower(), input.Mid().lower(), input.High().lower()]
+			else:
+				colors = input.ColorMap().split("/")
+
+			im = ax.imshow(
+				df, 
+				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()), 
+				interpolation=input.Interpolation().lower()
+			)
 
 			# Visibility of features
 			if "legend" in input.Features(): colorbar(im, ax=ax, label="Distance")
@@ -204,7 +215,7 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MatrixType, input.TextSize, input.DistanceMethod, input.CorrelationMethod, input.Interpolation, input.ColorMap, input.Features, input.Chain, input.K)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MatrixType, input.TextSize, input.DistanceMethod, input.CorrelationMethod, input.Interpolation, input.ColorMap, input.Low, input.Mid, input.High, input.Bins, input.Features, input.Chain, input.K)
 	async def Heatmap(): return await GenerateHeatmap()
 
 	@output
@@ -272,8 +283,31 @@ app_ui = ui.page_fluid(
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
 			ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
 
-			# Set the ColorMap used.
-			ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
+			ui.br(),
+
+			# Set the ColorMap used. Our parsers just splits by slashes
+			ui.input_select(id="ColorMap", label="Color Map", choices={
+					"Custom": "Custom", 
+					"Blue/White/Yellow": "Blue/Yellow",
+					"Red/Black/Green": "Red/Green",
+					"Pink/White/Green": "Pink/Green",
+					"Blue/Green/Yellow": "Blue/Green/Yellow",
+					"Black/Gray/White": "Grayscale",
+					"Red/Orange/Yellow/Green/Blue/Indigo/Violet": "Rainbow",
+				}
+			),
+
+			ui.panel_conditional(
+				"input.ColorMap === 'Custom'",
+				ui.HTML("Low/Mid/High Colors"),
+				ui.input_select(id="Low", label=None, choices=Colors, selected="Blue"),
+				ui.input_select(id="Mid", label=None, choices=Colors, selected="White"),
+				ui.input_select(id="High", label=None, choices=Colors, selected="Yellow"),
+			),
+
+			ui.br(),
+
+			ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
 
 			# Customize what aspects of the heatmap are visible
 			ui.input_checkbox_group(id="Features", label="Heatmap Features",
