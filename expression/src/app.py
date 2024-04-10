@@ -21,6 +21,8 @@ from scipy.cluster import hierarchy
 from sklearn.preprocessing import StandardScaler
 from pandas import DataFrame
 
+import sklearn
+
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate, Colors
 
 
