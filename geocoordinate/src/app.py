@@ -26,7 +26,7 @@ from numpy import zeros, meshgrid, linspace, isnan
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
 # Fine, Shiny
-import branca, certifi, xyzservices
+import branca, certifi, xyzservices, requests
 
 
 def server(input, output, session):
