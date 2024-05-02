@@ -1,4 +1,4 @@
-// Shinylive 0.2.8
+// Shinylive 0.3.0
 // Copyright 2024 RStudio, PBC
 import {
   Icon,
@@ -20,7 +20,7 @@ import {
   require_jsx_runtime,
   require_react,
   stringToUint8Array
-} from "./chunk-WDYTLQ6R.js";
+} from "./chunk-CWUBJNRT.js";
 
 // node_modules/events/events.js
 var require_events = __commonJS({
@@ -35964,7 +35964,10 @@ var searchExtensions = [
 ];
 
 // src/Components/codeMirror/extensions.ts
-function getExtensions(opts = { lineNumbers: true }) {
+function getExtensions({
+  indentSpaces = 4,
+  lineNumbers: lineNumbers2 = true
+} = {}) {
   const extensions = [
     // lineNumbers(),
     highlightActiveLineGutter(),
@@ -35975,7 +35978,7 @@ function getExtensions(opts = { lineNumbers: true }) {
     dropCursor(),
     EditorState.allowMultipleSelections.of(true),
     indentOnInput(),
-    indentUnit.of("    "),
+    indentUnit.of(" ".repeat(indentSpaces)),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     bracketMatching(),
     closeBrackets(),
@@ -35995,7 +35998,7 @@ function getExtensions(opts = { lineNumbers: true }) {
       ...lintKeymap
     ])
   ];
-  if (opts.lineNumbers) {
+  if (lineNumbers2) {
     extensions.push(lineNumbers(), lintGutterWithCustomTheme());
   }
   return extensions;
@@ -38941,8 +38944,9 @@ function Editor({
         return getBinaryFileExtensions();
       }
       const language2 = inferFiletype(file.name);
+      const indentSpaces = language2 === "r" ? 2 : 4;
       return [
-        getExtensions({ lineNumbers: lineNumbers2 }),
+        getExtensions({ lineNumbers: lineNumbers2, indentSpaces }),
         getLanguageExtension(language2),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {

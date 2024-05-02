@@ -1,4 +1,4 @@
-/* Shinylive 0.2.8
+/* Shinylive 0.3.0
 // Copyright 2024 RStudio, PBC */
 /* src/Components/App.css */
 :root {
@@ -49,6 +49,7 @@
 }
 .shinylive-container.viewer {
   --pad: 0;
+  min-width: unset;
 }
 .shinylive-container > div {
   border-radius: var(--panel-roundness);

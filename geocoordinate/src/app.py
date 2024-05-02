@@ -17,6 +17,11 @@
 from shiny import App, reactive, render, ui
 from folium import Map as FoliumMap
 from folium.plugins import HeatMap, HeatMapWithTime
+from folium.raster_layers import ImageOverlay
+from scipy.interpolate import griddata
+from tempfile import NamedTemporaryFile
+from matplotlib.pyplot import subplots
+from numpy import zeros, meshgrid, linspace, isnan
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
@@ -46,15 +51,49 @@ def server(input, output, session):
 		@param map The folium map to attach the heatmap to.
 		"""
 
-		# Get each column
-		longitudes = df[lon_col].tolist()
-		latitudes = df[lat_col].tolist()
-		values = [1] * len(latitudes) if input.Uniform() else df[v_col].tolist()
+		# Extract latitude, longitude, and value columns
+		latitude = df[lat_col]
+		longitude = df[lon_col]
+		values = [1] * len(longitude) if input.Uniform() else df[v_col]
 
-		HeatMap(list(zip(latitudes, longitudes, values)),
-		min_opacity=input.Opacity(),
-		radius=input.Radius(),
-		blur=input.Blur()).add_to(map)
+
+		if input.Scale():
+			HeatMap(list(zip(latitude, longitude, values)),
+			min_opacity=input.Opacity(),
+			radius=input.Radius(),
+			blur=input.Blur()).add_to(map)
+
+		else:
+			# Define grid
+			x = linspace(longitude.min(), longitude.max(), 100)
+			y = linspace(latitude.min(), latitude.max(), 100)
+			X, Y = meshgrid(x, y)
+
+			# Interpolate data onto grid
+			Z = griddata((longitude.values.flatten(), latitude.values.flatten()), values, (X.flatten(), Y.flatten()), method='cubic')
+			Z[isnan(Z)] = 0
+
+			# Generate the contour
+			fig, ax = subplots()
+			contour = ax.tricontour(X.flatten(), Y.flatten(), Z.flatten(), 
+				cmap='jet', 
+				levels=200, 
+			)
+			ax.axis('off')  # Turn off axes
+			ax.get_xaxis().set_visible(False)  # Hide x-axis
+			ax.get_yaxis().set_visible(False)  # Hide y-axis
+
+			# Save the contour as an image, add to the map
+			temp = NamedTemporaryFile(suffix='.png')
+			fig.savefig(temp, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=300)
+			image_overlay = ImageOverlay(
+				image=temp.name,
+				bounds=[[min(latitude), min(longitude)], [max(latitude), max(longitude)]],
+				opacity=input.Opacity(),
+				pixelated=False,
+			)
+			image_overlay.add_to(map)
+
 		map.fit_bounds(map.get_bounds())
 
 
@@ -141,8 +180,9 @@ def server(input, output, session):
 
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
-			if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
-			else: GenerateMap(df, map, v_col, lon_col, lat_col)
+			#if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
+			#else: GenerateMap(df, map, v_col, lon_col, lat_col)
+			GenerateMap(df, map, v_col, lon_col, lat_col)
 			return map
 
 
@@ -154,7 +194,7 @@ def server(input, output, session):
 
 	@output
 	@render.ui
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Temporal, input.Uniform, input.TimeColumn, input.ValueColumn, input.MapType, input.Opacity, input.Radius, input.Blur, input.ROI)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Temporal, input.Uniform, input.TimeColumn, input.ValueColumn, input.MapType, input.Opacity, input.Radius, input.Blur, input.ROI, input.Scale)
 	async def Heatmap(): return await LoadMap()
 
 
@@ -248,6 +288,7 @@ app_ui = ui.page_fluid(
 
 			ui.input_checkbox(id="Temporal", label="Temporal Heatmap"),
 			ui.input_checkbox(id="Uniform", label="Uniform Values"),
+			ui.input_checkbox(id="Scale", label="Scale Intensity with Zoom", value=True),
 
 			# Only provide a temporal column if we're working with time
 			ui.panel_conditional(
