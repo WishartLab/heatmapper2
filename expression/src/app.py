@@ -187,10 +187,7 @@ def server(input, output, session):
 			# Render the heatmap.
 			ax_heatmap = fig.add_subplot(gs[1, 1])
 
-			if input.ColorMap() == "Custom":
-				colors = [input.Low().lower(), input.Mid().lower(), input.High().lower()]
-			else:
-				colors = input.ColorMap().split("/")
+			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
 
 			heatmap = ax_heatmap.imshow(
 				df,
@@ -218,6 +215,7 @@ def server(input, output, session):
 			if "legend" in input.Features():
 				ax_cbar = fig.add_subplot(gs[3, 1])
 				cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
+				cbar.ax.tick_params(labelsize=input.TextSize())
 			return fig
 
 
@@ -292,29 +290,33 @@ app_ui = ui.page_fluid(
 					selected="Nearest",
 				),
 
-				ui.br(),
-
-				# Set the ColorMap used. Our parsers just splits by slashes
-				ui.input_select(id="ColorMap", label="Color Map", choices={
-						"Custom": "Custom", 
-						"Blue/White/Yellow": "Blue/Yellow",
-						"Red/Black/Green": "Red/Green",
-						"Pink/White/Green": "Pink/Green",
-						"Blue/Green/Yellow": "Blue/Green/Yellow",
-						"Black/Gray/White": "Grayscale",
-						"Red/Orange/Yellow/Green/Blue/Indigo/Violet": "Rainbow",
-					}
+				ui.layout_columns(
+					"Color Map",
+					ui.input_checkbox(id="Custom", label="Custom"),
 				),
-
 				ui.panel_conditional(
-					"input.ColorMap === 'Custom'",
-					ui.HTML("Low/Mid/High Colors"),
-					ui.input_select(id="Low", label=None, choices=Colors, selected="Blue"),
-					ui.input_select(id="Mid", label=None, choices=Colors, selected="White"),
-					ui.input_select(id="High", label=None, choices=Colors, selected="Yellow"),
+					"input.Custom",
+						ui.input_select(
+						id="CustomColors",
+						label=None,
+						choices=Colors,
+						selected=["Blue", "White", "Yellow"],
+						multiple=True,
+						selectize=True,
+					),
 				),
-
-				ui.br(),
+				ui.panel_conditional(
+					"!input.Custom",
+					ui.input_select(id="ColorMap", label=None, choices={
+							"Blue White Yellow": "Blue/Yellow",
+							"Red Black Green": "Red/Green",
+							"Pink White Green": "Pink/Green",
+							"Blue Green Yellow": "Blue/Green/Yellow",
+							"Black Gray White": "Grayscale",
+							"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
+						}
+					),
+				),
 
 				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
 
