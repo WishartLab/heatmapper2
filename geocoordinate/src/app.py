@@ -18,10 +18,10 @@ from shiny import App, reactive, render, ui
 from folium import Map as FoliumMap
 from folium.plugins import HeatMap, HeatMapWithTime
 from folium.raster_layers import ImageOverlay
-from scipy.interpolate import griddata
 from tempfile import NamedTemporaryFile
 from matplotlib.pyplot import subplots
-from numpy import zeros, meshgrid, linspace, isnan
+from scipy.stats import gaussian_kde
+from numpy import vstack
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
 
@@ -51,41 +51,49 @@ def server(input, output, session):
 		@param map The folium map to attach the heatmap to.
 		"""
 
-		# Extract latitude, longitude, and value columns
-		latitude = df[lat_col]
-		longitude = df[lon_col]
-		values = [1] * len(longitude) if input.Uniform() else df[v_col]
-
+		if input.Uniform():
+			df["Value"] = [1] * len(df[lat_col])
+			v_col = "Value"
 
 		if input.Scale():
-			HeatMap(list(zip(latitude, longitude, values)),
+			HeatMap(list(zip(df[lat_col], df[lon_col], df[v_col])),
 			min_opacity=input.Opacity(),
 			radius=input.Radius(),
 			blur=input.Blur()).add_to(map)
 
 		else:
-			# Define grid
-			x = linspace(longitude.min(), longitude.max(), 100)
-			y = linspace(latitude.min(), latitude.max(), 100)
-			X, Y = meshgrid(x, y)
+			latitude = df[lat_col]
+			longitude = df[lon_col]
+			values = df[v_col]
 
-			# Interpolate data onto grid
-			Z = griddata((longitude.values.flatten(), latitude.values.flatten()), values, (X.flatten(), Y.flatten()), method='cubic')
-			Z[isnan(Z)] = 0
+			# Threshold for density estimation
+			threshold = 0.1
+			stack = vstack([longitude, latitude])
+
+			# Calculate kernel density estimation
+			kde = gaussian_kde(stack)
+			density = kde(stack)
+			values = values + density * threshold
 
 			# Generate the contour
 			fig, ax = subplots()
-			contour = ax.tricontour(X.flatten(), Y.flatten(), Z.flatten(), 
-				cmap='jet', 
-				levels=200, 
+			contour = ax.scatter(
+				longitude, 
+				latitude, 
+				c=values * 100, 
+				s=[input.Radius()] * len(values), 
+				cmap="jet", 
+				alpha=input.Opacity(), 
+				linewidths=0
 			)
+
 			ax.axis('off')  # Turn off axes
 			ax.get_xaxis().set_visible(False)  # Hide x-axis
 			ax.get_yaxis().set_visible(False)  # Hide y-axis
 
 			# Save the contour as an image, add to the map
 			temp = NamedTemporaryFile(suffix='.png')
-			fig.savefig(temp, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=300)
+			fig.savefig(temp, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=500)
 			image_overlay = ImageOverlay(
 				image=temp.name,
 				bounds=[[min(latitude), min(longitude)], [max(latitude), max(longitude)]],
@@ -180,9 +188,8 @@ def server(input, output, session):
 
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
-			#if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
-			#else: GenerateMap(df, map, v_col, lon_col, lat_col)
-			GenerateMap(df, map, v_col, lon_col, lat_col)
+			if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
+			else: GenerateMap(df.copy(deep=True), map, v_col, lon_col, lat_col)
 			return map
 
 
@@ -249,8 +256,8 @@ def server(input, output, session):
 			ui.update_slider(id="Radius", value=15, min=1, max=50, step=1)
 			ui.update_slider(id="Blur", value=0.8, min=0.0, max=1.0, step=0.1)
 		else:
-			ui.update_slider(id="Opacity", value=0.5, min=0.0, max=1.0, step=0.1)
-			ui.update_slider(id="Radius", value=25, min=5, max=50, step=5)
+			ui.update_slider(id="Opacity", value=0.7, min=0.0, max=1.0, step=0.1)
+			ui.update_slider(id="Radius", value=25, min=5, max=100, step=5)
 			ui.update_slider(id="Blur", value=15, min=1, max=30, step=1)
 
 
@@ -305,8 +312,8 @@ app_ui = ui.page_fluid(
 			# Only OpenStreatMap and CartoDB Positron seem to work.
 			ui.input_radio_buttons(id="MapType", label="Map Type", choices=["OpenStreetMap", "CartoDB Positron"], selected="CartoDB Positron"),
 
-			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
-			ui.input_slider(id="Radius", label="Size of Points", value=25, min=5, max=50, step=5),
+			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.7, min=0.0, max=1.0, step=0.1),
+			ui.input_slider(id="Radius", label="Size of Points", value=25, min=5, max=100, step=5),
 			ui.input_slider(id="Blur", label="Blurring", value=15, min=1, max=30, step=1),
 			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
 
