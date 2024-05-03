@@ -21,7 +21,7 @@ from scipy.cluster import hierarchy
 from scipy.stats import zscore
 from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate, Colors
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, ColorMap
 
 
 def server(input, output, session):
@@ -262,23 +262,27 @@ app_ui = ui.page_fluid(
 				project="Expression"
 			),
 
-			# The column that holds names for the data.
-			ui.input_select(id="NameColumn", label="Names", choices=[], multiple=False),
+			TableOptions(),
 
-			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
-			ui.input_select(id="ClusterMethod", label="Clustering Method", choices=["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"], selected="Average"),
+			# Shared, Non-Table settings.
+			ui.panel_conditional(
+				"input.MainTab != 'TableTab'",
+				# The column that holds names for the data.
+				ui.input_select(id="NameColumn", label="Names", choices=[], multiple=False),
 
-			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html#scipy.spatial.distance.pdist
-			ui.input_select(id="DistanceMethod", label="Distance Method", choices=["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
+				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+				ui.input_select(id="ClusterMethod", label="Clustering Method", choices=["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"], selected="Average"),
 
-			# Customize the text size of the axes.
-			ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
+				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html#scipy.spatial.distance.pdist
+				ui.input_select(id="DistanceMethod", label="Distance Method", choices=["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
+
+				# Customize the text size of the axes.
+				ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
+			),
 
 			# Settings pertaining to the Heatmap view.
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
-				ui.br(),
-
 				# Define how the colors are scaled.
 				ui.input_select(id="ScaleType", label="Scale Type", choices=["Row", "Column", "None"], selected="Row"),
 
@@ -290,34 +294,8 @@ app_ui = ui.page_fluid(
 					selected="Nearest",
 				),
 
-				ui.layout_columns(
-					"Color Map",
-					ui.input_checkbox(id="Custom", label="Custom"),
-				),
-				ui.panel_conditional(
-					"input.Custom",
-						ui.input_select(
-						id="CustomColors",
-						label=None,
-						choices=Colors,
-						selected=["Blue", "White", "Yellow"],
-						multiple=True,
-						selectize=True,
-					),
-				),
-				ui.panel_conditional(
-					"!input.Custom",
-					ui.input_select(id="ColorMap", label=None, choices={
-							"Blue White Yellow": "Blue/Yellow",
-							"Red Black Green": "Red/Green",
-							"Pink White Green": "Pink/Green",
-							"Blue Green Yellow": "Blue/Green/Yellow",
-							"Black Gray White": "Grayscale",
-							"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
-						}
-					),
-				),
-
+				ColorMap(),
+				
 				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
 
 				# Toggle rendering features. All are on by default.
@@ -329,8 +307,6 @@ app_ui = ui.page_fluid(
 			# Settings pertaining to the dendrogram view.
 			ui.panel_conditional(
 				"input.MainTab === 'RowTab' || input.MainTab === 'ColumnTab'",
-				ui.br(),
-
 				# Define the Orientation of the dendrogram in the Tab
 				ui.input_select(id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"], selected="Left"),
 			),

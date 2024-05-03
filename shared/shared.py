@@ -162,11 +162,6 @@ class Cache:
 		# The primary cache now serves as a file agnostic cache, containing the raw bytes of files.
 		self._primary = {}
 
-		# The Secondary cache now serves as the transformed output through the handler. There is now
-		# no need to specify mutability because the primary cache doesn't contain data that can be changed.
-		# It serves solely as a cache for the Handler if the user throws out whatever is in the secondary.
-		self._secondary = {}
-
 		# The data handler for processing the binary files.
 		self._handler = DataHandler
 
@@ -206,11 +201,8 @@ class Cache:
 			n = str(source + example_file)
 			path = self._local_sync(n)
 		
-		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
-		if n not in self._secondary:
-			self._secondary[n] = self._handler(path)
-
-		return (n, self._secondary[n]) if return_n else self._secondary[n]
+		if n not in self._primary: self._primary[n] = self._handler(path)
+		return (n, self._primary[n]) if return_n else self._primary[n]
 
 
 	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
@@ -254,11 +246,8 @@ class Cache:
 				path = Path(temp.name)
 			else: path = raw
 
-		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
-		if n not in self._secondary:
-			self._secondary[n] = self._handler(path)
-
-		return (n, self._secondary[n]) if return_n else self._secondary[n]
+		if n not in self._primary: self._primary[n] = self._handler(path)
+		return (n, self._primary[n]) if return_n else self._primary[n]
 
 
 	async def Update(self, input):
@@ -285,44 +274,6 @@ class Cache:
 				elif input.Type() == "Float": df.iloc[row, column] = float(input.TableVal())
 				else: df.iloc[row, column] = input.TableVal()
 			except ValueError: pass
-
-
-	async def Purge(self, input, source_file=None, example_file=None, source=None):
-		"""
-		@brief Purges the secondary cache of whatever the user has uploaded/selected
-		@param input: The Shiny input. See N() for required objects.
-		@param source_file: The source ID, defaults to input.File()
-		@param example_file: The example ID, defaults to input.Example()
-		@param source: The path that should be appending to the path for fetching. 
-		@info This function should be called on a reactive hook for a "Reset" button.
-		"""
-
-		if source_file is None: source_file = input.File()
-		if example_file is None: example_file = input.Example()
-		if source is None: source = self._source
-
-		if input.SourceFile() == "Upload":
-			file: list[FileInfo] | None = source_file
-			if file is None: return None
-			n = file[0]["datapath"]
-		else: n = source + example_file
-		del self._secondary[n]
-
-
-def TableValueUpdate(df, input):
-	"""
-	@brief Updates the value displayed in the TableVal based on the current selection
-	@param df The DataFrame
-	@param input The shiny input
-	"""
-
-	if not df.empty:
-		rows, columns = df.shape
-		try:
-			row, column = int(input.TableRow()), int(input.TableCol())
-			if 0 <= row <= rows and 0 <= column <= columns:
-				ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")")
-		except TypeError: pass
 
 
 def NavBar():
@@ -407,17 +358,59 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	]
 
 
+def TableOptions():
+	"""
+	@brief Return the options for Table Manipulation.
+	@returns A conditional panel that provides a DataType, and a ResetButton.
+	"""
+	return  ui.panel_conditional(
+		"input.MainTab === 'TableTab'",
+		ui.input_radio_buttons(id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+		ui.input_action_button("Reset", "Reset Values"),
+	),
+
+
+def ColorMap():
+	"""
+	@brief Returns a ColorMap input Selection
+	@returns	A list of UI elements. Firstly, a header that contained a toggle for custom ColorMaps.
+						Then, two conditional panels based on the status of the toggle. If the user wants
+						custom color maps, then provide a selectize.js selection box that allows for multiple
+						selections. These options are used to define the gradient, low to high. If not, just a
+						collection of predefined maps, where the keys must be split on spaces to generate a map
+						that MatPlotLib can use.
+	"""
+	return [
+		ui.layout_columns("Color Map", ui.input_checkbox(id="Custom", label="Custom")),
+		ui.panel_conditional(
+			"input.Custom",
+				ui.input_select(
+				id="CustomColors",
+				label=None,
+				choices=Colors,
+				selected=["Blue", "White", "Yellow"],
+				multiple=True,
+				selectize=True,
+			),
+		),
+		ui.panel_conditional(
+			"!input.Custom",
+			ui.input_select(id="ColorMap", label=None, choices={
+					"Blue White Yellow": "Blue/Yellow",
+					"Red Black Green": "Red/Green",
+					"Pink White Green": "Pink/Green",
+					"Blue Green Yellow": "Blue/Green/Yellow",
+					"Black Gray White": "Grayscale",
+					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
+				}
+			),
+		)]
+
+
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
 		ui.nav_panel("Heatmap", m_type(id="Heatmap", height="90vh"), value="HeatmapTab"),
-		ui.nav_panel("Table",
-			ui.layout_columns(
-				ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
-				ui.input_action_button("Reset", "Reset Values"),
-			),
-			ui.output_data_frame(id="Table"),
-			value="TableTab"
-		),
+		ui.nav_panel("Table", ui.output_data_frame(id="Table"), value="TableTab"),
 		*args,
 		id="MainTab"
 	)
