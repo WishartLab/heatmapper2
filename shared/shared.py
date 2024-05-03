@@ -406,20 +406,13 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
-		ui.nav_panel("Interactive", m_type("Heatmap", height="75vh"), value="Interactive"),
-		ui.nav_panel("Table",
+		ui.nav_panel("Interactive", m_type(id="Heatmap", height="90vh"), value="Interactive"),
+		ui.nav_panel("Table",	
 			ui.layout_columns(
-				ui.input_numeric("TableRow", "Row", 0, min=0),
-				ui.input_numeric("TableCol", "Column", 0, min=0),
-				ui.input_text("TableVal", "Value", 0),
 				ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
-				col_widths=[2,2,6,2],
-			),
-			ui.layout_columns(
-				ui.input_action_button("Update", "Update"),
 				ui.input_action_button("Reset", "Reset Values"),
 			),
-			ui.output_data_frame("LoadedTable")
+			ui.output_data_frame(id="LoadedTable")
 		),
 		*args,
 		id="MainTab"

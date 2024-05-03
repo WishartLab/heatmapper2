@@ -33,18 +33,22 @@ def server(input, output, session):
 	}
 
 	DataCache = Cache("expression")
+	Data = reactive.value(DataFrame())
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, ignore_init=False, ignore_none=False)
+	async def UpdateData(): Data.set((await DataCache.Load(input)).copy(deep=True))
 
 
-	async def ProcessData():
+	def ProcessData(df):
 		"""
 		@brief Extracts the labels for each axis, and returns it alongside a DataFrame containing only the relevant data.
 		@returns	A list containing the labels for the y axis, a list containing the labels for the x axis, and a
 							DataFrame containing the loaded data without those two columns.
 		"""
 
-		df = await DataCache.Load(input)
 		name = input.NameColumn()
-		if name not in df: return None, None, None
+		if name is None: name = df.columns[0]
 
 		# Drop the naming columns before linkage.
 		data = df.drop(columns=Filter(df.columns, ColumnType.Name))
@@ -83,17 +87,54 @@ def server(input, output, session):
 		return dendrogram
 
 
-	async def GenerateHeatmap():
+	def RenderDendrogram(data, labels, invert, progress):
+		"""
+		@brief Renders a Dendrogram
+		@param data: The DataFrame
+		@param labels: The labels for the Dendrogram
+		@param invert: Whether to invert (Use for Column Dendrograms)
+		"""
+		if data is None: return
+
+		fig = figure(figsize=(12, 10))
+		ax = fig.add_subplot(111)
+
+		ax.spines["top"].set_visible(False)
+		ax.spines["right"].set_visible(False)
+		ax.spines["bottom"].set_visible(False)
+		ax.spines["left"].set_visible(False)
+
+		GenerateDendrogram(data, ax, input.Orientation(), progress, labels, invert=invert)
+		return fig
+
+
+	@render.data_frame
+	def LoadedTable():  return render.DataGrid(Data(), editable=True)
+
+
+	@LoadedTable.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
+
+
+	@render.plot
+	def Heatmap(): 
 		"""
 		@brief Generates the Heatmap
 		@returns The heatmap
 		"""
 
-		with ui.Progress() as p:
+		try:
+			df = LoadedTable.data_view()
+		except Exception:
+			df = Data()
 
+		with ui.Progress() as p:
 			p.inc(message="Reading input...")
-			index_labels, x_labels, data = await ProcessData()
-			if data is None: return
+			index_labels, x_labels, data = ProcessData(df)
 
 			# Create a figure with a heatmap and associated dendrograms
 			p.inc(message="Plotting...")
@@ -158,56 +199,21 @@ def server(input, output, session):
 			if "legend" in input.Features():
 				ax_cbar = fig.add_subplot(gs[3, 1])
 				cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
-
 			return fig
 
 
-	def RenderDendrogram(data, labels, invert, progress):
-		"""
-		@brief Renders a Dendrogram
-		@param data: The DataFrame
-		@param labels: The labels for the Dendrogram
-		@param invert: Whether to invert (Use for Column Dendrograms)
-		"""
-		if data is None: return
-
-		fig = figure(figsize=(12, 10))
-		ax = fig.add_subplot(111)
-
-		ax.spines["top"].set_visible(False)
-		ax.spines["right"].set_visible(False)
-		ax.spines["bottom"].set_visible(False)
-		ax.spines["left"].set_visible(False)
-
-		GenerateDendrogram(data, ax, input.Orientation(), progress, labels, invert=invert)
-		return fig
-
-
-	@output
-	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
-
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Low, input.Mid, input.High, input.Bins, input.Features)
-	async def Heatmap(): return await GenerateHeatmap()
-
-
-	@output
-	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
-	async def RowDendrogram(): 
-		index_labels, _, data = await ProcessData(); 
+	def RowDendrogram(): 
+		index_labels, _, data = ProcessData(Data()); 
 		with ui.Progress() as p:
 			return RenderDendrogram(data=data, labels=index_labels, invert=False, progress=p)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
-	async def ColumnDendrogram():
-	 _, x_labels, data = await ProcessData(); 
+	def ColumnDendrogram():
+	 _, x_labels, data = ProcessData(Data()); 
 	 with ui.Progress() as p:
 	 	return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 
@@ -219,27 +225,11 @@ def server(input, output, session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
+	def DownloadTable(): yield Data().to_string()
 
 
 	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def UpdateColumnSelection(): Filter((await DataCache.Load(input)).columns, ColumnType.Name, ui_element="NameColumn")
+	def UpdateColumnSelection(): Filter(Data().columns, ColumnType.Name, ui_element="NameColumn")
 
 
 app_ui = ui.page_fluid(
@@ -328,7 +318,7 @@ app_ui = ui.page_fluid(
 		# Add the main interface tabs.
 		MainTab(
 			ui.nav_panel("Row Dendrogram", ui.output_plot("RowDendrogram", height="90vh"), value="Row"),
-			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="Column")
+			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="Column"),
 		),
 	)
 )
