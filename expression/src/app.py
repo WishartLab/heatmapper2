@@ -14,7 +14,7 @@
 #
 
 
-from shiny import App, reactive, render, ui
+from shiny import App, reactive, render, ui, types
 from matplotlib.pyplot import figure, subplots, colorbar
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
@@ -36,8 +36,29 @@ def server(input, output, session):
 	Data = reactive.value(DataFrame())
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, ignore_init=False, ignore_none=False)
-	async def UpdateData(): Data.set((await DataCache.Load(input)).copy(deep=True))
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): 
+		"""
+		@brief Updates the reactive Data when input changes.
+
+		Data is a reactive value that contains the current state of the input DataFrame. Rather than fetching it on each use
+		(Even from a Cache), we store it as a variable to provide immediate access. This function queries the cache when the 
+		source file changes, or the user explicitly resets the data.
+		"""
+		Data.set((await DataCache.Load(input)).copy(deep=True))
+
+
+	def GetData(): 
+		"""
+		@brief Get the Data variable
+
+		Data is the static state of user input, and does not reflect the state of the user-modified table in the Table. However, 
+		the data_view() function of the Table will throw a SilentException if it hasn't been initialized (The user hasn't navigated
+		to the Table table). Therefore, we either need to return the raw variable if the Table hasn't been initialized, or the 
+		data_view() if it has.
+		"""
+		try: return Table.data_view()
+		except types.SilentException: return Data()
 
 
 	def ProcessData(df):
@@ -48,7 +69,7 @@ def server(input, output, session):
 		"""
 
 		name = input.NameColumn()
-		if name is None: name = df.columns[0]
+		if name not in df: return None, None , None
 
 		# Drop the naming columns before linkage.
 		data = df.drop(columns=Filter(df.columns, ColumnType.Name))
@@ -93,6 +114,7 @@ def server(input, output, session):
 		@param data: The DataFrame
 		@param labels: The labels for the Dendrogram
 		@param invert: Whether to invert (Use for Column Dendrograms)
+		@pararm progress: The progress bar to update when generating the Dendrogram.
 		"""
 		if data is None: return
 
@@ -109,10 +131,10 @@ def server(input, output, session):
 
 
 	@render.data_frame
-	def LoadedTable():  return render.DataGrid(Data(), editable=True)
+	def Table():  return render.DataGrid(Data(), editable=True)
 
 
-	@LoadedTable.set_patch_fn
+	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
 		if input.Type() == "Integer": value = int(patch["value"])
 		elif input.Type() == "Float": value = float(patch["value"])
@@ -127,18 +149,15 @@ def server(input, output, session):
 		@returns The heatmap
 		"""
 
-		try:
-			df = LoadedTable.data_view()
-		except Exception:
-			df = Data()
-
 		with ui.Progress() as p:
 			p.inc(message="Reading input...")
-			index_labels, x_labels, data = ProcessData(df)
+			index_labels, x_labels, data = ProcessData(GetData())
+			if data is None: return
 
 			# Create a figure with a heatmap and associated dendrograms
 			p.inc(message="Plotting...")
 			fig = figure(figsize=(12, 10))
+
 			gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
 
 			# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
@@ -205,7 +224,7 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def RowDendrogram(): 
-		index_labels, _, data = ProcessData(Data()); 
+		index_labels, _, data = ProcessData(GetData()); 
 		with ui.Progress() as p:
 			return RenderDendrogram(data=data, labels=index_labels, invert=False, progress=p)
 
@@ -213,7 +232,7 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def ColumnDendrogram():
-	 _, x_labels, data = ProcessData(Data()); 
+	 _, x_labels, data = ProcessData(GetData()); 
 	 with ui.Progress() as p:
 	 	return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 
@@ -225,16 +244,16 @@ def server(input, output, session):
 
 
 	@render.download(filename="table.csv")
-	def DownloadTable(): yield Data().to_string()
+	def DownloadTable(): yield GetData().to_string()
 
 
 	@reactive.Effect
-	def UpdateColumnSelection(): Filter(Data().columns, ColumnType.Name, ui_element="NameColumn")
+	def UpdateColumnSelection(): Filter(GetData().columns, ColumnType.Name, ui_element="NameColumn")
 
 
 app_ui = ui.page_fluid(
 
-	NavBar("Expression"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
@@ -259,14 +278,19 @@ app_ui = ui.page_fluid(
 
 			# Settings pertaining to the Heatmap view.
 			ui.panel_conditional(
-				"input.MainTab === 'Interactive'",
+				"input.MainTab === 'HeatmapTab'",
 				ui.br(),
 
 				# Define how the colors are scaled.
 				ui.input_select(id="ScaleType", label="Scale Type", choices=["Row", "Column", "None"], selected="Row"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
+				ui.input_select(
+					id="Interpolation", 
+					label="Interpolation", 
+					choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], 
+					selected="Nearest",
+				),
 
 				ui.br(),
 
@@ -295,14 +319,14 @@ app_ui = ui.page_fluid(
 				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
 
 				# Toggle rendering features. All are on by default.
-				ui.input_checkbox_group(id="Features", label="Heatmap Features",
+				ui.input_checkbox_group(id="Features", label="Visibility",
 					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"},
 					selected=["row", "col", "x", "y", "legend"])
 			),
 
 			# Settings pertaining to the dendrogram view.
 			ui.panel_conditional(
-				"input.MainTab === 'Row' || input.MainTab === 'Column'",
+				"input.MainTab === 'RowTab' || input.MainTab === 'ColumnTab'",
 				ui.br(),
 
 				# Define the Orientation of the dendrogram in the Tab
@@ -317,8 +341,8 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(
-			ui.nav_panel("Row Dendrogram", ui.output_plot("RowDendrogram", height="90vh"), value="Row"),
-			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="Column"),
+			ui.nav_panel("Row Dendrogram", ui.output_plot("RowDendrogram", height="90vh"), value="RowTab"),
+			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="ColumnTab"),
 		),
 	)
 )

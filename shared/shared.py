@@ -325,7 +325,7 @@ def TableValueUpdate(df, input):
 		except TypeError: pass
 
 
-def NavBar(current):
+def NavBar():
 	"""
 	@brief Returns a Navigation Bar for each project, with the current project selected.
 	@returns A list, containing a ui.panel_title, and a ui.navset_bar.
@@ -343,17 +343,18 @@ def NavBar(current):
 
 	return (
 		ui.panel_title(title=None, window_title="Heatmapper"),
-			ui.navset_bar(
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["image"]}" target="_blank" rel="noopener noreferrer">Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["geomap"]}" target="_blank" rel="noopener noreferrer">Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer">Geocoordinate</a>'), value="Geocoordinate"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer">3D</a>'), value="3D"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer">Spatial</a>'), value="Spatial"),
-				ui.nav_panel(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>'), value="About"),
-				title="Heatmapper",
-				selected=current,
+		ui.navset_bar(
+			ui.nav_control(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["image"]}" target="_blank" rel="noopener noreferrer">Image</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["geomap"]}" target="_blank" rel="noopener noreferrer">Geomap</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer">Geocoordinate</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer">3D</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer">Spatial</a>')),
+			ui.nav_control(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>')),
+			ui.nav_spacer(),
+			ui.nav_control(ui.input_dark_mode(id="mode")),
+			title="Heatmapper",
 		),
 	)
 
@@ -378,7 +379,12 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	"""
 
 	# If the user needs help with the formatting.
-	return [ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki/Format target="_blank" rel="noopener noreferrer">Data Format</a>'),
+	return [
+	ui.layout_columns(
+		ui.HTML("<a href=https://github.com/WishartLab/heatmapper2/wiki/Format target='_blank' rel='noopener noreferrer'>Format</a>"),
+		ui.HTML(f"<a href='https://github.com/WishartLab/heatmapper2/wiki/Interface#{project}' target='_blank' rel='noopener noreferrer'>Help</a>"),
+		col_widths=[6,6]
+	),
 
 	# Specify whether to use example files, or upload one.
 	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected=default, inline=True),
@@ -395,24 +401,22 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 		ui.layout_columns(
 			ui.input_select(id="Example", label=None, choices=examples, multiple=False),
 			ui.popover(ui.input_action_link(id="ExampleInfoButton", label="Info"), ui.output_text("ExampleInfo")),
-			col_widths=[8,2],
+			col_widths=[7,3],
 		)
 	),
-
-	ui.br(),
-	ui.HTML(f"<a href='https://github.com/WishartLab/heatmapper2/wiki/Interface#{project}' target='_blank' rel='noopener noreferrer'>Info on Settings</a>"),
 	]
 
 
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
-		ui.nav_panel("Interactive", m_type(id="Heatmap", height="90vh"), value="Interactive"),
-		ui.nav_panel("Table",	
+		ui.nav_panel("Heatmap", m_type(id="Heatmap", height="90vh"), value="HeatmapTab"),
+		ui.nav_panel("Table",
 			ui.layout_columns(
 				ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
 				ui.input_action_button("Reset", "Reset Values"),
 			),
-			ui.output_data_frame(id="LoadedTable")
+			ui.output_data_frame(id="Table"),
+			value="TableTab"
 		),
 		*args,
 		id="MainTab"
