@@ -34,31 +34,14 @@ def server(input, output, session):
 
 	DataCache = Cache("expression")
 	Data = reactive.value(DataFrame())
+	Valid = reactive.value(False)
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): 
-		"""
-		@brief Updates the reactive Data when input changes.
-
-		Data is a reactive value that contains the current state of the input DataFrame. Rather than fetching it on each use
-		(Even from a Cache), we store it as a variable to provide immediate access. This function queries the cache when the 
-		source file changes, or the user explicitly resets the data.
-		"""
-		Data.set((await DataCache.Load(input)).copy(deep=True))
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
 
 
-	def GetData(): 
-		"""
-		@brief Get the Data variable
-
-		Data is the static state of user input, and does not reflect the state of the user-modified table in the Table. However, 
-		the data_view() function of the Table will throw a SilentException if it hasn't been initialized (The user hasn't navigated
-		to the Table table). Therefore, we either need to return the raw variable if the Table hasn't been initialized, or the 
-		data_view() if it has.
-		"""
-		try: return Table.data_view()
-		except types.SilentException: return Data()
+	def GetData(): return Table.data_view() if Valid() else Data()
 
 
 	def ProcessData(df):
@@ -131,7 +114,7 @@ def server(input, output, session):
 
 
 	@render.data_frame
-	def Table():  return render.DataGrid(Data(), editable=True)
+	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
 
 
 	@Table.set_patch_fn
@@ -188,7 +171,6 @@ def server(input, output, session):
 			ax_heatmap = fig.add_subplot(gs[1, 1])
 
 			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
-
 			heatmap = ax_heatmap.imshow(
 				df,
 				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()),

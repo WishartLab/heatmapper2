@@ -15,6 +15,7 @@ from sys import modules
 from pathlib import Path
 from enum import Enum
 from os.path import exists
+from copy import deepcopy
 
 # Used for fetching web resources in a variety of fashions.
 URL = "https://wishartlab.github.io/heatmapper2"
@@ -134,19 +135,12 @@ class Cache:
 
 
 	async def _remote(self, url):
-		if url not in self._primary:
 			r = await pyfetch(url);
 			if not r.ok: return None
-			else: self._primary[url] = await r.bytes()
-		return self._primary[url]
+			return await r.bytes()
 
 
 	async def _local(self, url):
-		if not exists(url): return None
-		return Path(url)
-
-
-	def _local_sync(self, url):
 		if not exists(url): return None
 		return Path(url)
 
@@ -159,8 +153,11 @@ class Cache:
 												take a name, and a binary stream, and return a DataFrame.
 		"""
 
-		# The primary cache now serves as a file agnostic cache, containing the raw bytes of files.
+		# The primary is the unprocessed, fetched web resources
 		self._primary = {}
+
+		# The objects are anything that applications want to store
+		self._objects = {}
 
 		# The data handler for processing the binary files.
 		self._handler = DataHandler
@@ -176,36 +173,7 @@ class Cache:
 			self._source = "../example_input/"
 
 
-	def SyncLoad(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
-		"""
-		@brief A synchronous loading function that only supports local files
-		@info See Load() for more information
-		"""
-		if source_file is None: source_file = input.File()
-		if example_file is None: example_file = input.Example()
-		if source is None: source = self._source
-		if input_switch is None: input_switch = input.SourceFile()
-
-		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
-		if input_switch == "Upload":
-			file: list[FileInfo] | None = source_file
-			if file is None: return (None, default) if return_n else default
-
-			# The datapath can be immediately used to load examples, but we explicitly need to use
-			# Local as a user uploaded file will always be fetched on disk.
-			n = str(file[0]["datapath"])
-			path = Path(n)
-
-		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
-		else:
-			n = str(source + example_file)
-			path = self._local_sync(n)
-		
-		if n not in self._primary: self._primary[n] = self._handler(path)
-		return (n, self._primary[n]) if return_n else self._primary[n]
-
-
-	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
+	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame()):
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
@@ -230,7 +198,7 @@ class Cache:
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
 		if input_switch == "Upload":
 			file: list[FileInfo] | None = source_file
-			if file is None: return (None, default) if return_n else default
+			if file is None: return default
 
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
@@ -241,39 +209,36 @@ class Cache:
 		else:
 			n = str(source + example_file)
 			raw = await self._download(n)
-			if type(raw) is bytes:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read()); temp.seek(0)
-				path = Path(temp.name)
-			else: path = raw
 
-		if n not in self._primary: self._primary[n] = self._handler(path)
-		return (n, self._primary[n]) if return_n else self._primary[n]
+			# WASM needs a temporary file, but they are deleted out of their scope.
+			if Pyodide:
+				temp = NamedTemporaryFile(suffix=Path(n).suffix); 
+				temp.write(BytesIO(raw).read()); temp.seek(0)
+				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
+			elif n not in self._primary: self._primary[n] = self._handler(raw)
+
+		return deepcopy(self._primary[n])
 
 
-	async def Update(self, input):
+	def Store(self, object, inputs):
 		"""
-		@brief Updates information within the secondary cache based on user selection
-		@param input: The Shiny input. Importantly, these must be defined:
-			input.TableRow: The row to modify
-			input.TableCol: The column to modify
-			input.TableVal: What the user wants to set as the new value
-		@info This function should be called on a reactive hook for a "Update" button.
+		@brief Store arbitrary data in the Cache.
+		@param object: The object to store
+		@param inputs: A list of values that compose a hash of the object.
 		"""
+		h = "".join(str(i) for i in inputs)
+		self._objects[h] = object
 
-		# Get the data
-		df = await self.Load(input)
-		if not type(df) is DataFrame: return
 
-		row_count, column_count = df.shape
-		row, column = input.TableRow(), input.TableCol()
-
-		# So long as row and column are sane, update.
-		if row < row_count and column < column_count:
-			try:
-				if input.Type() == "Integer": df.iloc[row, column] = int(input.TableVal())
-				elif input.Type() == "Float": df.iloc[row, column] = float(input.TableVal())
-				else: df.iloc[row, column] = input.TableVal()
-			except ValueError: pass
+	def Get(self, inputs):
+		"""
+		@brief Retrieve arbitrary data in the Cache.
+		@param inputs: A list of values that compose a hash of the object.
+		"""
+		h = "".join(str(i) for i in inputs)
+		if h in self._objects:
+				return self._objects[h]
+		else: return None
 
 
 def NavBar():
@@ -366,7 +331,7 @@ def TableOptions():
 	return  ui.panel_conditional(
 		"input.MainTab === 'TableTab'",
 		ui.input_radio_buttons(id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
-		ui.input_action_button("Reset", "Reset Values"),
+		ui.input_action_button(id="Reset", label="Reset Values"),
 	),
 
 
