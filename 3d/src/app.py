@@ -17,7 +17,7 @@ from pandas import DataFrame
 from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions
 
 
 def server(input, output, session):
@@ -48,21 +48,41 @@ def server(input, output, session):
 		if suffix == ".png" or suffix == ".jpg": return read_texture(path.resolve())
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("3d", DataHandler=HandleData)
+	Data = reactive.value(None)
+	Valid = reactive.value(False)
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+
+
+	def GetData(): return Table.data_view() if Valid() else Data()
 
 
 	@output
 	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.File, input.Update, input.Reset)
-	async def LoadedTable(): 
-		df = await DataCache.Load(input)
-		if type(df) is DataFrame: return df
+	def Table():
+		df = Data()
+		try:
+			grid = render.DataGrid(Data(), editable=True)
+			Valid.set(True)
+			return grid
+		except TypeError:
+			ui.modal_show(ui.modal("The provided input format cannot be rendered",
+			title="Table cannot be rendered", easy_close=True, footer=None))
+
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
 
 
 	@output
 	@render.ui
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Object, input.Update, input.Reset, input.ColorMap, input.Style, input.Colors, input.Opacity, input.Features)
 	async def Heatmap():
-
 		with ui.Progress() as p:
 
 			# Get the model and data. 
@@ -73,7 +93,7 @@ def server(input, output, session):
 				example_file=Info[input.Example()]["Object"],
 				default=None
 			)
-			source = await DataCache.Load(input, default=None)
+			source = GetData()
 
 			# We support just rendering a model without data, but we need the model
 			if model is None: return
@@ -126,30 +146,22 @@ def server(input, output, session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable():
-		df = await DataCache.Load(input);
+	def DownloadTable():
+		df = GetData()
 		if df is not None:
 			yield df.to_string()
 
 
-	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
 app_ui = ui.page_fluid(
 
-	NavBar("3D"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
 
 			FileSelection(examples={"example1.csv": "Example 1", "texture.jpg": "Example 2"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"], project="3D"),
+
+			TableOptions(),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Object", "Choose an Object File", accept=[".obj"], multiple=False)),
 

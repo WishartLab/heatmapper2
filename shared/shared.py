@@ -15,6 +15,7 @@ from sys import modules
 from pathlib import Path
 from enum import Enum
 from os.path import exists
+from copy import deepcopy
 
 # Used for fetching web resources in a variety of fashions.
 URL = "https://wishartlab.github.io/heatmapper2"
@@ -134,19 +135,12 @@ class Cache:
 
 
 	async def _remote(self, url):
-		if url not in self._primary:
 			r = await pyfetch(url);
 			if not r.ok: return None
-			else: self._primary[url] = await r.bytes()
-		return self._primary[url]
+			return await r.bytes()
 
 
 	async def _local(self, url):
-		if not exists(url): return None
-		return Path(url)
-
-
-	def _local_sync(self, url):
 		if not exists(url): return None
 		return Path(url)
 
@@ -159,13 +153,11 @@ class Cache:
 												take a name, and a binary stream, and return a DataFrame.
 		"""
 
-		# The primary cache now serves as a file agnostic cache, containing the raw bytes of files.
+		# The primary is the unprocessed, fetched web resources
 		self._primary = {}
 
-		# The Secondary cache now serves as the transformed output through the handler. There is now
-		# no need to specify mutability because the primary cache doesn't contain data that can be changed.
-		# It serves solely as a cache for the Handler if the user throws out whatever is in the secondary.
-		self._secondary = {}
+		# The objects are anything that applications want to store
+		self._objects = {}
 
 		# The data handler for processing the binary files.
 		self._handler = DataHandler
@@ -181,39 +173,7 @@ class Cache:
 			self._source = "../example_input/"
 
 
-	def SyncLoad(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
-		"""
-		@brief A synchronous loading function that only supports local files
-		@info See Load() for more information
-		"""
-		if source_file is None: source_file = input.File()
-		if example_file is None: example_file = input.Example()
-		if source is None: source = self._source
-		if input_switch is None: input_switch = input.SourceFile()
-
-		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
-		if input_switch == "Upload":
-			file: list[FileInfo] | None = source_file
-			if file is None: return (None, default) if return_n else default
-
-			# The datapath can be immediately used to load examples, but we explicitly need to use
-			# Local as a user uploaded file will always be fetched on disk.
-			n = str(file[0]["datapath"])
-			path = Path(n)
-
-		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
-		else:
-			n = str(source + example_file)
-			path = self._local_sync(n)
-		
-		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
-		if n not in self._secondary:
-			self._secondary[n] = self._handler(path)
-
-		return (n, self._secondary[n]) if return_n else self._secondary[n]
-
-
-	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame(), return_n=False):
+	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame()):
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
@@ -238,7 +198,7 @@ class Cache:
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
 		if input_switch == "Upload":
 			file: list[FileInfo] | None = source_file
-			if file is None: return (None, default) if return_n else default
+			if file is None: return default
 
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
@@ -249,83 +209,47 @@ class Cache:
 		else:
 			n = str(source + example_file)
 			raw = await self._download(n)
-			if type(raw) is bytes:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix); temp.write(BytesIO(raw).read()); temp.seek(0)
-				path = Path(temp.name)
-			else: path = raw
 
-		# If the secondary cache hasn't been populated (Or was purge by the user), populate it.
-		if n not in self._secondary:
-			self._secondary[n] = self._handler(path)
+			# WASM needs a temporary file, but they are deleted out of their scope.
+			if Pyodide:
+				temp = NamedTemporaryFile(suffix=Path(n).suffix); 
+				temp.write(BytesIO(raw).read()); temp.seek(0)
+				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
+			elif n not in self._primary: self._primary[n] = self._handler(raw)
 
-		return (n, self._secondary[n]) if return_n else self._secondary[n]
-
-
-	async def Update(self, input):
-		"""
-		@brief Updates information within the secondary cache based on user selection
-		@param input: The Shiny input. Importantly, these must be defined:
-			input.TableRow: The row to modify
-			input.TableCol: The column to modify
-			input.TableVal: What the user wants to set as the new value
-		@info This function should be called on a reactive hook for a "Update" button.
-		"""
-
-		# Get the data
-		df = await self.Load(input)
-		if not type(df) is DataFrame: return
-
-		row_count, column_count = df.shape
-		row, column = input.TableRow(), input.TableCol()
-
-		# So long as row and column are sane, update.
-		if row < row_count and column < column_count:
-			try:
-				if input.Type() == "Integer": df.iloc[row, column] = int(input.TableVal())
-				elif input.Type() == "Float": df.iloc[row, column] = float(input.TableVal())
-				else: df.iloc[row, column] = input.TableVal()
-			except ValueError: pass
-
-
-	async def Purge(self, input, source_file=None, example_file=None, source=None):
-		"""
-		@brief Purges the secondary cache of whatever the user has uploaded/selected
-		@param input: The Shiny input. See N() for required objects.
-		@param source_file: The source ID, defaults to input.File()
-		@param example_file: The example ID, defaults to input.Example()
-		@param source: The path that should be appending to the path for fetching. 
-		@info This function should be called on a reactive hook for a "Reset" button.
-		"""
-
-		if source_file is None: source_file = input.File()
-		if example_file is None: example_file = input.Example()
-		if source is None: source = self._source
-
-		if input.SourceFile() == "Upload":
-			file: list[FileInfo] | None = source_file
-			if file is None: return None
-			n = file[0]["datapath"]
-		else: n = source + example_file
-		del self._secondary[n]
-
-
-def TableValueUpdate(df, input):
-	"""
-	@brief Updates the value displayed in the TableVal based on the current selection
-	@param df The DataFrame
-	@param input The shiny input
-	"""
-
-	if not df.empty:
-		rows, columns = df.shape
+		# If the object cannot be copied, then we can just return it directly
 		try:
-			row, column = int(input.TableRow()), int(input.TableCol())
-			if 0 <= row <= rows and 0 <= column <= columns:
-				ui.update_text(id="TableVal", label="Value (" + str(df.iloc[row, column]) + ")")
-		except TypeError: pass
+			return deepcopy(self._primary[n])
+		except AttributeError:
+			return self._primary[n]
 
 
-def NavBar(current):
+	def Store(self, object, inputs):
+		"""
+		@brief Store arbitrary data in the Cache.
+		@param object: The object to store
+		@param inputs: A list of values that compose a hash of the object.
+		"""
+		h = "".join(str(i) for i in inputs)
+		self._objects[h] = object
+
+
+	def Get(self, inputs):
+		"""
+		@brief Retrieve arbitrary data in the Cache.
+		@param inputs: A list of values that compose a hash of the object.
+		"""
+		h = "".join(str(i) for i in inputs)
+		if h in self._objects:
+				return self._objects[h]
+		else: return None
+
+	def In(inputs):
+		h = "".join(str(i) for i in inputs)
+		return h in self._objects
+
+
+def NavBar():
 	"""
 	@brief Returns a Navigation Bar for each project, with the current project selected.
 	@returns A list, containing a ui.panel_title, and a ui.navset_bar.
@@ -343,17 +267,18 @@ def NavBar(current):
 
 	return (
 		ui.panel_title(title=None, window_title="Heatmapper"),
-			ui.navset_bar(
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>'), value="Expression"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>'), value="Pairwise"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["image"]}" target="_blank" rel="noopener noreferrer">Image</a>'), value="Image"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["geomap"]}" target="_blank" rel="noopener noreferrer">Geomap</a>'), value="Geomap"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer">Geocoordinate</a>'), value="Geocoordinate"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer">3D</a>'), value="3D"),
-				ui.nav_panel(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer">Spatial</a>'), value="Spatial"),
-				ui.nav_panel(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>'), value="About"),
-				title="Heatmapper",
-				selected=current,
+		ui.navset_bar(
+			ui.nav_control(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["image"]}" target="_blank" rel="noopener noreferrer">Image</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["geomap"]}" target="_blank" rel="noopener noreferrer">Geomap</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer">Geocoordinate</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer">3D</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer">Spatial</a>')),
+			ui.nav_control(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>')),
+			ui.nav_spacer(),
+			ui.nav_control(ui.input_dark_mode(id="mode")),
+			title="Heatmapper",
 		),
 	)
 
@@ -378,7 +303,12 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	"""
 
 	# If the user needs help with the formatting.
-	return [ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki/Format target="_blank" rel="noopener noreferrer">Data Format</a>'),
+	return [
+	ui.layout_columns(
+		ui.HTML("<a href=https://github.com/WishartLab/heatmapper2/wiki/Format target='_blank' rel='noopener noreferrer'>Format</a>"),
+		ui.HTML(f"<a href='https://github.com/WishartLab/heatmapper2/wiki/Interface#{project}' target='_blank' rel='noopener noreferrer'>Help</a>"),
+		col_widths=[6,6]
+	),
 
 	# Specify whether to use example files, or upload one.
 	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected=default, inline=True),
@@ -395,32 +325,65 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 		ui.layout_columns(
 			ui.input_select(id="Example", label=None, choices=examples, multiple=False),
 			ui.popover(ui.input_action_link(id="ExampleInfoButton", label="Info"), ui.output_text("ExampleInfo")),
-			col_widths=[8,2],
+			col_widths=[7,3],
 		)
 	),
-
-	ui.br(),
-	ui.HTML(f"<a href='https://github.com/WishartLab/heatmapper2/wiki/Interface#{project}' target='_blank' rel='noopener noreferrer'>Info on Settings</a>"),
 	]
+
+
+def TableOptions():
+	"""
+	@brief Return the options for Table Manipulation.
+	@returns A conditional panel that provides a DataType, and a ResetButton.
+	"""
+	return  ui.panel_conditional(
+		"input.MainTab === 'TableTab'",
+		ui.input_radio_buttons(id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+		ui.input_action_button(id="Reset", label="Reset Values"),
+	),
+
+
+def ColorMap():
+	"""
+	@brief Returns a ColorMap input Selection
+	@returns	A list of UI elements. Firstly, a header that contained a toggle for custom ColorMaps.
+						Then, two conditional panels based on the status of the toggle. If the user wants
+						custom color maps, then provide a selectize.js selection box that allows for multiple
+						selections. These options are used to define the gradient, low to high. If not, just a
+						collection of predefined maps, where the keys must be split on spaces to generate a map
+						that MatPlotLib can use.
+	"""
+	return [
+		ui.layout_columns("Color Map", ui.input_checkbox(id="Custom", label="Custom")),
+		ui.panel_conditional(
+			"input.Custom",
+				ui.input_select(
+				id="CustomColors",
+				label=None,
+				choices=Colors,
+				selected=["Blue", "White", "Yellow"],
+				multiple=True,
+				selectize=True,
+			),
+		),
+		ui.panel_conditional(
+			"!input.Custom",
+			ui.input_select(id="ColorMap", label=None, choices={
+					"Blue White Yellow": "Blue/Yellow",
+					"Red Black Green": "Red/Green",
+					"Pink White Green": "Pink/Green",
+					"Blue Green Yellow": "Blue/Green/Yellow",
+					"Black Gray White": "Grayscale",
+					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
+				}
+			),
+		)]
 
 
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
-		ui.nav_panel("Interactive", m_type("Heatmap", height="75vh"), value="Interactive"),
-		ui.nav_panel("Table",
-			ui.layout_columns(
-				ui.input_numeric("TableRow", "Row", 0, min=0),
-				ui.input_numeric("TableCol", "Column", 0, min=0),
-				ui.input_text("TableVal", "Value", 0),
-				ui.input_select(id="Type", label="Datatype", choices=["Integer", "Float", "String"]),
-				col_widths=[2,2,6,2],
-			),
-			ui.layout_columns(
-				ui.input_action_button("Update", "Update"),
-				ui.input_action_button("Reset", "Reset Values"),
-			),
-			ui.output_data_frame("LoadedTable")
-		),
+		ui.nav_panel("Heatmap", m_type(id="Heatmap", height="90vh"), value="HeatmapTab"),
+		ui.nav_panel("Table", ui.output_data_frame(id="Table"), value="TableTab"),
 		*args,
 		id="MainTab"
 	)

@@ -14,14 +14,13 @@
 #
 
 
-from shiny import App, reactive, render, ui
+from shiny import App, reactive, render, ui, types
 from matplotlib.pyplot import figure, subplots, colorbar
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
 from scipy.stats import zscore
-from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate, Colors
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, ColorMap
 
 
 def server(input, output, session):
@@ -33,18 +32,26 @@ def server(input, output, session):
 	}
 
 	DataCache = Cache("expression")
+	Data = reactive.value(None)
+	Valid = reactive.value(False)
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
 
 
-	async def ProcessData():
+	def GetData(): return Table.data_view() if Valid() else Data()
+
+
+	def ProcessData(df):
 		"""
 		@brief Extracts the labels for each axis, and returns it alongside a DataFrame containing only the relevant data.
 		@returns	A list containing the labels for the y axis, a list containing the labels for the x axis, and a
 							DataFrame containing the loaded data without those two columns.
 		"""
 
-		df = await DataCache.Load(input)
 		name = input.NameColumn()
-		if name not in df: return None, None, None
+		if name not in df: return None, None , None
 
 		# Drop the naming columns before linkage.
 		data = df.drop(columns=Filter(df.columns, ColumnType.Name))
@@ -83,21 +90,58 @@ def server(input, output, session):
 		return dendrogram
 
 
-	async def GenerateHeatmap():
+	def RenderDendrogram(data, labels, invert, progress):
+		"""
+		@brief Renders a Dendrogram
+		@param data: The DataFrame
+		@param labels: The labels for the Dendrogram
+		@param invert: Whether to invert (Use for Column Dendrograms)
+		@pararm progress: The progress bar to update when generating the Dendrogram.
+		"""
+		if data is None: return
+
+		fig = figure(figsize=(12, 10))
+		ax = fig.add_subplot(111)
+
+		ax.spines["top"].set_visible(False)
+		ax.spines["right"].set_visible(False)
+		ax.spines["bottom"].set_visible(False)
+		ax.spines["left"].set_visible(False)
+
+		GenerateDendrogram(data, ax, input.Orientation(), progress, labels, invert=invert)
+		return fig
+
+
+	@output
+	@render.data_frame
+	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
+
+
+	@output
+	@render.plot
+	def Heatmap(): 
 		"""
 		@brief Generates the Heatmap
 		@returns The heatmap
 		"""
 
 		with ui.Progress() as p:
-
 			p.inc(message="Reading input...")
-			index_labels, x_labels, data = await ProcessData()
+			index_labels, x_labels, data = ProcessData(GetData())
 			if data is None: return
 
 			# Create a figure with a heatmap and associated dendrograms
 			p.inc(message="Plotting...")
 			fig = figure(figsize=(12, 10))
+
 			gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
 
 			# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
@@ -127,11 +171,7 @@ def server(input, output, session):
 			# Render the heatmap.
 			ax_heatmap = fig.add_subplot(gs[1, 1])
 
-			if input.ColorMap() == "Custom":
-				colors = [input.Low().lower(), input.Mid().lower(), input.High().lower()]
-			else:
-				colors = input.ColorMap().split("/")
-
+			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
 			heatmap = ax_heatmap.imshow(
 				df,
 				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()),
@@ -158,56 +198,22 @@ def server(input, output, session):
 			if "legend" in input.Features():
 				ax_cbar = fig.add_subplot(gs[3, 1])
 				cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
-
+				cbar.ax.tick_params(labelsize=input.TextSize())
 			return fig
 
 
-	def RenderDendrogram(data, labels, invert, progress):
-		"""
-		@brief Renders a Dendrogram
-		@param data: The DataFrame
-		@param labels: The labels for the Dendrogram
-		@param invert: Whether to invert (Use for Column Dendrograms)
-		"""
-		if data is None: return
-
-		fig = figure(figsize=(12, 10))
-		ax = fig.add_subplot(111)
-
-		ax.spines["top"].set_visible(False)
-		ax.spines["right"].set_visible(False)
-		ax.spines["bottom"].set_visible(False)
-		ax.spines["left"].set_visible(False)
-
-		GenerateDendrogram(data, ax, input.Orientation(), progress, labels, invert=invert)
-		return fig
-
-
-	@output
-	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
-
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.ScaleType, input.Interpolation, input.ColorMap, input.Low, input.Mid, input.High, input.Bins, input.Features)
-	async def Heatmap(): return await GenerateHeatmap()
-
-
-	@output
-	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
-	async def RowDendrogram(): 
-		index_labels, _, data = await ProcessData(); 
+	def RowDendrogram(): 
+		index_labels, _, data = ProcessData(GetData()); 
 		with ui.Progress() as p:
 			return RenderDendrogram(data=data, labels=index_labels, invert=False, progress=p)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.NameColumn, input.ClusterMethod, input.DistanceMethod, input.TextSize, input.Orientation)
-	async def ColumnDendrogram():
-	 _, x_labels, data = await ProcessData(); 
+	def ColumnDendrogram():
+	 _, x_labels, data = ProcessData(GetData()); 
 	 with ui.Progress() as p:
 	 	return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 
@@ -219,32 +225,16 @@ def server(input, output, session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
+	def DownloadTable(): yield GetData().to_string()
 
 
 	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def UpdateColumnSelection(): Filter((await DataCache.Load(input)).columns, ColumnType.Name, ui_element="NameColumn")
+	def UpdateColumnSelection(): Filter(GetData().columns, ColumnType.Name, ui_element="NameColumn")
 
 
 app_ui = ui.page_fluid(
 
-	NavBar("Expression"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
@@ -255,66 +245,51 @@ app_ui = ui.page_fluid(
 				project="Expression"
 			),
 
-			# The column that holds names for the data.
-			ui.input_select(id="NameColumn", label="Names", choices=[], multiple=False),
+			TableOptions(),
 
-			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
-			ui.input_select(id="ClusterMethod", label="Clustering Method", choices=["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"], selected="Average"),
+			# Shared, Non-Table settings.
+			ui.panel_conditional(
+				"input.MainTab != 'TableTab'",
+				# The column that holds names for the data.
+				ui.input_select(id="NameColumn", label="Names", choices=[], multiple=False),
 
-			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html#scipy.spatial.distance.pdist
-			ui.input_select(id="DistanceMethod", label="Distance Method", choices=["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
+				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+				ui.input_select(id="ClusterMethod", label="Clustering Method", choices=["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"], selected="Average"),
 
-			# Customize the text size of the axes.
-			ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
+				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html#scipy.spatial.distance.pdist
+				ui.input_select(id="DistanceMethod", label="Distance Method", choices=["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
+
+				# Customize the text size of the axes.
+				ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
+			),
 
 			# Settings pertaining to the Heatmap view.
 			ui.panel_conditional(
-				"input.MainTab === 'Interactive'",
-				ui.br(),
-
+				"input.MainTab === 'HeatmapTab'",
 				# Define how the colors are scaled.
 				ui.input_select(id="ScaleType", label="Scale Type", choices=["Row", "Column", "None"], selected="Row"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
-
-				ui.br(),
-
-				# Set the ColorMap used. Our parsers just splits by slashes
-				ui.input_select(id="ColorMap", label="Color Map", choices={
-						"Custom": "Custom", 
-						"Blue/White/Yellow": "Blue/Yellow",
-						"Red/Black/Green": "Red/Green",
-						"Pink/White/Green": "Pink/Green",
-						"Blue/Green/Yellow": "Blue/Green/Yellow",
-						"Black/Gray/White": "Grayscale",
-						"Red/Orange/Yellow/Green/Blue/Indigo/Violet": "Rainbow",
-					}
+				ui.input_select(
+					id="Interpolation", 
+					label="Interpolation", 
+					choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], 
+					selected="Nearest",
 				),
 
-				ui.panel_conditional(
-					"input.ColorMap === 'Custom'",
-					ui.HTML("Low/Mid/High Colors"),
-					ui.input_select(id="Low", label=None, choices=Colors, selected="Blue"),
-					ui.input_select(id="Mid", label=None, choices=Colors, selected="White"),
-					ui.input_select(id="High", label=None, choices=Colors, selected="Yellow"),
-				),
-
-				ui.br(),
-
+				ColorMap(),
+				
 				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
 
 				# Toggle rendering features. All are on by default.
-				ui.input_checkbox_group(id="Features", label="Heatmap Features",
+				ui.input_checkbox_group(id="Features", label="Visibility",
 					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"},
 					selected=["row", "col", "x", "y", "legend"])
 			),
 
 			# Settings pertaining to the dendrogram view.
 			ui.panel_conditional(
-				"input.MainTab === 'Row' || input.MainTab === 'Column'",
-				ui.br(),
-
+				"input.MainTab === 'RowTab' || input.MainTab === 'ColumnTab'",
 				# Define the Orientation of the dendrogram in the Tab
 				ui.input_select(id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"], selected="Left"),
 			),
@@ -327,8 +302,8 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(
-			ui.nav_panel("Row Dendrogram", ui.output_plot("RowDendrogram", height="90vh"), value="Row"),
-			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="Column")
+			ui.nav_panel("Row Dendrogram", ui.output_plot("RowDendrogram", height="90vh"), value="RowTab"),
+			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="ColumnTab"),
 		),
 	)
 )

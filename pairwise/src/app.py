@@ -14,16 +14,15 @@
 #
 
 
-from shiny import App, reactive, render, ui
+from shiny import App, reactive, render, ui, types
 from matplotlib.pyplot import subplots, colorbar
 from scipy.spatial.distance import pdist, squareform
 from matplotlib.colors import LinearSegmentedColormap
 from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
-from pathlib import Path
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableValueUpdate, Colors
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, ColorMap
 
 
 def server(input, output, session):
@@ -41,8 +40,20 @@ def server(input, output, session):
 		suffix = path.suffix
 		if suffix == ".pdb": return PDBMatrix(path.resolve())
 		elif suffix == ".fasta": return FASTAMatrix(path.resolve())
-		else: return DataCache.DefaultHandler(path)
+		else: return ChartMatrix(DataCache.DefaultHandler(path))
+
 	DataCache = Cache("pairwise", HandleData)
+	Data = reactive.value(None)
+	Valid = reactive.value(False)
+
+
+	# We add Matrix and Method as they are calculated in the Matrix handlers.
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+
+
+	def GetData(): return Table.data_view() if Valid() else Data()
 
 
 	def FASTAMatrix(file):
@@ -69,14 +80,7 @@ def server(input, output, session):
 					if kmer not in dictionary:
 							dictionary[kmer] = [0.0] * len(sequences)
 					dictionary[kmer][x] += increment
-		frequencies = DataFrame.from_dict(dictionary, orient='index')
-
-		# Calculate matrix
-		if input.MatrixType() == "Distance":
-			distances = pdist(frequencies.T, metric=input.DistanceMethod().lower())
-			return DataFrame(squareform(distances), index=column_names, columns=column_names)
-		else:
-			return frequencies.corr(method=input.CorrelationMethod().lower())
+		return DataFrame.from_dict(dictionary, orient='index', columns=column_names)
 
 
 	def PDBMatrix(file):
@@ -97,13 +101,7 @@ def server(input, output, session):
 							for residue in chain:
 									for atom in residue:
 											coordinates.append(atom.coord)
-
-		# Calculate matrix
-		if input.MatrixType() == "Distance":
-			distances = pdist(coordinates, metric=input.DistanceMethod().lower())
-			return DataFrame(squareform(distances))
-		else:
-			return DataFrame(coordinates).corr(method=input.CorrelationMethod().lower())
+		return DataFrame(coordinates)
 
 
 	def ChartMatrix(df):
@@ -144,37 +142,48 @@ def server(input, output, session):
 			except ValueError:
 				coordinates = df.iloc[:, 1:].values
 				point_names = df.columns[1:]
-				
-		# Calculate a distant matrix, and return it
-		if input.MatrixType() == "Distance":
-			distances = pdist(coordinates, metric=input.DistanceMethod().lower())
-			return DataFrame(squareform(distances), index=point_names, columns=point_names)
-		else:
-			return DataFrame(coordinates, index=point_names, columns=point_names).corr(method=input.CorrelationMethod().lower())
+		return DataFrame(coordinates, columns=point_names, index=point_names).T
 
 
-	async def GenerateHeatmap():
-		"""
-		@brief Generates the Heatmap
-		@returns The heatmap
-		"""
+	@output
+	@render.data_frame
+	def Table():
+		df = Data()
+		if df.columns[0] == 0:
+			ui.modal_show(ui.modal("The provided input format cannot be rendered",
+			title="Table cannot be rendered", easy_close=True, footer=None))
+		else: 
+			Valid.set(True)
+			return render.DataGrid(Data(), editable=True)
 
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
+
+
+	@output
+	@render.plot
+	def Heatmap():
 		with ui.Progress() as p:
-
 			p.inc(message="Reading input...")
-			n, data = await DataCache.Load(input, return_n=True)
-			if data.empty: return
-			if Path(n).suffix not in [".pdb", ".fasta"]: df = ChartMatrix(data)
-			else: df = data
+			data = GetData()
+			
+			p.inc(message="Calculating...")
+			# Calculate matrix
+			if input.MatrixType() == "Distance":
+				distances = pdist(data, metric=input.DistanceMethod().lower())
+				df = DataFrame(squareform(distances), columns=data.index, index=data.index)
+			else:
+				df = data.corr(method=input.CorrelationMethod().lower())
 
 			p.inc(message="Plotting...")
 			fig, ax = subplots()
 
-			if input.ColorMap() == "Custom":
-				colors = [input.Low().lower(), input.Mid().lower(), input.High().lower()]
-			else:
-				colors = input.ColorMap().split("/")
-
+			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
 			im = ax.imshow(
 				df, 
 				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()), 
@@ -182,7 +191,9 @@ def server(input, output, session):
 			)
 
 			# Visibility of features
-			if "legend" in input.Features(): colorbar(im, ax=ax, label="Distance")
+			if "legend" in input.Features(): 
+				cbar = colorbar(im, ax=ax, label="Distance")
+				cbar.ax.tick_params(labelsize=input.TextSize())
 
 			if "y" in input.Features():
 				ax.tick_params(axis="y", labelsize=input.TextSize())
@@ -204,19 +215,6 @@ def server(input, output, session):
 						for j in range(df.shape[1]):
 								ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 
-			return ax
-
-
-	@output
-	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
-
-
-	@output
-	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MatrixType, input.TextSize, input.DistanceMethod, input.CorrelationMethod, input.Interpolation, input.ColorMap, input.Low, input.Mid, input.High, input.Bins, input.Features, input.Chain, input.K)
-	async def Heatmap(): return await GenerateHeatmap()
 
 	@output
 	@render.text
@@ -225,27 +223,12 @@ def server(input, output, session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
-
-
-	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
+	def DownloadTable(): yield GetData().to_string()
 
 
 app_ui = ui.page_fluid(
 
-	NavBar("Pairwise"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
@@ -262,64 +245,48 @@ app_ui = ui.page_fluid(
 				project="Pairwise"
 			),
 
-			# Specify Matrix Type
-			ui.input_radio_buttons(id="MatrixType", label="Matrix Type", choices=["Distance", "Correlation"], selected="Distance", inline=True),
-
-			# Customize the text size of the axes.
-			ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
-
-			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
-			ui.panel_conditional(
-				"input.MatrixType === 'Distance'",
-				ui.input_select(id="DistanceMethod", label="Distance Method", choices=[
-					"Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
-			),
-
-			# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html
-			ui.panel_conditional(
-				"input.MatrixType === 'Correlation'",
-				ui.input_select(id="CorrelationMethod", label="Correlation Method", choices=["Pearson", "Kendall", "Spearman"], selected="Pearson"),
-			),
-
-			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-			ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
-
-			ui.br(),
-
-			# Set the ColorMap used. Our parsers just splits by slashes
-			ui.input_select(id="ColorMap", label="Color Map", choices={
-					"Custom": "Custom", 
-					"Blue/White/Yellow": "Blue/Yellow",
-					"Red/Black/Green": "Red/Green",
-					"Pink/White/Green": "Pink/Green",
-					"Blue/Green/Yellow": "Blue/Green/Yellow",
-					"Black/Gray/White": "Grayscale",
-					"Red/Orange/Yellow/Green/Blue/Indigo/Violet": "Rainbow",
-				}
-			),
+			TableOptions(),
 
 			ui.panel_conditional(
-				"input.ColorMap === 'Custom'",
-				ui.HTML("Low/Mid/High Colors"),
-				ui.input_select(id="Low", label=None, choices=Colors, selected="Blue"),
-				ui.input_select(id="Mid", label=None, choices=Colors, selected="White"),
-				ui.input_select(id="High", label=None, choices=Colors, selected="Yellow"),
+				"input.MainTab != 'TableTab'",
+
+				# Specify Matrix Type
+				ui.input_radio_buttons(id="MatrixType", label="Matrix Type", choices=["Distance", "Correlation"], selected="Distance", inline=True),
+
+				# Customize the text size of the axes.
+				ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
+
+				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
+				ui.panel_conditional(
+					"input.MatrixType === 'Distance'",
+					ui.input_select(id="DistanceMethod", label="Distance Method", choices=[
+						"Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
+				),
+
+				# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html
+				ui.panel_conditional(
+					"input.MatrixType === 'Correlation'",
+					ui.input_select(id="CorrelationMethod", label="Correlation Method", choices=["Pearson", "Kendall", "Spearman"], selected="Pearson"),
+				),
+
+				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
+				ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
+
+				ColorMap(),
+
+				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
+
+				# Customize what aspects of the heatmap are visible
+				ui.input_checkbox_group(id="Features", label="Heatmap Features",
+						choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
+						selected=["legend"]),
+
+				# Specify the PDB Chain
+				ui.input_text("Chain", "PDB Chain", "A"),
+
+				# Customize the K-mer to compute for FASTA sequences
+				ui.input_numeric(id="K", label="K-Mer Length", value=3, min=3, max=5, step=1),
 			),
-
-			ui.br(),
-
-			ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
-
-			# Customize what aspects of the heatmap are visible
-			ui.input_checkbox_group(id="Features", label="Heatmap Features",
-					choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
-					selected=["legend"]),
-
-			# Specify the PDB Chain
-			ui.input_text("Chain", "PDB Chain", "A"),
-
-			# Customize the K-mer to compute for FASTA sequences
-			ui.input_numeric(id="K", label="K-Mer Length", value=3, min=3, max=5, step=1),
 
 			# Add the download buttons.
 			ui.download_button("DownloadTable", "Download Table"),

@@ -13,20 +13,14 @@
 #
 
 from shiny import App, reactive, render, ui
-from io import BytesIO
 from matplotlib.pyplot import get_cmap
 from tempfile import TemporaryDirectory, NamedTemporaryFile
-from pandas import DataFrame
-from numpy import append
-from pathlib import Path
 from anndata import read_h5ad
 from squidpy import gr, pl, read
-from shiny.types import FileInfo
-from anndata import AnnData
 from scanpy import pp, tl
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType
 
 
 def server(input, output, session):
@@ -37,11 +31,6 @@ def server(input, output, session):
 		"seqfish.h5ad": "Pre-processed example files provided by SquidPy",
 		"imc.h5ad": "Pre-processed example files provided by SquidPy",
 	}
-
-	# The DataCache holds our H5AD files, but DataCache serves as a Cache to conserve
-	# bandwidth, not computation. The SpatialCache caches objects computed via
-	# squidpy.gr functions, using a hash of the input parameters
-	SpatialCache = {}
 
 	# Concurrent jobs to run for calculations.
 	Jobs = 8
@@ -65,9 +54,15 @@ def server(input, output, session):
 		elif suffix == ".h5": return None
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("spatial", DataHandler=HandleData)
+	Data = reactive.value(None)
 
 
-	def Load():
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example)
+	async def UpdateData(): Data.set(await Load());
+
+
+	async def Load():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
 		@info SquidPy's Visium Reader expect a directory, so Spatial will accept multiple files
@@ -78,12 +73,11 @@ def server(input, output, session):
 
 			# Get all the files, to generate a name.
 			if input.File() is None: return None
-			name = ""
-			for file in input.File():
-				name += file["datapath"]
-
+			name = [f["datapath"] for f in input.File()]
+			
+	
 			# If the name hasn't been cached, we need to construct the object.
-			if name not in SpatialCache:
+			if not DataCache.In(name):
 
 				# For each file uploaded, dump it into a temporary directory
 				temp = TemporaryDirectory()
@@ -101,7 +95,7 @@ def server(input, output, session):
 					elif suffix == ".h5": counts = base
 
 					# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
-					elif suffix == ".h5ad": return DataCache.SyncLoad(input, default=None)
+					elif suffix == ".h5ad": return await DataCache.Load(input, default=None)
 
 					open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
 
@@ -117,29 +111,32 @@ def server(input, output, session):
 				pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
 
 				# Throw it into the Cache.
-				SpatialCache[name] = adata
+				DataCache.Store(adata, name)
 
 			# Return the cached information.
-			return SpatialCache[name]
+			return DataCache.Get(name)
 
 		# With an example, just return it.
-		else: return DataCache.SyncLoad(input, default=None)
+		else: return await DataCache.Load(input, default=None)
 
 
 	@output
 	@render.data_frame
-	async def LoadedTable(): return Load().to_df()
+	def Table(): 
+		if input.TableType() == "obs":
+			return render.DataGrid(Data().obs)
+		elif input.TableType() == "var":
+			return render.DataGrid(Data().var)
 
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Statistic, input.Perm, input.P, input.Correlation, input.Keys, input.Shape, input.Features, input.ImgOpacity, input.ColorMap, input.Opacity)
 	def Heatmap():
 
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
-			adata = Load()
+			adata = Data()
 			if adata is None: return
 
 			try:
@@ -164,9 +161,6 @@ def server(input, output, session):
 					adata,
 					genes=genes,
 					mode=stat,
-					n_perms=input.Perm(),
-					two_tailed=input.P() == "Two-Tailed",
-					corr_method=input.Correlation()
 				)
 
 			p.inc(message="Plotting...")
@@ -184,12 +178,11 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab)
 	def Centrality():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
-			adata = Load()
+			adata = Data()
 			if adata is None: return
 
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
@@ -209,7 +202,6 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Function, input.Distance)
 	def Ripley():
 		with ui.Progress() as p:
 
@@ -234,12 +226,11 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Interval, input.Splits, input.Cluster, input.OccurrenceGraph)
 	def Occurrence():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
-			adata = Load()
+			adata = Data()
 			if adata is None: return
 
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
@@ -278,9 +269,8 @@ def server(input, output, session):
 
 
 	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.MainTab, input.Keys)
-	async def UpdateColumnSelection():
-		adata = Load()
+	def UpdateColumnSelection():
+		adata = Data()
 		if adata is None: return
 		if input.MainTab() == "Occurrence":
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
@@ -295,7 +285,7 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
-	NavBar("Spatial"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
@@ -313,16 +303,14 @@ app_ui = ui.page_fluid(
 			),
 
 			ui.panel_conditional(
-				"input.MainTab === 'Interactive'",
-				ui.HTML("<b>Interactive Settings</b>"),
+				"input.MainTab === 'TableTab'",
+				ui.input_radio_buttons(id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
+			),
+
+			ui.panel_conditional(
+				"input.MainTab === 'HeatmapTab'",
+				ui.HTML("<b>Heatmap Settings</b>"),
 				ui.input_select(id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
-
-				ui.input_slider(id="Perm", label="Permutations", value=100, min=1, max=200, step=1),
-
-				ui.input_radio_buttons(id="P", label="P-Value Distribution", choices=["Two-Tailed", "One-Tailed"], selected="One-Tailed", inline=True),
-
-				# https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html#statsmodels.stats.multitest.multipletests
-				ui.input_select(id="Correlation", label="Correlation Method", choices=["bonferroni" "sidak", "holm-sidak", "holm", "simes-hochberg", "hommel", "fdr_bh", "fdr_by", "fdr_tsbh", "fdr_tsbky"], selected="holm-sidak"),
 
 				ui.input_select(id="Keys", label="Annotation Keys", choices=[], selected=None),
 

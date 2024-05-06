@@ -23,7 +23,7 @@ from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
 from numpy import vstack
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableValueUpdate
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions
 
 # Fine, Shiny
 import branca, certifi, xyzservices, requests
@@ -42,6 +42,15 @@ def server(input, output, session):
 	}
 
 	DataCache = Cache("geocoordinate")
+	Data = reactive.value(None)
+	Valid = reactive.value(False)
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+
+
+	def GetData(): return Table.data_view() if Valid() else Data()
 
 
 	def GenerateMap(df, map, v_col, lon_col, lat_col):
@@ -144,17 +153,25 @@ def server(input, output, session):
 			max_speed=60).add_to(map)
 
 
-	async def LoadMap():
-		"""
-		@brief Generates a map with the provided information
-		@returns the Folium.Map
-		"""
+	@output
+	@render.data_frame
+	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
 
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
+
+
+	@output
+	@render.ui
+	def Heatmap(): 
 		with ui.Progress() as p:
-
 			p.inc(message="Loading input...")
-			df = await DataCache.Load(input)
-			if df.empty: return
+			df = GetData()
 
 			# Set the Value Column Accordingly (Helper functions handle None)
 			p.inc(message="Formatting...")
@@ -194,48 +211,20 @@ def server(input, output, session):
 
 
 	@output
-	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
-
-
-	@output
-	@render.ui
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Temporal, input.Uniform, input.TimeColumn, input.ValueColumn, input.MapType, input.Opacity, input.Radius, input.Blur, input.ROI, input.Scale)
-	async def Heatmap(): return await LoadMap()
-
-
-	@output
 	@render.text
 	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
+	def DownloadTable(): yield GetData().to_string()
 
 
 	@render.download(filename="heatmap.html")
-	async def DownloadHeatmap(): m = await LoadMap(); yield m.get_root().render()
+	def DownloadHeatmap(): m = LoadMap(); yield m.get_root().render()
 
 
 	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.Temporal, input.Uniform)
 	async def UpdateColumns():
 		df = await DataCache.Load(input)
 		if not input.Uniform():
@@ -262,7 +251,7 @@ def server(input, output, session):
 
 
 	@reactive.Effect
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn,ignore_none=False, ignore_init=False)
+	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn)
 	async def UpdateROI():
 		df = await DataCache.Load(input)
 		v_col = input.ValueColumn()
@@ -275,7 +264,7 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
-	NavBar("Geocoordinate"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
@@ -292,6 +281,8 @@ app_ui = ui.page_fluid(
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Geocoordinate"
 			),
+
+			TableOptions(),
 
 			ui.input_checkbox(id="Temporal", label="Temporal Heatmap"),
 			ui.input_checkbox(id="Uniform", label="Uniform Values"),
