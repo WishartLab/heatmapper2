@@ -18,9 +18,8 @@ from matplotlib.pyplot import subplots, colorbar
 from scipy.interpolate import interp2d
 from numpy import arange, meshgrid, linspace
 from PIL import Image
-from pathlib import Path
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableValueUpdate
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions
 
 
 def server(input, output, session):
@@ -43,18 +42,37 @@ def server(input, output, session):
 		if path.suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]: return Image.open(path.resolve())
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("image", DataHandler=HandleData)
+	Data = reactive.value(None)
+	Valid = reactive.value(False)
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
 
 
-	async def GenerateHeatmap():
-		"""
-		@brief Generates the heatmap, overlaying the Image with the DataFrame
-		@returns The Plot's axis, for downloading purposes.
-		"""
+	def GetData(): return Table.data_view() if Valid() else Data()
 
+
+	@output
+	@render.data_frame
+	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
+
+
+	@output
+	@render.plot
+	async def Heatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
-			df = await DataCache.Load(input)
+			df = GetData()
 
 			p.inc(message="Loading image...")
 			img = await DataCache.Load(input, source_file=input.Image(), example_file=Info[input.Example()]["Image"])
@@ -96,7 +114,9 @@ def server(input, output, session):
 			)
 
 		# Visibility of features
-		if "legend" in input.Features(): colorbar(im, ax=ax, label="Value")
+		if "legend" in input.Features(): 
+			cbar = colorbar(im, ax=ax, label="Value")
+			cbar.ax.tick_params(labelsize=input.TextSize())
 
 		if "y" in input.Features(): ax.tick_params(axis="y", labelsize=input.TextSize())
 		else: ax.set_yticklabels([])
@@ -108,50 +128,25 @@ def server(input, output, session):
 
 
 	@output
-	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
-
-
-	@output
-	@render.plot
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Image, input.Update, input.Reset, input.TextSize, input.Opacity, input.ColorMap, input.Algorithm, input.Interpolation, input.Style, input.Levels, input.Smoothing, input.Features)
-	async def Heatmap(): return await GenerateHeatmap()
-
-
-	@output
 	@render.text
 	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]["Description"]
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
-
-
-	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
+	def DownloadTable(): yield GetData().to_string()
 
 
 app_ui = ui.page_fluid(
 
-	NavBar("Image"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
 
 			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], project="Image"),
+
+			TableOptions(),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", 
 				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"], 
