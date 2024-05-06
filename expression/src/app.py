@@ -18,7 +18,6 @@ from shiny import App, reactive, render, ui, types
 from matplotlib.pyplot import figure, subplots, colorbar
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
-from scipy.stats import zscore
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, ColorMap
 
@@ -166,8 +165,15 @@ def server(input, output, session):
 				ax_col.axis("off")
 
 			# Handle scaling
-			if input.ScaleType() != "None": df = zscore(df, axis=1 if input.ScaleType() == "Row" else 0)
-			
+			if input.ScaleType() == "Row":
+				mean = df.mean(axis=1)
+				std_dev = df.std(axis=1)
+				df = ((df.T - mean) / std_dev)
+			elif input.ScaleType() == "Column":
+				mean = df.mean(axis=0)
+				std_dev = df.std(axis=0)
+				df = (df - mean) / std_dev
+		
 			# Render the heatmap.
 			ax_heatmap = fig.add_subplot(gs[1, 1])
 
