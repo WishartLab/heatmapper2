@@ -217,7 +217,11 @@ class Cache:
 				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
 			elif n not in self._primary: self._primary[n] = self._handler(raw)
 
-		return deepcopy(self._primary[n])
+		# If the object cannot be copied, then we can just return it directly
+		try:
+			return deepcopy(self._primary[n])
+		except AttributeError:
+			return self._primary[n]
 
 
 	def Store(self, object, inputs):

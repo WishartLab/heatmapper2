@@ -150,10 +150,8 @@ def server(input, output, session):
 	def Table():
 		df = Data()
 		if df.columns[0] == 0:
-			m = ui.modal(
-			"The provided input format cannot be rendered",
-			title="Table cannot be rendered", easy_close=True, footer=None)
-			ui.modal_show(m)
+			ui.modal_show(ui.modal("The provided input format cannot be rendered",
+			title="Table cannot be rendered", easy_close=True, footer=None))
 		else: 
 			Valid.set(True)
 			return render.DataGrid(Data(), editable=True)
