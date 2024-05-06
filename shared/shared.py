@@ -244,6 +244,10 @@ class Cache:
 				return self._objects[h]
 		else: return None
 
+	def In(inputs):
+		h = "".join(str(i) for i in inputs)
+		return h in self._objects
+
 
 def NavBar():
 	"""
