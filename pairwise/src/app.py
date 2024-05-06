@@ -145,6 +145,7 @@ def server(input, output, session):
 		return DataFrame(coordinates, columns=point_names, index=point_names).T
 
 
+	@output
 	@render.data_frame
 	def Table():
 		df = Data()
@@ -166,6 +167,7 @@ def server(input, output, session):
 		return value
 
 
+	@output
 	@render.plot
 	def Heatmap():
 		with ui.Progress() as p:

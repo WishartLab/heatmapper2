@@ -21,7 +21,7 @@ from branca.colormap import linear
 from pathlib import Path
 from json import loads
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableValueUpdate, Raw
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw
 from geojson import Mappings
 
 # Fine, Shiny
@@ -48,9 +48,18 @@ def server(input, output, session):
 		if path.suffix == ".geojson": return loads(path.open().read())
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("geomap", DataHandler=HandleData)
+	Data = reactive.value(None)
+	Valid = reactive.value(False)
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
+	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
 
 
-	async def LoadChoropleth(df, map, geojson, k_col, v_col):
+	def GetData(): return Table.data_view() if Valid() else Data()
+
+
+	def LoadChoropleth(df, map, geojson, k_col, v_col):
 		"""
 		@brief Applies a Choropleth to a Folium Map
 		@param df: The DataFrame that contains information to plot
@@ -73,7 +82,7 @@ def server(input, output, session):
 		).add_to(map)
 
 
-	async def LoadTemporalChoropleth(df, map, geojson, k_col, v_col):
+	def LoadTemporalChoropleth(df, map, geojson, k_col, v_col):
 		"""
 		@brief Applies a TimeSliderChoropleth to a Folium map
 		@param df: The DataFrame that contains data to plot
@@ -138,16 +147,27 @@ def server(input, output, session):
 		colormap.add_to(map)
 
 
-	async def LoadMap():
-		"""
-		@brief Generates a map with the provided information
-		@returns the Folium.Map
-		"""
+	@output
+	@render.data_frame
+	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
 
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if input.Type() == "Integer": value = int(patch["value"])
+		elif input.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		return value
+
+
+	@output
+	@render.ui
+	async def Heatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
-			df = await DataCache.Load(input)
+			df = GetData()
+			if df is None: return
 
 			p.inc(message="Loading GeoJSON...")
 			geojson = await DataCache.Load(
@@ -181,24 +201,11 @@ def server(input, output, session):
 
 			# Load the choropleth.
 			p.inc(message="Plotting...")
-			if input.Temporal(): await LoadTemporalChoropleth(df, map, geojson, k_col, v_col)
-			else: await LoadChoropleth(df, map, geojson, k_col, v_col)
+			if input.Temporal(): LoadTemporalChoropleth(df, map, geojson, k_col, v_col)
+			else: LoadChoropleth(df, map, geojson, k_col, v_col)
 
 			map.fit_bounds(map.get_bounds())
 			return map
-
-
-	@output
-	@render.data_frame
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset)
-	async def LoadedTable(): return await DataCache.Load(input)
-
-
-	@output
-	@render.ui
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.JSONFile, input.JSONSelection, input.JSONUpload, input.Temporal, input.KeyColumn, input.ValueColumn, input.MapType, input.ColorMap, input.Opacity, input.Bins, input.ROI)
-	async def Heatmap(): return await LoadMap()
-
 
 	@output
 	@render.data_frame
@@ -224,40 +231,23 @@ def server(input, output, session):
 
 
 	@render.download(filename="table.csv")
-	async def DownloadTable(): yield (await DataCache.Load(input)).to_string()
+	def DownloadTable(): yield GetData().to_string()
 
 
 	@render.download(filename="heatmap.html")
-	async def DownloadHeatmap(): yield (await LoadMap()).get_root().render()
+	def DownloadHeatmap(): yield LoadMap().get_root().render()
 
 
 	@reactive.Effect
-	@reactive.event(input.Example, input.File, input.Reset, input.Update, input.Temporal)
-	async def UpdateColumns():
-		df = await DataCache.Load(input)
+	def UpdateColumns():
+		df = GetData()
 		key = Filter(df.columns, ColumnType.Name, only_one=True, ui_element="KeyColumn")
 		Filter(df.columns, ColumnType.Value, bad=[key], ui_element="ValueColumn")
 
 
 	@reactive.Effect
-	@reactive.event(input.Update)
-	async def Update(): await DataCache.Update(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.Reset)
-	async def Reset(): await DataCache.Purge(input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.TableRow, input.TableCol, input.Update, input.Reset)
-	async def UpdateTableValue(): TableValueUpdate(await DataCache.Load(input), input)
-
-
-	@reactive.Effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Update, input.Reset, input.ValueColumn)
-	async def UpdateROI():
-		df = await DataCache.Load(input)
+	def UpdateROI():
+		df = GetData()
 		v_col = input.ValueColumn()
 		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
 		else:
@@ -267,7 +257,7 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
-	NavBar("Geomap"),
+	NavBar(),
 
 	ui.layout_sidebar(
 		ui.sidebar(
@@ -277,6 +267,8 @@ app_ui = ui.page_fluid(
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Geomap"
 			),
+
+			TableOptions(),
 
 			ui.input_radio_buttons(id="JSONFile", label="Specify a GeoJSON File", choices=["Provided", "Upload"], selected="Provided", inline=True),
 			ui.panel_conditional(

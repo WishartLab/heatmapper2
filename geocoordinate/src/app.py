@@ -153,6 +153,7 @@ def server(input, output, session):
 			max_speed=60).add_to(map)
 
 
+	@output
 	@render.data_frame
 	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
 
@@ -165,6 +166,7 @@ def server(input, output, session):
 		return value
 
 
+	@output
 	@render.ui
 	def Heatmap(): 
 		with ui.Progress() as p:

@@ -112,6 +112,7 @@ def server(input, output, session):
 		return fig
 
 
+	@output
 	@render.data_frame
 	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
 
@@ -124,6 +125,7 @@ def server(input, output, session):
 		return value
 
 
+	@output
 	@render.plot
 	def Heatmap(): 
 		"""
