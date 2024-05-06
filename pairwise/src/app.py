@@ -21,7 +21,6 @@ from matplotlib.colors import LinearSegmentedColormap
 from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
-from pathlib import Path
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, ColorMap
 
@@ -44,7 +43,7 @@ def server(input, output, session):
 		else: return ChartMatrix(DataCache.DefaultHandler(path))
 
 	DataCache = Cache("pairwise", HandleData)
-	Data = reactive.value(DataFrame())
+	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
 

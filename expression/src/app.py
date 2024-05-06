@@ -19,7 +19,6 @@ from matplotlib.pyplot import figure, subplots, colorbar
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
 from scipy.stats import zscore
-from pandas import DataFrame
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, ColorMap
 
@@ -33,7 +32,7 @@ def server(input, output, session):
 	}
 
 	DataCache = Cache("expression")
-	Data = reactive.value(DataFrame())
+	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
 	@reactive.effect
