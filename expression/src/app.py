@@ -279,8 +279,6 @@ app_ui = ui.page_fluid(
 
 				ColorMap(),
 				
-				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
-
 				# Toggle rendering features. All are on by default.
 				ui.input_checkbox_group(id="Features", label="Visibility",
 					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"},

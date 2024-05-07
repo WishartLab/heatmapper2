@@ -377,7 +377,8 @@ def ColorMap():
 					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
 				}
 			),
-		)]
+		),
+		ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1)]
 
 
 def MainTab(*args, m_type=ui.output_plot):

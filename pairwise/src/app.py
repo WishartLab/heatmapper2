@@ -274,8 +274,6 @@ app_ui = ui.page_fluid(
 
 				ColorMap(),
 
-				ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1),
-
 				# Customize what aspects of the heatmap are visible
 				ui.input_checkbox_group(id="Features", label="Heatmap Features",
 						choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
