@@ -51,9 +51,19 @@ def server(input, output, session):
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
+	Object = reactive.value(None)
+
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.Object, input.Example)
+	async def UpdateObject():Object.set(await DataCache.Load(input,
+			source_file=input.Object(),
+			example_file=Info[input.Example()]["Object"],
+			default=None
+		))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -82,17 +92,12 @@ def server(input, output, session):
 
 	@output
 	@render.ui
-	async def Heatmap():
+	def Heatmap():
 		with ui.Progress() as p:
 
 			# Get the model and data. 
 			p.inc(message="Loading input...")
-			model = await DataCache.Load(
-				input,
-				source_file=input.Object(),
-				example_file=Info[input.Example()]["Object"],
-				default=None
-			)
+			model = Object()
 			source = GetData()
 
 			# We support just rendering a model without data, but we need the model

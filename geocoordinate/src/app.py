@@ -225,8 +225,8 @@ def server(input, output, session):
 
 
 	@reactive.Effect
-	async def UpdateColumns():
-		df = await DataCache.Load(input)
+	def UpdateColumns():
+		df = GetData()
 		if not input.Uniform():
 			if not Filter(df.columns, ColumnType.Value, ui_element="ValueColumn"):
 				ui.update_checkbox(id="Uniform", value=True)
@@ -251,9 +251,8 @@ def server(input, output, session):
 
 
 	@reactive.Effect
-	@reactive.event(input.Update, input.Reset, input.Example, input.File, input.ValueColumn)
-	async def UpdateROI():
-		df = await DataCache.Load(input)
+	def UpdateROI():
+		df = GetData()
 		v_col = input.ValueColumn()
 
 		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)

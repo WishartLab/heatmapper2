@@ -43,9 +43,19 @@ def server(input, output, session):
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
+	IMG = reactive.value(None)
+
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+
+
+	@reactive.effect
+	@reactive.event(input.SourceFile, input.Example, input.Image)
+	async def UpdateIMG(): IMG.set(await DataCache.Load(input,
+			source_file=input.Image(), 
+			example_file=Info[input.Example()]["Image"]
+		))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -66,14 +76,14 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	async def Heatmap():
+	def Heatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
 			df = GetData()
 
 			p.inc(message="Loading image...")
-			img = await DataCache.Load(input, source_file=input.Image(), example_file=Info[input.Example()]["Image"])
+			img = IMG()
 			if img is None or df.empty: return None
 
 			# Wrangle into an acceptable format.

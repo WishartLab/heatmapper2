@@ -51,9 +51,23 @@ def server(input, output, session):
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
+	JSON = reactive.value(None)
+
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+
+
+	@reactive.effect
+	@reactive.event(input.JSONUpload, input.JSONSelection, input.JSONFile)
+	async def UpdateGeoJSON(): JSON.set(await DataCache.Load(
+			input,
+			source_file=input.JSONUpload(),
+			example_file=input.JSONSelection(),
+			source=URL,
+			input_switch=input.JSONFile(),
+			default=None
+		))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -162,7 +176,7 @@ def server(input, output, session):
 
 	@output
 	@render.ui
-	async def Heatmap():
+	def Heatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
@@ -170,14 +184,7 @@ def server(input, output, session):
 			if df is None: return
 
 			p.inc(message="Loading GeoJSON...")
-			geojson = await DataCache.Load(
-				input,
-				source_file=input.JSONUpload(),
-				example_file=input.JSONSelection(),
-				source=URL,
-				input_switch=input.JSONFile(),
-				default=None
-			)
+			geojson = JSON()
 
 			p.inc(message="Formatting...")
 			k_col, v_col = input.KeyColumn(), input.ValueColumn()
@@ -209,16 +216,8 @@ def server(input, output, session):
 
 	@output
 	@render.data_frame
-	@reactive.event(input.JSONFile, input.JSONSelection, input.JSONUpload)
-	async def GeoJSON():
-		geojson = await DataCache.Load(
-			input,
-			source_file=input.JSONUpload(),
-			example_file=input.JSONSelection(),
-			source=URL,
-			input_switch=input.JSONFile(),
-			default=None
-		)
+	def GeoJSON():
+		geojson = JSON()
 		if geojson is None: return
 		names = [feature['properties']['name'] for feature in geojson['features']]
 		return DataFrame({'Name': names})

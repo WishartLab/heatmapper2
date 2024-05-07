@@ -50,7 +50,7 @@ def server(input, output, session):
 			gr.spatial_neighbors(adata)
 			return adata
 
-		# Pass loading .h5, we deal with them in Load()
+		# Pass loading .h5, we deal with them in UpdateData()
 		elif suffix == ".h5": return None
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("spatial", DataHandler=HandleData)
@@ -59,10 +59,7 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example)
-	async def UpdateData(): Data.set(await Load());
-
-
-	async def Load():
+	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
 		@info SquidPy's Visium Reader expect a directory, so Spatial will accept multiple files
@@ -72,7 +69,7 @@ def server(input, output, session):
 		if input.SourceFile() == "Upload":
 
 			# Get all the files, to generate a name.
-			if input.File() is None: return None
+			if input.File() is None: return
 			name = [f["datapath"] for f in input.File()]
 			
 	
@@ -114,10 +111,10 @@ def server(input, output, session):
 				DataCache.Store(adata, name)
 
 			# Return the cached information.
-			return DataCache.Get(name)
+			Data.set(DataCache.Get(name))
 
 		# With an example, just return it.
-		else: return await DataCache.Load(input, default=None)
+		else: Data.set(await DataCache.Load(input, default=None))
 
 
 	@output
@@ -206,7 +203,7 @@ def server(input, output, session):
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
-			adata = Load()
+			adata = Data()
 			if adata is None: return
 
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
@@ -262,7 +259,7 @@ def server(input, output, session):
 
 	@render.download(filename="adata.h5ad")
 	def DownloadTable():
-		adata = Load()
+		adata = Data()
 		temp = NamedTemporaryFile(); 
 		adata.write(temp.name)
 		yield open(temp.name, "rb").read()
