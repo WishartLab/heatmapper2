@@ -278,7 +278,10 @@ def NavBar():
 			ui.nav_control(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>')),
 			ui.nav_spacer(),
 			ui.nav_control(ui.input_dark_mode(id="mode")),
-			title="Heatmapper",
+			title=ui.HTML(
+				f'<a href="{URL}" target="_blank" rel="noopener noreferrer"> \
+					<img src="{Raw}/site/logo.png" alt="Heatmapper"> \
+				</a>'),
 		),
 	)
 
