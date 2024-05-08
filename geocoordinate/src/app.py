@@ -60,15 +60,19 @@ def server(input, output, session):
 		@param map The folium map to attach the heatmap to.
 		"""
 
+		opacity = input.Opacity()
+		radius = input.Radius()
+		blur = input.Blur()
+
 		if input.Uniform():
 			df["Value"] = [1] * len(df[lat_col])
 			v_col = "Value"
 
 		if input.Scale():
 			HeatMap(list(zip(df[lat_col], df[lon_col], df[v_col])),
-			min_opacity=input.Opacity(),
-			radius=input.Radius(),
-			blur=input.Blur()).add_to(map)
+			min_opacity=opacity,
+			radius=radius,
+			blur=blur).add_to(map)
 
 		else:
 			latitude = df[lat_col]
@@ -90,9 +94,9 @@ def server(input, output, session):
 				longitude, 
 				latitude, 
 				c=values * 100, 
-				s=[input.Radius()] * len(values), 
+				s=[radius] * len(values), 
 				cmap="jet", 
-				alpha=input.Opacity(), 
+				alpha=opacity, 
 				linewidths=0
 			)
 
@@ -106,7 +110,7 @@ def server(input, output, session):
 			image_overlay = ImageOverlay(
 				image=temp.name,
 				bounds=[[min(latitude), min(longitude)], [max(latitude), max(longitude)]],
-				opacity=input.Opacity(),
+				opacity=opacity,
 				pixelated=False,
 			)
 			image_overlay.add_to(map)
@@ -143,13 +147,17 @@ def server(input, output, session):
 				time_slice.append([lat, lon, value])
 			data.append(time_slice)
 
+		radius = input.Radius()
+		opacity = input.Opacity()
+		blur = input.Blur()
+
 		# Make the heamap
 		HeatMapWithTime(
 			data,
 			index=df[t_col].drop_duplicates().to_list(),
-			radius=input.Radius(),
-			min_opacity=input.Opacity(),
-			blur=input.Blur(),
+			radius=radius,
+			min_opacity=opacity,
+			blur=blur,
 			max_speed=60).add_to(map)
 
 
@@ -205,7 +213,9 @@ def server(input, output, session):
 
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
-			if input.Temporal(): GenerateTemporalMap(df, map, input.TimeColumn(), v_col, lon_col, lat_col)
+			if input.Temporal(): 
+				t_col = input.TimeColumn()
+				GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
 			else: GenerateMap(df.copy(deep=True), map, v_col, lon_col, lat_col)
 			return map
 

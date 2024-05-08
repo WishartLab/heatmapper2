@@ -106,16 +106,22 @@ def server(input, output, session):
 			p.inc(message="Plotting...")
 			pl = Plotter()
 
+			style = input.Style()
+			opacity = input.Opacity()
+			features = input.Features()
+			cmap = input.ColorMap().lower()
+			colors = input.Colors()
+
 			# If there's no source, just render the model
 			if source is None:
 				pl.add_mesh(
 					model,
-					style=input.Style(),
-					opacity=input.Opacity(),
-					show_edges="Edges" in input.Features(),
-					lighting="Lighting" in input.Features(),
-					interpolate_before_map="Interpolation" in input.Features(),
-					smooth_shading="Smooth Shading" in input.Features(),
+					style=style,
+					opacity=opacity,
+					show_edges="Edges" in features,
+					lighting="Lighting" in features,
+					interpolate_before_map="Interpolation" in features,
+					smooth_shading="Smooth Shading" in features,
 				)
 
 			# If are data source is a table, render it as a heatmap.
@@ -124,14 +130,14 @@ def server(input, output, session):
 				pl.add_mesh(
 					model,
 					scalars=values,
-					style=input.Style(),
-					cmap=input.ColorMap().lower(),
-					opacity=input.Opacity(),
-					n_colors=input.Colors(),
-					show_edges="Edges" in input.Features(),
-					lighting="Lighting" in input.Features(),
-					interpolate_before_map="Interpolation" in input.Features(),
-					smooth_shading="Smooth Shading" in input.Features(),
+					style=style,
+					cmap=cmap,
+					opacity=opacity,
+					n_colors=colors,
+					show_edges="Edges" in features,
+					lighting="Lighting" in features,
+					interpolate_before_map="Interpolation" in features,
+					smooth_shading="Smooth Shading" in features,
 				)
 
 			# If we have a texture, map it.

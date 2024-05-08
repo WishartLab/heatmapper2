@@ -82,17 +82,22 @@ def server(input, output, session):
 		@param k_vol: The name of the column within df that contains names
 		@param v_col: the name of the column within df that contains the values to plot.
 		"""
+
+		colormap = input.ColorMap().lower()
+		opacity = input.Opacity()
+		bins = input.Bins()
+
 		Choropleth(
 				geo_data=geojson,
 				name="choropleth",
 				data=df,
 				columns=[k_col, v_col],
 				key_on="feature.properties.name",
-				fill_color=input.ColorMap().lower(),
-				fill_opacity=input.Opacity(),
-				line_opacity=input.Opacity(),
+				fill_color=colormap,
+				fill_opacity=opacity,
+				line_opacity=opacity,
 				legend_name="Legend",
-				bins=input.Bins()
+				bins=bins
 		).add_to(map)
 
 
@@ -285,7 +290,7 @@ app_ui = ui.page_fluid(
 			ui.input_select(id="ValueColumn", label="Value", choices=[], multiple=False),
 
 			# Only OpenStreatMap and CartoDB Positron seem to work.
-			ui.input_radio_buttons(id="MapType", label="Map Type", choices=["OpenStreetMap", "CartoDB Positron"], selected="CartoDB Positron"),
+			ui.input_radio_buttons(id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
 
 			ui.input_select(id="ColorMap", label="Color Map", choices=["Inferno", "Magma", "Plasma", "Viridis"], selected="Viridis"),
 			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),

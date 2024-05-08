@@ -101,15 +101,19 @@ def server(input, output, session):
 			# Add the image as an overlay, if we have one.
 			if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
 
+			cmap = input.ColorMap().lower()
+			alpha = input.Opacity()
+			algorithm = input.Algorithm().lower()
+			levels = input.Levels()
+
 			im = ax.contourf(
 				df,
-				cmap=input.ColorMap().lower(),
+				cmap=cmap,
 				extent=[0, 1, 0, 1],
 				zorder=1,
-				alpha=input.Opacity(),
-				algorithm=input.Algorithm().lower(),
-				linestyles=input.Style().lower(),
-				levels=input.Levels(),
+				alpha=alpha,
+				algorithm=algorithm,
+				levels=levels,
 			)
 
 		# Visibility of features
@@ -162,9 +166,6 @@ app_ui = ui.page_fluid(
 
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
 			ui.input_select(id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], selected="MPL2014"),
-
-			# https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html
-			ui.input_select(id="Interpolation", label="Spline Interpolation", choices=["Linear", "Cubic", "Quintic"], selected="Linear"),
 
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
 			ui.input_select(id="Style", label=" Line Style", choices=["Solid", "Dashed", "Dashdot", "Dotted"], selected="Solid"),

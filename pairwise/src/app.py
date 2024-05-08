@@ -175,19 +175,22 @@ def server(input, output, session):
 			p.inc(message="Calculating...")
 			# Calculate matrix
 			if input.MatrixType() == "Distance":
-				distances = pdist(data, metric=input.DistanceMethod().lower())
+				metric = input.DistanceMethod().lower()
+				distances = pdist(data, metric=metric)
 				df = DataFrame(squareform(distances), columns=data.index, index=data.index)
 			else:
-				df = data.corr(method=input.CorrelationMethod().lower())
+				method = input.CorrelationMethod().lower()
+				df = data.corr(method=method)
 
 			p.inc(message="Plotting...")
 			fig, ax = subplots()
 
 			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
+			interpolation = input.Interpolation().lower()
 			im = ax.imshow(
 				df, 
 				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()), 
-				interpolation=input.Interpolation().lower()
+				interpolation=interpolation
 			)
 
 			# Visibility of features

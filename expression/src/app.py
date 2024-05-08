@@ -71,7 +71,10 @@ def server(input, output, session):
 		"""
 
 		if progress is not None: progress.inc(message="Creating linkage matrix...")
-		matrix = hierarchy.linkage(data.values.T if invert else data.values, method=input.ClusterMethod().lower(), metric=input.DistanceMethod().lower())
+		method = input.ClusterMethod().lower()
+		metric = input.DistanceMethod().lower()
+
+		matrix = hierarchy.linkage(data.values.T if invert else data.values, method=method, metric=metric)
 
 		if progress is not None: progress.inc(message="Creating dendrogram...")
 		dendrogram = hierarchy.dendrogram(matrix, ax=ax, orientation=orientation.lower())
@@ -79,13 +82,15 @@ def server(input, output, session):
 		# If there are labels, sort them according to the dendrogram.
 		if labels: labels = [labels[i] for i in dendrogram["leaves"]]
 
+		text_size = input.TextSize()
+
 		# Add ticks depending on the orientation.
 		if orientation == "Left" or orientation == "Right":
 			ax.set_xticks([])
-			ax.set_yticklabels(labels, fontsize=input.TextSize())
+			ax.set_yticklabels(labels, fontsize=text_size)
 		else:
 			ax.set_yticks([])
-			ax.set_xticklabels(labels, fontsize=input.TextSize())
+			ax.set_xticklabels(labels, fontsize=text_size)
 
 		return dendrogram
 
@@ -172,17 +177,22 @@ def server(input, output, session):
 			ax_heatmap = fig.add_subplot(gs[1, 1])
 
 			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
+			interpolation = input.Interpolation().lower()
+			bins = input.Bins()
+
 			heatmap = ax_heatmap.imshow(
 				df,
-				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()),
-				interpolation=input.Interpolation().lower(),
+				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=bins),
+				interpolation=interpolation,
 				aspect="auto",
 			)
+
+			text_size = input.TextSize()
 
 			# If we render the Y axis.
 			if "y" in input.Features():
 				ax_heatmap.set_yticks(range(len(index_labels)))
-				ax_heatmap.set_yticklabels(index_labels, fontsize=input.TextSize())
+				ax_heatmap.set_yticklabels(index_labels, fontsize=text_size)
 				ax_heatmap.yaxis.tick_right()
 			else:
 				ax_heatmap.set_yticklabels([])
@@ -190,7 +200,7 @@ def server(input, output, session):
 			# If we render the X axis.
 			if "x" in input.Features():
 				ax_heatmap.set_xticks(range(len(x_labels)))
-				ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=input.TextSize())
+				ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=text_size)
 			else:
 				ax_heatmap.set_xticklabels([])
 
@@ -198,7 +208,7 @@ def server(input, output, session):
 			if "legend" in input.Features():
 				ax_cbar = fig.add_subplot(gs[3, 1])
 				cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
-				cbar.ax.tick_params(labelsize=input.TextSize())
+				cbar.ax.tick_params(labelsize=text_size)
 			return fig
 
 

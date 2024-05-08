@@ -134,7 +134,9 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			if adata is None: return
+			colors = input.Keys()
+
+			if adata is None or colors is None: return
 
 			try:
 				genes = adata[:, adata.var.highly_variable].var_names.values[:100]
@@ -161,15 +163,32 @@ def server(input, output, session):
 				)
 
 			p.inc(message="Plotting...")
+
+			# Shiny does not seem to properly setup dependencies to reactive values if
+			# They are used directly in function invocations. Therefore, we need
+			# To create variables using these reactives, that way changes properly 
+			# Recall this function.
+			shape = input.Shape().lower()
+			features = input.Features()
+			img_alpha = input.ImgOpacity()
+			cmap = input.ColorMap().lower()
+			alpha = input.Opacity()
+			columns = input.Columns()
+			spacing = input.Spacing()
+
 			pl.spatial_scatter(
 				adata,
-				color=input.Keys(),
-				shape=input.Shape().lower(),
-				img="Image" in input.Features(),
-				img_alpha=input.ImgOpacity(),
-				cmap=get_cmap(input.ColorMap().lower()),
-				alpha=input.Opacity(),
-				colorbar=False
+				color=colors,
+				shape=shape,
+				img="Image" in features,
+				img_alpha=img_alpha,
+				cmap=get_cmap(cmap),
+				alpha=alpha,
+				colorbar=len(colors) > 1 and "Legend" in features,
+				frameon="Frame" in features,
+				ncols=columns,
+				wspace=spacing,
+				hspace=spacing,
 			)
 
 
@@ -180,21 +199,25 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
+			score = input.Score()
+
 			if adata is None: return
 
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+			location = f"{key}_centrality_scores"
 
 			p.inc(message="Computing score...")
-			if f"{key}_centrality_scores" not in adata.uns:
+			if location not in adata.uns or score not in adata.uns[location]:
 				gr.centrality_scores(
 					adata,
 					cluster_key=key,
 					n_jobs=Jobs,
-					show_progress_bar=False
+					show_progress_bar=False,
+					score=score,
 				)
 
 			p.inc(message="Plotting...")
-			pl.centrality_scores(adata, key)
+			pl.centrality_scores(adata, key, score=score)
 
 
 	@output
@@ -206,19 +229,30 @@ def server(input, output, session):
 			adata = Data()
 			if adata is None: return
 
+			function = input.Function()
+			metric = input.Distance().lower()
+
+			# Because the metric is not uniquely identified within the adata, we cache it
+			# and check if the user has changed it. If it has changed, we need to recompute.
+			# However, we don't Cache the actual calculation, just the metric, as we would
+			# be caching the information twice.
+			hash_list = [input.Function(), input.SourceFile(), input.Example(), input.File()]
+			old_metric = DataCache.Get(hash_list)
+
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
 
 			p.inc(message="Generating function...")
-			if f"{key}_ripley_{input.Function()}" not in adata.uns:
+			if f"{key}_ripley_{function}" not in adata.uns or metric != old_metric:
 				gr.ripley(
 					adata,
 					cluster_key=key,
-					mode=input.Function(),
-					metric=input.Distance().lower(),
+					mode=function,
+					metric=metric,
 				)
+				DataCache.Store(metric, hash_list)
 
 			p.inc(message="Plotting...")
-			pl.ripley(adata, cluster_key=key, mode=input.Function())
+			pl.ripley(adata, cluster_key=key, mode=function)
 
 
 	@output
@@ -267,17 +301,22 @@ def server(input, output, session):
 
 	@reactive.Effect
 	def UpdateColumnSelection():
-		adata = Data()
-		if adata is None: return
-		if input.MainTab() == "Occurrence":
-			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
-			if key is not None:
-				Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
-		if not input.Keys():
-			try:
-				ui.update_select(id="Keys", label="Annotation Keys", choices=adata.var.gene_ids.index.drop_duplicates().to_list())
-			except AttributeError:
-				pass
+		with ui.Progress() as p:
+			p.inc(message="Loading data...")
+			adata = Data()
+
+			p.inc(message="Generating Annotation Keys...")
+			if adata is None: return
+			if input.MainTab() == "Occurrence":
+				key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+				if key is not None:
+					Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
+			if not input.Keys():
+				try:
+					choices = adata.var.gene_ids.index.drop_duplicates().to_list()
+					ui.update_select(id="Keys", label="Annotation Keys", choices=choices, selected=choices[0])
+				except AttributeError:
+					pass
 
 
 app_ui = ui.page_fluid(
@@ -308,21 +347,39 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'HeatmapTab'",
 				ui.HTML("<b>Heatmap Settings</b>"),
 				ui.input_select(id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
-
-				ui.input_select(id="Keys", label="Annotation Keys", choices=[], selected=None),
+				ui.input_select(id="Keys", label="Annotation Keys", choices=[], selected=None, selectize=True, multiple=True),
 
 				ui.HTML("<b>Visual Settings</b>"),
-
 				ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
 				ui.input_select(id="Shape", label="Shape", choices=["Circle", "Square", "Hex"], selected="Hex"),
 
 				ui.input_slider(id="ImgOpacity", label="Image Opacity", value=1, min=0.0, max=1.0, step=0.1),
 				ui.input_slider(id="Opacity", label="Data Opacity", value=1, min=0.0, max=1.0, step=0.1),
 
-				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=["Image"], selected=["Image"]),
+				ui.input_slider(id="Columns", label="Columns", value=2, min=1, max=10, step=1),
+				ui.input_slider(id="Spacing", label="Spacing", value=0.3, min=0.0, max=1.0, step=0.1),
+
+				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=
+					["Image", "Legend", "Frame"], 
+					selected=["Image", "Legend"]
+				),
 			),
 
-	
+			ui.panel_conditional(
+				"input.MainTab === 'Centrality'",
+				ui.HTML("<b>Centrality Settings</b>"),
+				ui.input_select(
+				id="Score",
+				label="Score",
+				choices={
+					"closeness_centrality": "Closeness Centrality", 
+					"average_clustering": "Average Clustering",
+					"degree_centrality": "Degree Centrality"
+				},
+				selected=["Closeness Centrality"],
+				),
+			),
+
 			ui.panel_conditional(
 				"input.MainTab === 'Ripley'",
 				ui.HTML("<b>Ripley Settings</b>"),
