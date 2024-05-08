@@ -13,7 +13,6 @@ for folder in "${subfolders[@]}"; do
     # Check if the subfolder exists
     if [ -d "$folder" ]; then
         shinylive export --subdir $folder $folder/src site
-        cp favicon.ico site/$folder
     else
         # Print a message if the subfolder doesn't exist
         echo "Subfolder '$folder' not found."
