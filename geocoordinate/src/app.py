@@ -180,6 +180,7 @@ def server(input, output, session):
 		with ui.Progress() as p:
 			p.inc(message="Loading input...")
 			df = GetData()
+			if df is None: return
 
 			# Set the Value Column Accordingly (Helper functions handle None)
 			p.inc(message="Formatting...")
@@ -192,6 +193,8 @@ def server(input, output, session):
 			# Get lat and lon, generate the map
 			lon_col = Filter(df.columns, ColumnType.Longitude, only_one=True)
 			lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
+			if lat_col is None or lon_col is None: return
+
 			map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
 
 			# IF ROI is defined, and we have a column of values to work with.

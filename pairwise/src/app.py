@@ -171,6 +171,7 @@ def server(input, output, session):
 		with ui.Progress() as p:
 			p.inc(message="Reading input...")
 			data = GetData()
+			if data is None or len(data.index) == 0: return
 			
 			p.inc(message="Calculating...")
 			# Calculate matrix
