@@ -283,7 +283,7 @@ def NavBar():
 	)
 
 
-def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Example", project="Overview"):
+def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Upload", project="Overview"):
 	"""
 	@brief Returns the file selection dialog for the user to upload/select an example
 	@param examples: Either a list of example file names, or a dictionary mapping
