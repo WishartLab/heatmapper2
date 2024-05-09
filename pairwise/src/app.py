@@ -22,7 +22,8 @@ from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, ColorMap
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods
+from config import config
 
 
 def server(input, output, session):
@@ -42,9 +43,12 @@ def server(input, output, session):
 		elif suffix == ".fasta": return FASTAMatrix(path.resolve())
 		else: return ChartMatrix(DataCache.DefaultHandler(path))
 
+
 	DataCache = Cache("pairwise", HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
+
+	for conf, var in config.items(): var.Resolve(input[conf])
 
 
 	# We add Matrix and Method as they are calculated in the Matrix handlers.
@@ -69,7 +73,7 @@ def server(input, output, session):
 		column_names = [record.id for record in records]
 
 		# Get our K-Mer value
-		k = input.K()
+		k = config.K()
 
 		# Generate the value
 		dictionary = {}
@@ -97,7 +101,7 @@ def server(input, output, session):
 		coordinates = []
 		for model in structure:
 			for chain in model:
-					if chain.id == input.Chain():
+					if chain.id == config.Chain():
 							for residue in chain:
 									for atom in residue:
 											coordinates.append(atom.coord)
@@ -175,46 +179,48 @@ def server(input, output, session):
 			
 			p.inc(message="Calculating...")
 			# Calculate matrix
-			if input.MatrixType() == "Distance":
-				metric = input.DistanceMethod().lower()
+			if config.MatrixType() == "Distance":
+				metric = config.DistanceMethod().lower()
 				distances = pdist(data, metric=metric)
 				df = DataFrame(squareform(distances), columns=data.index, index=data.index)
 			else:
-				method = input.CorrelationMethod().lower()
+				method = config.CorrelationMethod().lower()
 				df = data.corr(method=method)
 
 			p.inc(message="Plotting...")
 			fig, ax = subplots()
 
-			colors = input.CustomColors() if input.Custom() else input.ColorMap().split()
-			interpolation = input.Interpolation().lower()
+			colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
+			interpolation = config.Interpolation().lower()
 			im = ax.imshow(
 				df, 
-				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=input.Bins()), 
+				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()), 
 				interpolation=interpolation
 			)
 
-			# Visibility of features
-			if "legend" in input.Features(): 
-				cbar = colorbar(im, ax=ax, label="Distance")
-				cbar.ax.tick_params(labelsize=input.TextSize())
+			text_size = config.TextSize()
 
-			if "y" in input.Features():
-				ax.tick_params(axis="y", labelsize=input.TextSize())
+			# Visibility of features
+			if "legend" in config.Features(): 
+				cbar = colorbar(im, ax=ax, label="Distance")
+				cbar.ax.tick_params(labelsize=text_size)
+
+			if "y" in config.Features():
+				ax.tick_params(axis="y", labelsize=text_size)
 				ax.set_yticks(range(len(df.columns)))
 				ax.set_yticklabels(df.columns)
 			else:
 				ax.set_yticklabels([])
 
-			if "x" in input.Features():
-				ax.tick_params(axis="x", labelsize=input.TextSize())
+			if "x" in config.Features():
+				ax.tick_params(axis="x", labelsize=text_size)
 				ax.set_xticks(range(len(df.columns)))
 				ax.set_xticklabels(df.columns, rotation=90)
 			else:
 				ax.set_xticklabels([])
 
 			# Annotate each cell with its value
-			if "label" in input.Features():
+			if "label" in config.Features():
 				for i in range(df.shape[0]):
 						for j in range(df.shape[1]):
 								ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
@@ -228,6 +234,63 @@ def server(input, output, session):
 
 	@render.download(filename="table.csv")
 	def DownloadTable(): yield GetData().to_string()
+
+
+	@render.ui
+	def ConditionalElements():
+		"""
+		@brief Handle Conditional Panels.
+
+		Because we need access to config, we cannot use ui.panel_conditional, as that uses
+		JavaScript.
+		"""
+		elements = []
+
+		if config.Custom():
+			elements.append(
+				config.CustomColors.UI(ui.input_select,
+					id="CustomColors",
+					label="Colors",
+					choices=Colors,
+					multiple=True,
+					selectize=True,
+				)
+			)
+		else:
+			elements.append(
+				config.ColorMap.UI(ui.input_select, 
+					id="ColorMap", label="Colors", 
+					choices={
+						"Blue White Yellow": "Blue/Yellow",
+						"Red Black Green": "Red/Green",
+						"Pink White Green": "Pink/Green",
+						"Blue Green Yellow": "Blue/Green/Yellow",
+						"Black Gray White": "Grayscale",
+						"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
+					}
+				)
+			)		
+
+		# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
+		if config.MatrixType() == "Distance":
+			elements.append(
+				config.DistanceMethod.UI(ui.input_select,
+					id="DistanceMethod", 
+					label="Distance Method", 
+					choices=DistanceMethods,
+				)
+			)
+
+		# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html
+		elif config.MatrixType() == "Correlation":
+			elements.append(
+				config.CorrelationMethod.UI(ui.input_select,
+					id="CorrelationMethod", 
+					label="Correlation Method", 
+					choices=["Pearson", "Kendall", "Spearman"], 
+				)
+			)
+		return elements
 
 
 app_ui = ui.page_fluid(
@@ -254,44 +317,49 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab != 'TableTab'",
 
-				# Specify Matrix Type
-				ui.input_radio_buttons(id="MatrixType", label="Matrix Type", choices=["Distance", "Correlation"], selected="Distance", inline=True),
+				config.MatrixType.UI(ui.input_radio_buttons,
+					id="MatrixType", 
+					label="Matrix Type", 
+					choices=["Distance", "Correlation"], 
+					inline=True
+				),
 
 				# Customize the text size of the axes.
-				ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
-
-				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
-				ui.panel_conditional(
-					"input.MatrixType === 'Distance'",
-					ui.input_select(id="DistanceMethod", label="Distance Method", choices=[
-						"Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Mahalanobis", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"], selected="Euclidean"),
+				config.TextSize.UI(ui.input_numeric,
+					id="TextSize", 
+					label="Text Size", 
+					min=1, 
+					max=20, 
+					step=1
 				),
 
-				# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html
-				ui.panel_conditional(
-					"input.MatrixType === 'Correlation'",
-					ui.input_select(id="CorrelationMethod", label="Correlation Method", choices=["Pearson", "Kendall", "Spearman"], selected="Pearson"),
-				),
+				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom ColorMap"),
+				config.Bins.UI(ui.input_slider, id="Bins", label="Number of Colors", min=3, max=100, step=1),
+
+				ui.output_ui("ConditionalElements"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				ui.input_select(id="Interpolation", label="Interpolation", choices=["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"], selected="Nearest"),
-
-				ColorMap(),
+				config.Interpolation.UI(ui.input_select, 
+					id="Interpolation", 
+					label="Interpolation", 
+					choices=InterpolationMethods
+				),
 
 				# Customize what aspects of the heatmap are visible
-				ui.input_checkbox_group(id="Features", label="Heatmap Features",
-						choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
-						selected=["legend"]),
+				config.Features.UI(ui.input_checkbox_group,
+					id="Features", label="Heatmap Features",
+					choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
+				),
 
 				# Specify the PDB Chain
-				ui.input_text("Chain", "PDB Chain", "A"),
+				config.Chain.UI(ui.input_text, id="Chain", label="PDB Chain"),
 
 				# Customize the K-mer to compute for FASTA sequences
-				ui.input_numeric(id="K", label="K-Mer Length", value=3, min=3, max=5, step=1),
+				config.K.UI(ui.input_numeric, id="K", label="K-Mer Length", min=3, max=5, step=1),
 			),
 
 			# Add the download buttons.
-			ui.download_button("DownloadTable", "Download Table"),
+			config.DownloadTable.UI(ui.download_button, id="DownloadTable", label="Download Table"),
 		),
 
 		# Add the main interface tabs.

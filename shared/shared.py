@@ -6,7 +6,7 @@
 # Due to the way ShinyLive exports applications, this file is symlinked into each project to reduce redundancy.
 #
 
-from shiny import ui
+from shiny import ui, reactive
 from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
 from io import BytesIO
@@ -33,8 +33,10 @@ if "pyodide" in modules:
 else:
 	Pyodide = False
 
-# MatPlotLib Colors
+# Shared Values
 Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "Olive", "Cyan", "White", "Yellow"]
+DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
+InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"]
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
 Columns = {
@@ -346,44 +348,6 @@ def TableOptions():
 	),
 
 
-def ColorMap():
-	"""
-	@brief Returns a ColorMap input Selection
-	@returns	A list of UI elements. Firstly, a header that contained a toggle for custom ColorMaps.
-						Then, two conditional panels based on the status of the toggle. If the user wants
-						custom color maps, then provide a selectize.js selection box that allows for multiple
-						selections. These options are used to define the gradient, low to high. If not, just a
-						collection of predefined maps, where the keys must be split on spaces to generate a map
-						that MatPlotLib can use.
-	"""
-	return [
-		ui.layout_columns("Color Map", ui.input_checkbox(id="Custom", label="Custom")),
-		ui.panel_conditional(
-			"input.Custom",
-				ui.input_select(
-				id="CustomColors",
-				label=None,
-				choices=Colors,
-				selected=["Blue", "White", "Yellow"],
-				multiple=True,
-				selectize=True,
-			),
-		),
-		ui.panel_conditional(
-			"!input.Custom",
-			ui.input_select(id="ColorMap", label=None, choices={
-					"Blue White Yellow": "Blue/Yellow",
-					"Red Black Green": "Red/Green",
-					"Pink White Green": "Pink/Green",
-					"Blue Green Yellow": "Blue/Green/Yellow",
-					"Black Gray White": "Grayscale",
-					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
-				}
-			),
-		),
-		ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1)]
-
-
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
 		ui.nav_panel("Heatmap", m_type(id="Heatmap", height="90vh"), value="HeatmapTab"),
@@ -391,3 +355,73 @@ def MainTab(*args, m_type=ui.output_plot):
 		*args,
 		id="MainTab"
 	)
+
+
+class Config:
+	"""
+	@brief A configuration entry.
+	"""
+
+	def __init__(self, visible=True, **kwargs):
+		"""
+		@brief Create a configuration entry.
+		@param default: The default value for an input.
+		@param visible: Whether the input should be shown in the sidebar
+		@param **kwargs: Arguments to be passed to the input.
+		"""
+		self.visible = visible
+		self.kwargs = kwargs
+		if "selected" in kwargs:
+			self.default = kwargs["selected"]
+		elif "value" in kwargs:
+			self.default = kwargs["value"]
+		self.resolve = None
+
+
+	def __call__(self): 
+		try:
+			return self.resolve()
+		except Exception:
+			return self.default
+
+
+	def Resolve(self, input): 
+		if self.visible: self.resolve = input
+
+
+	def UI(self, ui, **kwargs):
+		"""
+		@brief Displays the configured UI.
+		@param ui The Shiny interface element to use.
+		@parram **kwargs: Additional arguments to be passed to the input.
+		@note	keyword arguments passed to the Config object during initialization will overrule
+					arguments passed to this function. Duplicates are allowed.
+		"""
+
+		# Remove duplicates.
+		duplicates = []
+		for key in kwargs.keys():
+			if key in self.kwargs: duplicates.append(key)
+		for key in duplicates: del kwargs[key]
+
+		# Return the correct UI.
+		if self.visible: return ui(**kwargs, **self.kwargs)
+
+
+class ConfigHandler(dict):
+	"""
+	@brief: A dictionary that can be accessed with dots, and can automatically resolve.
+	"""
+
+	__getattr__ = dict.get
+	__setattr__ = dict.__setitem__
+	__delattr__ = dict.__delitem__
+
+
+	def Resolve(self, input): 
+		"""
+		@brief Resolves all stored objects.
+		@param input The input to use for resolving.
+		"""
+		for conf, var in self.items():
+			var.Resolve(input[conf])
