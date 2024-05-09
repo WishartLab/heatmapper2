@@ -18,6 +18,7 @@ from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions
+from config import config
 
 
 def server(input, output, session):
@@ -50,8 +51,10 @@ def server(input, output, session):
 	DataCache = Cache("3d", DataHandler=HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
-
 	Object = reactive.value(None)
+
+	for conf, var in config.items(): var.Resolve(input[conf])
+
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
@@ -106,11 +109,11 @@ def server(input, output, session):
 			p.inc(message="Plotting...")
 			pl = Plotter()
 
-			style = input.Style()
-			opacity = input.Opacity()
-			features = input.Features()
-			cmap = input.ColorMap().lower()
-			colors = input.Colors()
+			style = config.Style().lower()
+			opacity = config.Opacity()
+			features = config.Features()
+			cmap = config.ColorMap().lower()
+			colors = config.Colors()
 
 			# If there's no source, just render the model
 			if source is None:
@@ -172,25 +175,20 @@ app_ui = ui.page_fluid(
 
 			FileSelection(examples={"example1.csv": "Example 1", "texture.jpg": "Example 2"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"], project="3D"),
 
-			TableOptions(),
+			TableOptions(config),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Object", "Choose an Object File", accept=[".obj"], multiple=False)),
 
-			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=1.0, min=0.0, max=1.0, step=0.1),
-			ui.input_slider(id="Colors", label="Number of Colors", value=256, min=1, max=256, step=1),
+			config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
+			
+			config.Colors.UI(ui.input_slider, id="Colors", label="Number of Colors", value=256, min=1, max=256, step=1),
 
 			# Set the ColorMap used.
-			ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
+			config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"]),
 
-			ui.input_select(id="Style", label="Style", choices={"surface": "Surface", "wireframe": "Wireframe", "points": "Points", "points_gaussian": "Gaussian"}, selected="surface"),
+			config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
 
-			ui.input_checkbox_group(id="Features", label="Heatmap Features",
-				choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"],
-				selected=["Lighting", "Interpolation", "Smooth Shading"]
-			),
-
-			# Add the download buttons.
-			ui.download_button("DownloadTable", "Download Table"),
+			config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features", choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),
 		),
 
 		# Add the main interface tabs.

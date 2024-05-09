@@ -189,7 +189,6 @@ class Cache:
 		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
 										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
 										initialize without arguments.
-		@param return_n: Return the filename for post-processing.
 		"""
 
 		if source_file is None: source_file = input.File()
@@ -336,15 +335,16 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	]
 
 
-def TableOptions():
+def TableOptions(config):
 	"""
 	@brief Return the options for Table Manipulation.
 	@returns A conditional panel that provides a DataType, and a ResetButton.
 	"""
 	return  ui.panel_conditional(
 		"input.MainTab === 'TableTab'",
-		ui.input_radio_buttons(id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+		config.Type.UI(ui.input_radio_buttons, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
 		ui.input_action_button(id="Reset", label="Reset Values"),
+		config.DownloadTable.UI(ui.download_button, id="DownloadTable", label="Download Table"),
 	),
 
 

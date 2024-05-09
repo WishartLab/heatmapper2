@@ -153,6 +153,8 @@ def server(input, output, session):
 	@render.data_frame
 	def Table():
 		df = Data()
+		if df is None or len(df.columns) == 0: return
+
 		if df.columns[0] == 0:
 			ui.modal_show(ui.modal("The provided input format cannot be rendered",
 			title="Table cannot be rendered", easy_close=True, footer=None))
@@ -163,8 +165,8 @@ def server(input, output, session):
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		if input.Type() == "Integer": value = int(patch["value"])
-		elif input.Type() == "Float": value = float(patch["value"])
+		if config.Type() == "Integer": value = int(patch["value"])
+		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
 		return value
 
@@ -312,7 +314,7 @@ app_ui = ui.page_fluid(
 				project="Pairwise"
 			),
 
-			TableOptions(),
+			TableOptions(config),
 
 			ui.panel_conditional(
 				"input.MainTab != 'TableTab'",
@@ -357,9 +359,6 @@ app_ui = ui.page_fluid(
 				# Customize the K-mer to compute for FASTA sequences
 				config.K.UI(ui.input_numeric, id="K", label="K-Mer Length", min=3, max=5, step=1),
 			),
-
-			# Add the download buttons.
-			config.DownloadTable.UI(ui.download_button, id="DownloadTable", label="Download Table"),
 		),
 
 		# Add the main interface tabs.

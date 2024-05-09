@@ -8,6 +8,8 @@
 from shared import Config, ConfigHandler
 
 config = ConfigHandler({
+
+
 	# "Distance", "Correlation"
 	"MatrixType": Config(selected="Distance"),
 
@@ -44,7 +46,9 @@ config = ConfigHandler({
 	# Any number between 3-100 to define amount of bins for color mapping
 	"Bins": Config(value=50),
 
+	# "Integer" "Float" "String"
+	"Type": Config(selected="Integer"),
+
 	# No value, just toggle visibility.
 	"DownloadTable": Config(),
-
 })
