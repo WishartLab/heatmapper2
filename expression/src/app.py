@@ -20,7 +20,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
 from scipy.stats import zscore
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn
 from config import config
 
 
@@ -36,8 +36,8 @@ def server(input, output, session):
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
-	for conf, var in config.items(): var.Resolve(input[conf])
-
+	InitializeConfig(config, input)
+	
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
@@ -243,11 +243,7 @@ def server(input, output, session):
 	@reactive.Effect
 	def UpdateColumnSelection(): 
 		columns = GetData().columns
-		filtered = Filter(columns, ColumnType.Name)
-
-		if filtered is None: return
-		default = config.NameColumn()
-		ui.update_select(id="NameColumn", choices=filtered, selected=default if default in columns else filtered[0])
+		UpdateColumn(columns, ColumnType.Name, config.NameColumn(), "NameColumn")
 
 
 	@render.ui
@@ -345,7 +341,6 @@ app_ui = ui.page_fluid(
 				# Define the Orientation of the dendrogram in the Tab
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
-			id="SidebarPanel",
 		),
 
 		# Add the main interface tabs.

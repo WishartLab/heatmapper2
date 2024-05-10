@@ -20,9 +20,12 @@ from pandas import DataFrame, to_datetime
 from branca.colormap import linear
 from pathlib import Path
 from json import loads
+from datetime import datetime
+from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps
 from geojson import Mappings
+from config import config
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -50,8 +53,10 @@ def server(input, output, session):
 	DataCache = Cache("geomap", DataHandler=HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
-
 	JSON = reactive.value(None)
+
+	InitializeConfig(config, input)
+
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
@@ -73,7 +78,7 @@ def server(input, output, session):
 	def GetData(): return Table.data_view() if Valid() else Data()
 
 
-	def LoadChoropleth(df, map, geojson, k_col, v_col):
+	def LoadChoropleth(df, map, geojson, k_col, v_col, k_prop, p):
 		"""
 		@brief Applies a Choropleth to a Folium Map
 		@param df: The DataFrame that contains information to plot
@@ -83,16 +88,16 @@ def server(input, output, session):
 		@param v_col: the name of the column within df that contains the values to plot.
 		"""
 
-		colormap = input.ColorMap().lower()
-		opacity = input.Opacity()
-		bins = input.Bins()
+		colormap = config.ColorMap().lower()
+		opacity = config.Opacity()
+		bins = config.Bins()
 
 		Choropleth(
 				geo_data=geojson,
 				name="choropleth",
 				data=df,
 				columns=[k_col, v_col],
-				key_on="feature.properties.name",
+				key_on=f"feature.properties.{k_prop}",
 				fill_color=colormap,
 				fill_opacity=opacity,
 				line_opacity=opacity,
@@ -101,7 +106,7 @@ def server(input, output, session):
 		).add_to(map)
 
 
-	def LoadTemporalChoropleth(df, map, geojson, k_col, v_col):
+	def LoadTemporalChoropleth(df, map, geojson, k_col, v_col, k_prop, p):
 		"""
 		@brief Applies a TimeSliderChoropleth to a Folium map
 		@param df: The DataFrame that contains data to plot
@@ -111,54 +116,65 @@ def server(input, output, session):
 		@param v_col: The name of the column within df that contains the values to plot.
 		@info df can either contain a Time column, or all non key-columns will be handled as time columns.
 		"""
+
+		def Timestamp(time):
+			year, month, day = 1970, 1, 1
+			try:
+				if len(time) >= 1: year = int(time[0])
+				if len(time) >= 2: month = int(time[1])
+				if len(time) >= 3: day = int(time[2])
+			except ValueError: pass
+			return str(round(mktime(datetime(year, month, day).timetuple())))
+
+
 		# Check if we have a dedicated time column, or separate columns for each time slot.
 		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True, reject_unknown=True)
-		values = v_col if column else df.columns[1:]
 
-		color = input.ColorMap()
+		color = config.ColorMap()
 		if color == "Inferno": cmap = linear.inferno.scale
 		elif color == "Magma": cmap = linear.magma.scale
 		elif color == "Plasma": cmap = linear.plasma.scale
 		elif color == "Viridis": cmap = linear.viridis.scale
+		elif color == "Cividis": cmap = linear.cividis.scale
 
-		m, M = df[values].values.min(), df[values].values.max()
+		m, M = df[v_col].min(), df[v_col].max()
 		colormap = cmap(m, M)
-
 		style = {}
 
 		if column:
+			p.inc(message="Grouping by Date...")
 			grouped = df.groupby(k_col)
 
+			p.inc(message="Formatting...")
 			for i, (name, group) in enumerate(grouped):
 				style[i] = {}
-				for a, row in group.iterrows():
+				for time, value in zip(group[column], group[v_col]):
+					timestamp = Timestamp(time.split("-"))
+					if timestamp is None: return
 
-					# If the year isn't parsable, pray that it just works without parsing :)
-					try: year = str(to_datetime(row[column].split()[0]).timestamp()).split('.')[0]
-					except Exception: year = row[column]
-
-					style[i][year] = {'color': colormap(row[v_col]), 'opacity': input.Opacity()}
+					style[i][timestamp] = {'color': colormap(value), 'opacity': config.Opacity()}
 				for feature in geojson["features"]:
-							if feature["properties"]["name"] == name:
+							if feature["properties"][k_prop] == name:
 									feature["id"] = i
-
 		else:
-			# Convert DataFrame to style format
+			p.inc(message="Formatting...")
+			time_columns = df.columns.drop(k_col)
 			for i, row in df.iterrows():
 					name = row[k_col]
 					style[i] = {}
-					for year in df.columns[1:]:
-						value = row[year]
+					for time in time_columns:
+						value = row[time]
 
-						# If the year isn't parsable, pray that it just works without parsing :)
-						try: year = str(to_datetime(year.split()[0]).timestamp()).split('.')[0]
-						except Exception: pass
+						time = time.split(" ")
+						timestamp = Timestamp(time if len(time) == 1 else [time[0]])
+						if timestamp is None: return
 
-						style[i][year] = {'color': colormap(value), 'opacity': input.Opacity()}
+						style[i][timestamp] = {'color': colormap(value), 'opacity': config.Opacity()}
 					for feature in geojson["features"]:
-						if feature["properties"]["name"] == name:
+						if feature["properties"][k_prop] == name:
 								feature["id"] = i
 
+		p.inc(message="Creating Choropleth...")
 		TimeSliderChoropleth(
 				data=geojson,
 				styledict=style,
@@ -173,8 +189,8 @@ def server(input, output, session):
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		if input.Type() == "Integer": value = int(patch["value"])
-		elif input.Type() == "Float": value = float(patch["value"])
+		if config.Type() == "Integer": value = int(patch["value"])
+		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
 		return value
 
@@ -189,32 +205,43 @@ def server(input, output, session):
 			if df is None: return
 
 			p.inc(message="Loading GeoJSON...")
-			geojson = JSON()
+			try:
+				geojson = JSON()
+				properties = list(geojson['features'][0]['properties'].keys())
+			except Exception:
+				return
 
 			p.inc(message="Formatting...")
-			k_col, v_col = input.KeyColumn(), input.ValueColumn()
-			if k_col not in df or v_col not in df: return
+			k_col, v_col, k_prop = config.KeyColumn(), config.ValueColumn(), config.KeyProperty()
+			if k_col not in df or v_col not in df or k_prop not in properties: return
+
+			map_type = config.MapType()
 
 			# Give a placeholder map if nothing is selected, which should never really be the case.
-			if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=input.MapType(), zoom_start=15)
+			if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=map_type, zoom_start=15)
 
 			# Create map
-			map = FoliumMap(tiles=input.MapType())
+			map = FoliumMap(tiles=map_type)
 
-			if type(input.ROI()) is tuple:
-				m, M = df[v_col].min(), df[v_col].max()
-				l, u = input.ROI()[0], input.ROI()[1]
-				if l >= m and u <= M:
-					oob = []
-					for index, row in df.iterrows():
-						v = row[v_col]
-						if v < l or v > u: oob.append(index)
-					df = df.drop(oob)
+			p.inc(message="Dropping Invalid Values...")
+			names = []
+			for feature in geojson["features"]:
+				names.append(feature["properties"][k_prop])
+
+			to_drop = []
+			l, u = config.Min(), config.Max()
+			for index, key, value in zip(df.index, df[k_col], df[v_col]):
+				if key not in names: to_drop.append(index)
+				elif config.ROI() and (value < l or value > u): to_drop.append(index)
+			df = df.drop(to_drop)
+			if len(df) == 0:
+				ui.notification_show(ui="No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!", type="error", duration=3)
+				return
 
 			# Load the choropleth.
 			p.inc(message="Plotting...")
-			if input.Temporal(): LoadTemporalChoropleth(df, map, geojson, k_col, v_col)
-			else: LoadChoropleth(df, map, geojson, k_col, v_col)
+			if input.Temporal(): LoadTemporalChoropleth(df, map, geojson, k_col, v_col, k_prop, p)
+			else: LoadChoropleth(df, map, geojson, k_col, v_col, k_prop, p)
 
 			map.fit_bounds(map.get_bounds())
 			return map
@@ -222,10 +249,12 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def GeoJSON():
-		geojson = JSON()
-		if geojson is None: return
-		names = [feature['properties']['name'] for feature in geojson['features']]
-		return DataFrame({'Name': names})
+		try:
+			geojson = JSON()
+			names = [feature['properties'][config.KeyProperty()] for feature in geojson['features']]
+			return DataFrame({config.KeyProperty(): names})
+		except Exception:
+			ui.notification_show(ui="Could not render the GeoJSON table!", type="error", duration=3)
 
 
 	@output
@@ -245,18 +274,15 @@ def server(input, output, session):
 	@reactive.Effect
 	def UpdateColumns():
 		df = GetData()
-		key = Filter(df.columns, ColumnType.Name, only_one=True, ui_element="KeyColumn")
-		Filter(df.columns, ColumnType.Value, bad=[key], ui_element="ValueColumn")
+		columns = df.columns
+		key = UpdateColumn(columns, ColumnType.Name, config.KeyColumn(), "KeyColumn")
+		UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn", bad=[key])
 
-
-	@reactive.Effect
-	def UpdateROI():
-		df = GetData()
-		v_col = input.ValueColumn()
-		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
-		else:
-			m, M = int(df[v_col].min()), int(df[v_col].max())
-			ui.update_slider(id="ROI", value=(m, M), min=m, max=M)
+		try:
+			geojson = JSON()
+			properties = list(geojson['features'][0]['properties'].keys())
+			UpdateColumn(properties, ColumnType.NameGeoJSON, config.KeyProperty(), "KeyProperty")
+		except Exception: pass
 
 
 app_ui = ui.page_fluid(
@@ -272,8 +298,6 @@ app_ui = ui.page_fluid(
 				project="Geomap"
 			),
 
-			TableOptions(),
-
 			ui.input_radio_buttons(id="JSONFile", label="Specify a GeoJSON File", choices=["Provided", "Upload"], selected="Provided", inline=True),
 			ui.panel_conditional(
 				"input.JSONFile === 'Upload'",
@@ -284,25 +308,33 @@ app_ui = ui.page_fluid(
 				ui.input_select(id="JSONSelection", label=None, choices=Mappings, multiple=False, selected="canada.geojson"),
 			),
 
-			ui.input_checkbox(id="Temporal", label="Temporal Choropleth"),
+			TableOptions(config),
 
-			ui.input_select(id="KeyColumn", label="Key", choices=[], multiple=False),
-			ui.input_select(id="ValueColumn", label="Value", choices=[], multiple=False),
+			ui.panel_conditional(
+				"input.MainTab === 'HeatmapTab'",
+				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal Choropleth"),
 
-			# Only OpenStreatMap and CartoDB Positron seem to work.
-			ui.input_radio_buttons(id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
+				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[]),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[]),
+				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON Key", choices=[]),
 
-			ui.input_select(id="ColorMap", label="Color Map", choices=["Inferno", "Magma", "Plasma", "Viridis"], selected="Viridis"),
-			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
-			ui.input_slider(id="Bins", label="Number of Colors", value=8, min=3, max=8, step=1),
-			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
+				# Only OpenStreatMap and CartoDB Positron seem to work.
+				config.MapType.UI(ui.input_radio_buttons,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
 
-			# Add the download buttons.
-			"Download",
-			ui.download_button("DownloadHeatmap", "Heatmap"),
-			ui.download_button("DownloadTable", "Table"),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
 
-			id="SidebarPanel",
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
+
+				config.Bins.UI(ui.input_slider,id="Bins", label="Number of Colors", min=3, max=8, step=1),
+
+				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
+				ui.layout_columns(
+					config.Min.UI(ui.input_numeric,id="Min", label=None, min=0),
+					config.Max.UI(ui.input_numeric, id="Max", label=None, min=0),
+				),
+
+				ui.download_button(id="DownloadHeatmap", label="Download"),
+			),
 		),
 
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),

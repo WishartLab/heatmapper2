@@ -38,11 +38,12 @@ Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "
 DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
 InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"]
 ClusteringMethods = ["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"]
+ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma", "Cividis"]
 
-class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
+class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11;
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
-	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
+	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle", "iso_code", "continent", "country", "location"},
 	ColumnType.Value: {"value", "weight", "intensity", "in_tissue"},
 	ColumnType.Longitude: {"longitude", "long"},
 	ColumnType.Latitude: {"latitude", "lat"},
@@ -51,7 +52,8 @@ Columns = {
 	ColumnType.Z: {"z"},
 	ColumnType.Cluster: {"cell type", "celltype_mapped_refined", "cluster", "cell_class", "cell_subclass", "cell_cluster"},
 	ColumnType.Free: {None},
-	ColumnType.Spatial: {"spatial"}
+	ColumnType.Spatial: {"spatial"},
+	ColumnType.NameGeoJSON: {"name", "admin", "iso_a3", "iso_a2", "iso"}
 }
 
 
@@ -91,6 +93,24 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	reassembled = [columns[index] for index in indices]
 	if not reassembled: return None
 	return reassembled[0] if only_one else reassembled
+
+
+def UpdateColumn(columns, ctype, default, id, **kwargs):
+	"""
+	@brief Update a input_select element based on columns
+	@pararm columns: The list of columns to source
+	@param ctype: The ColumnType to search for
+	@param default: The default value to use
+	@param id: The ID of the UI element
+	@param kwargs: Keyword arguments to be passed to filter. 
+	@returns The new value of the element..
+	"""
+
+	filtered = Filter(columns, ctype, **kwargs)
+	if filtered is None: return
+	selected = default if default in columns else filtered[0]
+	ui.update_select(id=id, choices=filtered, selected=selected)
+	return selected
 
 
 class Cache:
@@ -342,7 +362,7 @@ def TableOptions(config):
 		"input.MainTab === 'TableTab'",
 		config.Type.UI(ui.input_radio_buttons, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
 		ui.input_action_button(id="Reset", label="Reset Values"),
-		config.DownloadTable.UI(ui.download_button, id="DownloadTable", label="Download Table"),
+		ui.download_button(id="DownloadTable", label="Download Table"),
 	),
 
 
@@ -426,3 +446,7 @@ class ConfigHandler(dict):
 		"""
 		for conf, var in self.items():
 			var.Resolve(input[conf])
+
+
+def InitializeConfig(config, input): 
+	for conf, var in config.items(): var.Resolve(input[conf])

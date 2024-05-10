@@ -22,7 +22,7 @@ from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig
 from config import config
 
 
@@ -48,7 +48,7 @@ def server(input, output, session):
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
-	for conf, var in config.items(): var.Resolve(input[conf])
+	InitializeConfig(config, input)
 
 
 	# We add Matrix and Method as they are calculated in the Matrix handlers.

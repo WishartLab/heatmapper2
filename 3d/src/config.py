@@ -26,7 +26,4 @@ config = ConfigHandler({
 
 	# Combination of "Edges", "Lighting", "Interpolation", "Smooth Shading"
 	"Features": Config(selected=["Lighting", "Interpolation", "Smooth Shading"]),
-
-	# No value, just toggle visibility.
-	"DownloadTable": Config(),
 })

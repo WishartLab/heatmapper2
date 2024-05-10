@@ -17,7 +17,7 @@ from pandas import DataFrame
 from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps
 from config import config
 
 
@@ -53,7 +53,7 @@ def server(input, output, session):
 	Valid = reactive.value(False)
 	Object = reactive.value(None)
 
-	for conf, var in config.items(): var.Resolve(input[conf])
+	InitializeConfig(config, input)
 
 
 	@reactive.effect
@@ -184,7 +184,7 @@ app_ui = ui.page_fluid(
 			config.Colors.UI(ui.input_slider, id="Colors", label="Number of Colors", value=256, min=1, max=256, step=1),
 
 			# Set the ColorMap used.
-			config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"]),
+			config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
 
 			config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
 
