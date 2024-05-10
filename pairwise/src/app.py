@@ -319,21 +319,10 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab != 'TableTab'",
 
-				config.MatrixType.UI(ui.input_radio_buttons,
-					id="MatrixType", 
-					label="Matrix Type", 
-					choices=["Distance", "Correlation"], 
-					inline=True
-				),
+				config.MatrixType.UI(ui.input_radio_buttons, id="MatrixType",  label="Matrix Type",  choices=["Distance", "Correlation"], inline=True),
 
 				# Customize the text size of the axes.
-				config.TextSize.UI(ui.input_numeric,
-					id="TextSize", 
-					label="Text Size", 
-					min=1, 
-					max=20, 
-					step=1
-				),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1),
 
 				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom ColorMap"),
 				config.Bins.UI(ui.input_slider, id="Bins", label="Number of Colors", min=3, max=100, step=1),
@@ -341,11 +330,7 @@ app_ui = ui.page_fluid(
 				ui.output_ui("ConditionalElements"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				config.Interpolation.UI(ui.input_select, 
-					id="Interpolation", 
-					label="Interpolation", 
-					choices=InterpolationMethods
-				),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Interpolation", choices=InterpolationMethods),
 
 				# Customize what aspects of the heatmap are visible
 				config.Features.UI(ui.input_checkbox_group,

@@ -37,6 +37,7 @@ else:
 Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "Olive", "Cyan", "White", "Yellow"]
 DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
 InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"]
+ClusteringMethods = ["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"]
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
 Columns = {
@@ -54,7 +55,7 @@ Columns = {
 }
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, ui_element=None, reject_unknown=False):
+def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, reject_unknown=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
@@ -62,7 +63,6 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	@param good: A list of column names on top of those defined by the type to be included
 	@param bad: A list of column names on top of those defined by the type to be excluded from the result.
 	@param only_one: Only return a single result, so the variable can be used immediately.
-	@param ui_element: An optional Shiny selection input to update.
 	@param reject_unknown: Only include columns explicitly defined
 	@return: A list of column names to use.
 	"""
@@ -90,9 +90,6 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	# Get the original column names, without case-folding, and return as a list.
 	reassembled = [columns[index] for index in indices]
 	if not reassembled: return None
-
-	# Update a UI element, if one was provided
-	if ui_element is not None: ui.update_select(id=ui_element, choices=reassembled, selected=reassembled[0])
 	return reassembled[0] if only_one else reassembled
 
 
@@ -204,7 +201,7 @@ class Cache:
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
 			n = str(file[0]["datapath"])
-			path = Path(n)
+			if n not in self._primary: self._primary[n] = self._handler(Path(n))
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
@@ -216,6 +213,7 @@ class Cache:
 				temp = NamedTemporaryFile(suffix=Path(n).suffix); 
 				temp.write(BytesIO(raw).read()); temp.seek(0)
 				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
+
 			elif n not in self._primary: self._primary[n] = self._handler(raw)
 
 		# If the object cannot be copied, then we can just return it directly
@@ -375,21 +373,24 @@ class Config:
 			self.default = kwargs["selected"]
 		elif "value" in kwargs:
 			self.default = kwargs["value"]
+		else:
+			self.default = None
 		self.resolve = None
 
 
 	def __call__(self): 
 		try:
-			return self.resolve()
+			resolved = self.resolve()
+			return self.default if resolved is None else resolved
 		except Exception:
 			return self.default
 
 
 	def Resolve(self, input): 
-		if self.visible: self.resolve = input
+		self.resolve = input
 
 
-	def UI(self, ui, **kwargs):
+	def UI(self, ui, *args, **kwargs):
 		"""
 		@brief Displays the configured UI.
 		@param ui The Shiny interface element to use.
@@ -405,7 +406,7 @@ class Config:
 		for key in duplicates: del kwargs[key]
 
 		# Return the correct UI.
-		if self.visible: return ui(**kwargs, **self.kwargs)
+		if self.visible: return ui(*args, **kwargs, **self.kwargs)
 
 
 class ConfigHandler(dict):
