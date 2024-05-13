@@ -1,8 +1,8 @@
 #
 # Heatmapper 
-# Pairwise Configuration
+# Expression Configuration
 #
-# This file contains configuration for Pairwise. 
+# This file contains configuration for Expression. 
 
 
 from shared import Config, ConfigHandler

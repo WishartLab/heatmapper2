@@ -15,9 +15,12 @@
 
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import subplots, colorbar
+from matplotlib.tri import Triangulation
+from matplotlib.cm import get_cmap
 from PIL import Image
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps
+from config import config
 
 
 def server(input, output, session):
@@ -42,8 +45,10 @@ def server(input, output, session):
 	DataCache = Cache("image", DataHandler=HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
-
 	IMG = reactive.value(None)
+
+	InitializeConfig(config, input)
+
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
@@ -68,8 +73,8 @@ def server(input, output, session):
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		if input.Type() == "Integer": value = int(patch["value"])
-		elif input.Type() == "Float": value = float(patch["value"])
+		if config.Type() == "Integer": value = int(patch["value"])
+		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
 		return value
 
@@ -81,6 +86,9 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			df = GetData()
+
+			# We need to reflect the DataFrame so that the first row is plotted at the top
+			df = df.iloc[::-1]
 
 			p.inc(message="Loading image...")
 			img = IMG()
@@ -101,10 +109,16 @@ def server(input, output, session):
 			# Add the image as an overlay, if we have one.
 			if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
 
-			cmap = input.ColorMap().lower()
-			alpha = input.Opacity()
-			algorithm = input.Algorithm().lower()
-			levels = input.Levels()
+			cmap = config.ColorMap().lower()
+			alpha = config.Opacity()
+			algorithm = config.Algorithm().lower()
+			levels = config.Levels()
+			normalization = config.Normalization().lower()
+
+			# Make 0 values transparent.
+			df = df.replace(0, -1)
+			cmap = get_cmap(cmap)
+			cmap.set_under(alpha=0)
 
 			im = ax.contourf(
 				df,
@@ -114,17 +128,18 @@ def server(input, output, session):
 				alpha=alpha,
 				algorithm=algorithm,
 				levels=levels,
+				norm=normalization,
 			)
 
 		# Visibility of features
-		if "legend" in input.Features(): 
+		if "legend" in config.Features(): 
 			cbar = colorbar(im, ax=ax, label="Value")
-			cbar.ax.tick_params(labelsize=input.TextSize())
+			cbar.ax.tick_params(labelsize=config.TextSize())
 
-		if "y" in input.Features(): ax.tick_params(axis="y", labelsize=input.TextSize())
+		if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
 		else: ax.set_yticklabels([])
 
-		if "x" in input.Features(): ax.tick_params(axis="x", labelsize=input.TextSize())
+		if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
 		else: ax.set_xticklabels([])
 
 		return ax
@@ -149,38 +164,33 @@ app_ui = ui.page_fluid(
 
 			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], project="Image"),
 
-			TableOptions(),
+			TableOptions(config),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", 
 				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"], 
 				multiple=False)),
 
 			# Customize the text size of the axes.
-			ui.input_numeric(id="TextSize", label="Text Size", value=8, min=1, max=50, step=1),
+			config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),
 
 			# Customize the opacity of the heatmap, making the background image more visible.
-			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.5, min=0.0, max=1.0, step=0.1),
+			config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
 
 			# Set the ColorMap used.
-			ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
+			config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
 
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
-			ui.input_select(id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], selected="MPL2014"),
+			config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
 
-			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
-			ui.input_select(id="Style", label=" Line Style", choices=["Solid", "Dashed", "Dashdot", "Dotted"], selected="Solid"),
+			# Normalization. Log works best with removing transparent values.
+			config.Normalization.UI(ui.input_select, id="Normalization", label="Normalization", choices=["Linear", "Log", "AsinH"]),
 
-			ui.input_slider(id="Levels", label="Number of Levels", value=20, min=1, max=100, step=1),
-			ui.input_slider(id="Smoothing", label="Smoothing", value=25, min=10, max=100, step=1),
-
+			config.Levels.UI(ui.input_slider, id="Levels", label="Number of Levels", min=1, max=100, step=1),
 
 			# Customize what aspects of the heatmap are visible
-			ui.input_checkbox_group(id="Features", label="Heatmap Features",
-					choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"},
-					selected=["legend"]),
-
-			# Add the download buttons.
-			ui.download_button("DownloadTable", "Download Table"),
+			config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features",
+					choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+			),
 		),
 
 		# Add the main interface tabs.

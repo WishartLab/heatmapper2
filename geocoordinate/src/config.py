@@ -1,8 +1,8 @@
 #
 # Heatmapper 
-# Pairwise Configuration
+# Geocoordinate Configuration
 #
-# This file contains configuration for Pairwise. 
+# This file contains configuration for Geocoordinate. 
 
 
 from shared import Config, ConfigHandler

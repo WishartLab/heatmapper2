@@ -1,8 +1,8 @@
 #
 # Heatmapper 
-# Pairwise Configuration
+# 3D Configuration
 #
-# This file contains configuration for Pairwise. 
+# This file contains configuration for 3D. 
 
 
 from shared import Config, ConfigHandler
