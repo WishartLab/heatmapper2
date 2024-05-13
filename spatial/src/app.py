@@ -20,7 +20,8 @@ from squidpy import gr, pl, read
 from scanpy import pp, tl
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, UpdateColumn, GenerateConditionalElements
+from config import config
 
 
 def server(input, output, session):
@@ -34,6 +35,8 @@ def server(input, output, session):
 
 	# Concurrent jobs to run for calculations.
 	Jobs = 8
+
+	InitializeConfig(config, input)
 
 
 	def HandleData(path):
@@ -120,10 +123,11 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table(): 
-		if input.TableType() == "obs":
-			return render.DataGrid(Data().obs)
-		elif input.TableType() == "var":
-			return render.DataGrid(Data().var)
+		state = config.TableType()
+		df = Data()
+		if df is None: return
+		if state == "obs": return render.DataGrid(df.obs)
+		elif state == "var": return render.DataGrid(df.var)
 
 
 	@output
@@ -134,7 +138,7 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			colors = input.Keys()
+			colors = config.Keys()
 
 			if adata is None or colors is None: return
 
@@ -145,7 +149,7 @@ def server(input, output, session):
 
 
 			p.inc(message="Computing statistic...")
-			stat = input.Statistic()
+			stat = config.Statistic()
 			if stat == "sepal" and "sepal_score" not in adata.uns:
 				gr.sepal(
 					adata,
@@ -168,13 +172,13 @@ def server(input, output, session):
 			# They are used directly in function invocations. Therefore, we need
 			# To create variables using these reactives, that way changes properly 
 			# Recall this function.
-			shape = input.Shape().lower()
-			features = input.Features()
-			img_alpha = input.ImgOpacity()
-			cmap = input.ColorMap().lower()
-			alpha = input.Opacity()
-			columns = input.Columns()
-			spacing = input.Spacing()
+			shape = config.Shape().lower()
+			features = config.Features()
+			img_alpha = config.ImgOpacity()
+			cmap = config.ColorMap().lower()
+			alpha = config.Opacity()
+			columns = config.Columns()
+			spacing = config.Spacing()
 
 			pl.spatial_scatter(
 				adata,
@@ -199,7 +203,7 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			score = input.Score()
+			score = config.Score()
 
 			if adata is None: return
 
@@ -229,14 +233,14 @@ def server(input, output, session):
 			adata = Data()
 			if adata is None: return
 
-			function = input.Function()
-			metric = input.Distance().lower()
+			function = config.Function()
+			metric = config.Distance().lower()
 
 			# Because the metric is not uniquely identified within the adata, we cache it
 			# and check if the user has changed it. If it has changed, we need to recompute.
 			# However, we don't Cache the actual calculation, just the metric, as we would
 			# be caching the information twice.
-			hash_list = [input.Function(), input.SourceFile(), input.Example(), input.File()]
+			hash_list = [config.Function(), input.SourceFile(), input.Example(), input.File()]
 			old_metric = DataCache.Get(hash_list)
 
 			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
@@ -268,19 +272,22 @@ def server(input, output, session):
 
 			p.inc(message="Calculating...")
 
+			interval = config.Interval()
+			splits = None if input.Splits() == 0 else input.Splits()
+
 			if f"{key}_co_occurrence" not in adata.uns:
 				gr.co_occurrence(
 					adata,
 					cluster_key=key,
-					interval=input.Interval(),
-					n_splits=None if input.Splits() == 0 else input.Splits(),
+					interval=interval,
+					n_splits=splits,
 					show_progress_bar=False,
 					n_jobs=Jobs,
 				)
 
 			p.inc(message="Plotting...")
-			if input.OccurrenceGraph() == "Line" and input.Cluster() is not None:
-				pl.co_occurrence(adata, cluster_key=key, clusters=input.Cluster())
+			if config.OccurrenceGraph() == "Line" and config.Cluster() is not None:
+				pl.co_occurrence(adata, cluster_key=key, clusters=config.Cluster())
 			else:
 				pl.spatial_scatter(adata, color=key, size=10, shape=None)
 
@@ -310,14 +317,18 @@ def server(input, output, session):
 			if input.MainTab() == "Occurrence":
 				key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
 				if key is not None:
-					Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, ui_element="Cluster")
-			if not input.Keys():
+					UpdateColumn(adata.obs[key].cat.categories.tolist(), ColumnType.Free, config.Cluster(), "Cluster")
+			if not config.Keys():
 				try:
 					choices = adata.var.gene_ids.index.drop_duplicates().to_list()
 					ui.update_select(id="Keys", label="Annotation Keys", choices=choices, selected=choices[0])
 				except AttributeError:
 					pass
 
+	@render.ui
+	def ConditionalElements(): return GenerateConditionalElements([
+			(config.OccurrenceGraph() == "Line", config.Cluster.UI(ui.input_select, id="Cluster", label="Cluster", choices=[], selected=None)),
+		])
 
 app_ui = ui.page_fluid(
 
@@ -340,70 +351,60 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'TableTab'",
-				ui.input_radio_buttons(id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
+				config.TableType.UI(ui.input_radio_buttons, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
-				ui.HTML("<b>Heatmap Settings</b>"),
-				ui.input_select(id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
-				ui.input_select(id="Keys", label="Annotation Keys", choices=[], selected=None, selectize=True, multiple=True),
-
-				ui.HTML("<b>Visual Settings</b>"),
-				ui.input_select(id="ColorMap", label="Color Map", choices=["Viridis", "Plasma", "Inferno", "Magma", "Cividis"], selected="Viridis"),
-				ui.input_select(id="Shape", label="Shape", choices=["Circle", "Square", "Hex"], selected="Hex"),
-
-				ui.input_slider(id="ImgOpacity", label="Image Opacity", value=1, min=0.0, max=1.0, step=0.1),
-				ui.input_slider(id="Opacity", label="Data Opacity", value=1, min=0.0, max=1.0, step=0.1),
-
-				ui.input_slider(id="Columns", label="Columns", value=2, min=1, max=10, step=1),
-				ui.input_slider(id="Spacing", label="Spacing", value=0.3, min=0.0, max=1.0, step=0.1),
-
-				ui.input_checkbox_group(id="Features", label="Heatmap Features", choices=
-					["Image", "Legend", "Frame"], 
-					selected=["Image", "Legend"]
-				),
+				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
+				config.Keys.UI(ui.input_select, id="Keys", label="Annotation Keys", choices=[], selectize=True, multiple=True),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
+				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"]),
+				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image Opacity", min=0.0, max=1.0, step=0.1),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data Opacity", min=0.0, max=1.0, step=0.1),
+				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1),
+				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1),
+				config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features", choices=["Image", "Legend", "Frame"]),
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'Centrality'",
-				ui.HTML("<b>Centrality Settings</b>"),
-				ui.input_select(
-				id="Score",
-				label="Score",
-				choices={
-					"closeness_centrality": "Closeness Centrality", 
-					"average_clustering": "Average Clustering",
-					"degree_centrality": "Degree Centrality"
-				},
-				selected=["Closeness Centrality"],
+				config.Score.UI(ui.input_select,
+					id="Score",
+					label="Score",
+					choices={
+						"closeness_centrality": "Closeness Centrality", 
+						"average_clustering": "Average Clustering",
+						"degree_centrality": "Degree Centrality"
+					},
 				),
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'Ripley'",
-				ui.HTML("<b>Ripley Settings</b>"),
-				ui.input_select(id="Function", label="Function", choices=["L", "F", "G"]),
-				ui.input_select(id="Distance", label="Distance Method", choices=["Euclidean", "Manhattan", "Chebyshev", "Minkowski"]),
+				config.Function.UI(ui.input_radio_buttons, id="Function", label="Function", choices=["L", "F", "G"], inline=True),
+				config.Distance.UI(ui.input_select, id="Distance", label="Distance Method", choices=DistanceMethods),
 			),
+
 
 			ui.panel_conditional(
 				"input.MainTab === 'Occurrence'",
-				ui.HTML("<b>Co-occurrence Settings</b>"),
-				ui.input_radio_buttons(id="OccurrenceGraph", label="Graph Type", choices=["Scatter", "Line"], inline=True),
 
-				ui.panel_conditional(
-					"input.OccurrenceGraph === 'Line'",
-					ui.input_select(id="Cluster", label="Cluster", choices=[], selected=None),
-				),
+				config.OccurrenceGraph.UI(ui.input_radio_buttons, id="OccurrenceGraph", label="Graph Type", choices=["Scatter", "Line"], inline=True),
 
-				ui.input_slider(id="Interval", label="Distance Interval", value=50, min=1, max=100, step=1),
-				ui.input_slider(id="Splits", label="Splits (0 = auto)", value=0, min=0, max=10, step=0),
+				ui.output_ui(id="ConditionalElements"),
+
+				config.Interval.UI(ui.input_slider, id="Interval", label="Distance Interval", min=1, max=100, step=1),
+				config.Splits.UI(ui.input_slider, id="Splits", label="Splits (0 = auto)", min=0, max=10, step=0),
 			),
 
 
-			# Add the download buttons.
-			ui.download_button("DownloadTable", "Download Table"),
+			ui.panel_conditional(
+				"input.MainTab === 'TableTab'",
+
+				# Add the download buttons.
+				ui.download_button("DownloadTable", "Download Table"),
+			),
 		),
 
 		# Add the main interface tabs.
