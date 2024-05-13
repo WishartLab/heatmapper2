@@ -449,4 +449,19 @@ class ConfigHandler(dict):
 
 
 def InitializeConfig(config, input): 
+	"""
+	@brief Initializes the configuration variable.
+	@param config: The configuration variable
+	@param input: The Shiny input
+
+	This function will update each configuration's resolve member, so that
+	if 
+	"""
 	for conf, var in config.items(): var.Resolve(input[conf])
+
+
+def GenerateConditionalElements(pairs):
+	elements = []
+	for conditional, element in pairs:
+		if conditional: elements.append(element)
+	return elements
