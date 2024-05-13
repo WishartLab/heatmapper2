@@ -6,7 +6,7 @@
 # Due to the way ShinyLive exports applications, this file is symlinked into each project to reduce redundancy.
 #
 
-from shiny import ui
+from shiny import ui, reactive
 from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
 from io import BytesIO
@@ -33,13 +33,17 @@ if "pyodide" in modules:
 else:
 	Pyodide = False
 
-# MatPlotLib Colors
+# Shared Values
 Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "Olive", "Cyan", "White", "Yellow"]
+DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
+InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"]
+ClusteringMethods = ["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"]
+ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma", "Cividis"]
 
-class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10;
+class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11;
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
-	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle"},
+	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle", "iso_code", "continent", "country", "location"},
 	ColumnType.Value: {"value", "weight", "intensity", "in_tissue"},
 	ColumnType.Longitude: {"longitude", "long"},
 	ColumnType.Latitude: {"latitude", "lat"},
@@ -48,11 +52,12 @@ Columns = {
 	ColumnType.Z: {"z"},
 	ColumnType.Cluster: {"cell type", "celltype_mapped_refined", "cluster", "cell_class", "cell_subclass", "cell_cluster"},
 	ColumnType.Free: {None},
-	ColumnType.Spatial: {"spatial"}
+	ColumnType.Spatial: {"spatial"},
+	ColumnType.NameGeoJSON: {"name", "admin", "iso_a3", "iso_a2", "iso"}
 }
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, ui_element=None, reject_unknown=False):
+def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, reject_unknown=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
@@ -60,7 +65,6 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	@param good: A list of column names on top of those defined by the type to be included
 	@param bad: A list of column names on top of those defined by the type to be excluded from the result.
 	@param only_one: Only return a single result, so the variable can be used immediately.
-	@param ui_element: An optional Shiny selection input to update.
 	@param reject_unknown: Only include columns explicitly defined
 	@return: A list of column names to use.
 	"""
@@ -88,10 +92,25 @@ def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one
 	# Get the original column names, without case-folding, and return as a list.
 	reassembled = [columns[index] for index in indices]
 	if not reassembled: return None
-
-	# Update a UI element, if one was provided
-	if ui_element is not None: ui.update_select(id=ui_element, choices=reassembled, selected=reassembled[0])
 	return reassembled[0] if only_one else reassembled
+
+
+def UpdateColumn(columns, ctype, default, id, **kwargs):
+	"""
+	@brief Update a input_select element based on columns
+	@pararm columns: The list of columns to source
+	@param ctype: The ColumnType to search for
+	@param default: The default value to use
+	@param id: The ID of the UI element
+	@param kwargs: Keyword arguments to be passed to filter. 
+	@returns The new value of the element..
+	"""
+
+	filtered = Filter(columns, ctype, **kwargs)
+	if filtered is None: return
+	selected = default if default in columns else filtered[0]
+	ui.update_select(id=id, choices=filtered, selected=selected)
+	return selected
 
 
 class Cache:
@@ -187,7 +206,6 @@ class Cache:
 		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
 										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
 										initialize without arguments.
-		@param return_n: Return the filename for post-processing.
 		"""
 
 		if source_file is None: source_file = input.File()
@@ -203,7 +221,7 @@ class Cache:
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
 			n = str(file[0]["datapath"])
-			path = Path(n)
+			if n not in self._primary: self._primary[n] = self._handler(Path(n))
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
@@ -215,6 +233,7 @@ class Cache:
 				temp = NamedTemporaryFile(suffix=Path(n).suffix); 
 				temp.write(BytesIO(raw).read()); temp.seek(0)
 				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
+
 			elif n not in self._primary: self._primary[n] = self._handler(raw)
 
 		# If the object cannot be copied, then we can just return it directly
@@ -334,54 +353,17 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	]
 
 
-def TableOptions():
+def TableOptions(config):
 	"""
 	@brief Return the options for Table Manipulation.
 	@returns A conditional panel that provides a DataType, and a ResetButton.
 	"""
 	return  ui.panel_conditional(
 		"input.MainTab === 'TableTab'",
-		ui.input_radio_buttons(id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+		config.Type.UI(ui.input_radio_buttons, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
 		ui.input_action_button(id="Reset", label="Reset Values"),
+		ui.download_button(id="DownloadTable", label="Download Table"),
 	),
-
-
-def ColorMap():
-	"""
-	@brief Returns a ColorMap input Selection
-	@returns	A list of UI elements. Firstly, a header that contained a toggle for custom ColorMaps.
-						Then, two conditional panels based on the status of the toggle. If the user wants
-						custom color maps, then provide a selectize.js selection box that allows for multiple
-						selections. These options are used to define the gradient, low to high. If not, just a
-						collection of predefined maps, where the keys must be split on spaces to generate a map
-						that MatPlotLib can use.
-	"""
-	return [
-		ui.layout_columns("Color Map", ui.input_checkbox(id="Custom", label="Custom")),
-		ui.panel_conditional(
-			"input.Custom",
-				ui.input_select(
-				id="CustomColors",
-				label=None,
-				choices=Colors,
-				selected=["Blue", "White", "Yellow"],
-				multiple=True,
-				selectize=True,
-			),
-		),
-		ui.panel_conditional(
-			"!input.Custom",
-			ui.input_select(id="ColorMap", label=None, choices={
-					"Blue White Yellow": "Blue/Yellow",
-					"Red Black Green": "Red/Green",
-					"Pink White Green": "Pink/Green",
-					"Blue Green Yellow": "Blue/Green/Yellow",
-					"Black Gray White": "Grayscale",
-					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
-				}
-			),
-		),
-		ui.input_slider(id="Bins", label="Number of Bins", value=50, min=3, max=100, step=1)]
 
 
 def MainTab(*args, m_type=ui.output_plot):
@@ -391,3 +373,95 @@ def MainTab(*args, m_type=ui.output_plot):
 		*args,
 		id="MainTab"
 	)
+
+
+class Config:
+	"""
+	@brief A configuration entry.
+	"""
+
+	def __init__(self, visible=True, **kwargs):
+		"""
+		@brief Create a configuration entry.
+		@param default: The default value for an input.
+		@param visible: Whether the input should be shown in the sidebar
+		@param **kwargs: Arguments to be passed to the input.
+		"""
+		self.visible = visible
+		self.kwargs = kwargs
+		if "selected" in kwargs:
+			self.default = kwargs["selected"]
+		elif "value" in kwargs:
+			self.default = kwargs["value"]
+		else:
+			self.default = None
+		self.resolve = None
+
+
+	def __call__(self): 
+		try:
+			resolved = self.resolve()
+			return self.default if resolved is None else resolved
+		except Exception:
+			return self.default
+
+
+	def Resolve(self, input): 
+		self.resolve = input
+
+
+	def UI(self, ui, *args, **kwargs):
+		"""
+		@brief Displays the configured UI.
+		@param ui The Shiny interface element to use.
+		@parram **kwargs: Additional arguments to be passed to the input.
+		@note	keyword arguments passed to the Config object during initialization will overrule
+					arguments passed to this function. Duplicates are allowed.
+		"""
+
+		# Remove duplicates.
+		duplicates = []
+		for key in kwargs.keys():
+			if key in self.kwargs: duplicates.append(key)
+		for key in duplicates: del kwargs[key]
+
+		# Return the correct UI.
+		if self.visible: return ui(*args, **kwargs, **self.kwargs)
+
+
+class ConfigHandler(dict):
+	"""
+	@brief: A dictionary that can be accessed with dots, and can automatically resolve.
+	"""
+
+	__getattr__ = dict.get
+	__setattr__ = dict.__setitem__
+	__delattr__ = dict.__delitem__
+
+
+	def Resolve(self, input): 
+		"""
+		@brief Resolves all stored objects.
+		@param input The input to use for resolving.
+		"""
+		for conf, var in self.items():
+			var.Resolve(input[conf])
+
+
+def InitializeConfig(config, input): 
+	"""
+	@brief Initializes the configuration variable.
+	@param config: The configuration variable
+	@param input: The Shiny input
+
+	This function will update each configuration's resolve member, so that
+	if 
+	"""
+	for conf, var in config.items(): var.Resolve(input[conf])
+
+
+def GenerateConditionalElements(pairs):
+	elements = []
+	for conditional, element in pairs:
+		if conditional: elements.append(element)
+	return elements

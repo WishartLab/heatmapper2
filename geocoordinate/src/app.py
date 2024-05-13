@@ -23,7 +23,8 @@ from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
 from numpy import vstack
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements
+from config import config
 
 # Fine, Shiny
 import branca, certifi, xyzservices, requests
@@ -45,6 +46,8 @@ def server(input, output, session):
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
+	InitializeConfig(config, input)
+
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
@@ -60,20 +63,19 @@ def server(input, output, session):
 		@param map The folium map to attach the heatmap to.
 		"""
 
-		opacity = input.Opacity()
-		radius = input.Radius()
-		blur = input.Blur()
+		opacity = config.Opacity()
+		radius = config.Radius()
+		blur = config.Blur()
 
-		if input.Uniform():
+		if "Uniform" in config.Features():
 			df["Value"] = [1] * len(df[lat_col])
 			v_col = "Value"
 
-		if input.Scale():
+		if "Scaled" in config.Features():
 			HeatMap(list(zip(df[lat_col], df[lon_col], df[v_col])),
 			min_opacity=opacity,
 			radius=radius,
 			blur=blur).add_to(map)
-
 		else:
 			latitude = df[lat_col]
 			longitude = df[lon_col]
@@ -114,7 +116,6 @@ def server(input, output, session):
 				pixelated=False,
 			)
 			image_overlay.add_to(map)
-
 		map.fit_bounds(map.get_bounds())
 
 
@@ -132,7 +133,7 @@ def server(input, output, session):
 		df = df.sort_values(by=t_col)
 
 		# Normalize
-		if not input.Uniform():
+		if not "Uniform" in config.Features():
 			values = df[v_col]
 			df[v_col] = (values - values.min()) / (values.max() - values.min())
 
@@ -143,13 +144,13 @@ def server(input, output, session):
 			for _, row in group_df.iterrows():
 				lat = row[lat_col]
 				lon = row[lon_col]
-				value = 1 if input.Uniform() else row[v_col]
+				value = 1 if "Uniform" in config.Features() else row[v_col]
 				time_slice.append([lat, lon, value])
 			data.append(time_slice)
 
-		radius = input.Radius()
-		opacity = input.Opacity()
-		blur = input.Blur()
+		radius = config.Radius() // 2
+		opacity = config.Opacity()
+		blur = config.Blur() / 30
 
 		# Make the heamap
 		HeatMapWithTime(
@@ -168,8 +169,8 @@ def server(input, output, session):
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		if input.Type() == "Integer": value = int(patch["value"])
-		elif input.Type() == "Float": value = float(patch["value"])
+		if config.Type() == "Integer": value = int(patch["value"])
+		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
 		return value
 
@@ -184,8 +185,8 @@ def server(input, output, session):
 
 			# Set the Value Column Accordingly (Helper functions handle None)
 			p.inc(message="Formatting...")
-			if not input.Uniform():
-				v_col = input.ValueColumn()
+			if not "Uniform" in config.Features():
+				v_col = config.ValueColumn()
 				if v_col not in df: return
 			else:
 				v_col = None
@@ -195,29 +196,23 @@ def server(input, output, session):
 			lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
 			if lat_col is None or lon_col is None: return
 
-			map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=input.MapType())
+			map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=config.MapType())
 
-			# IF ROI is defined, and we have a column of values to work with.
-			if type(input.ROI()) is tuple and v_col is not None:
-
-				# Get the min and max of the data, and the lower and upper bound
-				m, M = df[v_col].min(), df[v_col].max()
-				l, u = input.ROI()[0], input.ROI()[1]
-
-				# Avoid race condition of new data being uploaded, but the ROI not being updated in tandem.
-				if l >= m and u <= M:
-
-					# Get values outside the upper and lower bound, drop them.
-					oob = []
-					for index, row in df.iterrows():
-						v = row[v_col]
-						if v < l or v > u: oob.append(index)
-					df = df.drop(oob)
-
+			p.inc(message="Dropping Invalid Values...")
+			if config.ROI():
+				to_drop = []
+				l, u = config.Min(), config.Max()
+				for index, value in zip(df.index, df[v_col]):
+					if value < l or value > u: to_drop.append(index)
+				df = df.drop(to_drop)
+				if len(df) == 0:
+					ui.notification_show(ui="No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!", type="error", duration=3)
+					return
+			
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
-			if input.Temporal(): 
-				t_col = input.TimeColumn()
+			if "Temporal" in config.Features(): 
+				t_col = config.TimeColumn()
 				GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
 			else: GenerateMap(df.copy(deep=True), map, v_col, lon_col, lat_col)
 			return map
@@ -239,39 +234,26 @@ def server(input, output, session):
 
 	@reactive.Effect
 	def UpdateColumns():
-		df = GetData()
-		if not input.Uniform():
-			if not Filter(df.columns, ColumnType.Value, ui_element="ValueColumn"):
-				ui.update_checkbox(id="Uniform", value=True)
-		if input.Temporal(): Filter(df.columns, ColumnType.Time, ui_element="TimeColumn")
+		columns = GetData().columns
+		if not "Uniform" in config.Features(): 
+			UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn")
+		if "Temporal" in config.Features(): 
+			UpdateColumn(columns, ColumnType.Time, config.TimeColumn(), "TimeColumn")
 
 
-	@reactive.Effect
-	@reactive.event(input.Temporal)
-	def UpdateSliders():
-		"""
-		@brief Heatmapper and HeatmapperWithTime have different bounds for these rules, so we
-		update on the fly.
-		"""
-		if input.Temporal():
-			ui.update_slider(id="Opacity", value=0.6, min=0.0, max=1.0, step=0.1)
-			ui.update_slider(id="Radius", value=15, min=1, max=50, step=1)
-			ui.update_slider(id="Blur", value=0.8, min=0.0, max=1.0, step=0.1)
-		else:
-			ui.update_slider(id="Opacity", value=0.7, min=0.0, max=1.0, step=0.1)
-			ui.update_slider(id="Radius", value=25, min=5, max=100, step=5)
-			ui.update_slider(id="Blur", value=15, min=1, max=30, step=1)
+	@render.ui
+	def ConditionalElements(): return GenerateConditionalElements([
+			(
+				"Temporal" in config.Features(), 
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time Column", choices=[], multiple=False)
+			),
+			(
+				not "Uniform" in config.Features(), 
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False)
+			)
+		])
 
 
-	@reactive.Effect
-	def UpdateROI():
-		df = GetData()
-		v_col = input.ValueColumn()
-
-		if v_col not in df: ui.update_slider(id="ROI", value=0, min=0, max=0)
-		else:
-			m, M = int(df[v_col].min()), int(df[v_col].max())
-			ui.update_slider(id="ROI", value=(m, M), min=m, max=M)
 
 
 app_ui = ui.page_fluid(
@@ -294,35 +276,35 @@ app_ui = ui.page_fluid(
 				project="Geocoordinate"
 			),
 
-			TableOptions(),
+			TableOptions(config),
 
-			ui.input_checkbox(id="Temporal", label="Temporal Heatmap"),
-			ui.input_checkbox(id="Uniform", label="Uniform Values"),
-			ui.input_checkbox(id="Scale", label="Scale Intensity with Zoom", value=True),
-
-			# Only provide a temporal column if we're working with time
 			ui.panel_conditional(
-				"input.Temporal",
-				ui.input_select(id="TimeColumn", label="Time Column", choices=[], multiple=False),
+				"input.MainTab === 'HeatmapTab'",
+				ui.output_ui(id="ConditionalElements"),
+
+				# Only OpenStreatMap and CartoDB Positron seem to work.
+				config.MapType.UI(ui.input_radio_buttons,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
+
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
+				config.Radius.UI(ui.input_slider, id="Radius", label="Size of Points", min=5, max=100, step=5),
+				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
+				
+				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
+					ui.layout_columns(
+						config.Min.UI(ui.input_numeric,id="Min", label=None, min=0),
+						config.Max.UI(ui.input_numeric, id="Max", label=None, min=0),
+					),
+
+				config.Features.UI(
+					ui.input_checkbox_group, id="Features", label="Features", 
+					choices=["Temporal", "Uniform", "Scaled"], 
+					inline=True
+				),
+
+
+				# Add the download buttons.
+				ui.download_button("DownloadHeatmap", "Heatmap")
 			),
-
-			# Only give an option if we aren't working with a uniform value range.
-			ui.panel_conditional(
-				"!input.Uniform",
-				ui.input_select(id="ValueColumn", label="Value Column", choices=[], multiple=False),
-			),
-
-			# Only OpenStreatMap and CartoDB Positron seem to work.
-			ui.input_radio_buttons(id="MapType", label="Map Type", choices=["OpenStreetMap", "CartoDB Positron"], selected="CartoDB Positron"),
-
-			ui.input_slider(id="Opacity", label="Heatmap Opacity", value=0.7, min=0.0, max=1.0, step=0.1),
-			ui.input_slider(id="Radius", label="Size of Points", value=25, min=5, max=100, step=5),
-			ui.input_slider(id="Blur", label="Blurring", value=15, min=1, max=30, step=1),
-			ui.input_slider(id="ROI", label="Range of Interest", value=(0,0), min=0, max=100),
-
-			# Add the download buttons.
-			ui.download_button("DownloadHeatmap", "Heatmap"),
-			ui.download_button("DownloadTable", "Table"),
 		),
 
 		MainTab(m_type=ui.output_ui),
