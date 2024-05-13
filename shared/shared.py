@@ -38,7 +38,7 @@ Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "
 DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
 InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"]
 ClusteringMethods = ["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"]
-ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma", "Cividis"]
+ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma"]
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11;
 Columns = {

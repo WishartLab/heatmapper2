@@ -235,10 +235,16 @@ def server(input, output, session):
 	@reactive.Effect
 	def UpdateColumns():
 		columns = GetData().columns
+		if len(columns) == 0: return
 		if not "Uniform" in config.Features(): 
-			UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn")
+			column = UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn")
+			if column is None:
+				ui.notification_show(ui="Couldn't find a Value Column! You may need to select Uniform in the Features to visualize the HeatMap!", type="error", duration=3)
 		if "Temporal" in config.Features(): 
-			UpdateColumn(columns, ColumnType.Time, config.TimeColumn(), "TimeColumn")
+			column = UpdateColumn(columns, ColumnType.Time, config.TimeColumn(), "TimeColumn")
+			if column is None:
+				ui.notification_show(ui="Couldn't find a Temporal Column! You may need to deselect Temporal in the Features to visualize the HeatMap!", type="error", duration=3)
+		
 
 
 	@render.ui
@@ -278,6 +284,12 @@ app_ui = ui.page_fluid(
 
 			TableOptions(config),
 
+				config.Features.UI(
+					ui.input_checkbox_group, id="Features", label="Features", 
+					choices=["Temporal", "Uniform", "Scaled"], 
+					inline=True
+				),
+
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 				ui.output_ui(id="ConditionalElements"),
@@ -294,12 +306,6 @@ app_ui = ui.page_fluid(
 						config.Min.UI(ui.input_numeric,id="Min", label=None, min=0),
 						config.Max.UI(ui.input_numeric, id="Max", label=None, min=0),
 					),
-
-				config.Features.UI(
-					ui.input_checkbox_group, id="Features", label="Features", 
-					choices=["Temporal", "Uniform", "Scaled"], 
-					inline=True
-				),
 
 
 				# Add the download buttons.

@@ -21,9 +21,6 @@ config = ConfigHandler({
 	# One of "MPL2005", "MPL2014", "Serial", "Threaded"
 	"Algorithm": Config(selected="MPL2014"),
 
-	# "Linear", "Log", "AsinH"
-	"Normalization": Config(selected="Log"),
-
 	# Any value between 1-100
 	"Levels": Config(value=20),
 

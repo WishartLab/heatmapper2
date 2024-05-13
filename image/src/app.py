@@ -113,7 +113,6 @@ def server(input, output, session):
 			alpha = config.Opacity()
 			algorithm = config.Algorithm().lower()
 			levels = config.Levels()
-			normalization = config.Normalization().lower()
 
 			# Make 0 values transparent.
 			df = df.replace(0, -1)
@@ -128,7 +127,6 @@ def server(input, output, session):
 				alpha=alpha,
 				algorithm=algorithm,
 				levels=levels,
-				norm=normalization,
 			)
 
 		# Visibility of features
@@ -181,9 +179,6 @@ app_ui = ui.page_fluid(
 
 			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
 			config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
-
-			# Normalization. Log works best with removing transparent values.
-			config.Normalization.UI(ui.input_select, id="Normalization", label="Normalization", choices=["Linear", "Log", "AsinH"]),
 
 			config.Levels.UI(ui.input_slider, id="Levels", label="Number of Levels", min=1, max=100, step=1),
 
