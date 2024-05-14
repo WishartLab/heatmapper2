@@ -187,7 +187,7 @@ def server(input, output, session):
 				df = DataFrame(squareform(distances), columns=data.index, index=data.index)
 			else:
 				method = config.CorrelationMethod().lower()
-				df = data.corr(method=method)
+				df = data.T.corr(method=method)
 
 			p.inc(message="Plotting...")
 			fig, ax = subplots()
