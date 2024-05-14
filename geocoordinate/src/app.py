@@ -203,7 +203,9 @@ def server(input, output, session):
 				to_drop = []
 				l, u = config.Min(), config.Max()
 				for index, value in zip(df.index, df[v_col]):
-					if value < l or value > u: to_drop.append(index)
+					if value < l or value > u:
+						if config.ROI_Mode() == "Remove": to_drop.append(index)
+						elif config.ROI_Mode() == "Round": df.at[index, v_col] = u if value > u else l
 				df = df.drop(to_drop)
 				if len(df) == 0:
 					ui.notification_show(ui="No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!", type="error", duration=3)
@@ -302,6 +304,7 @@ app_ui = ui.page_fluid(
 				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
 				
 				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
+				config.ROI_Mode.UI(ui.input_radio_buttons, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
 					ui.layout_columns(
 						config.Min.UI(ui.input_numeric,id="Min", label=None, min=0),
 						config.Max.UI(ui.input_numeric, id="Max", label=None, min=0),

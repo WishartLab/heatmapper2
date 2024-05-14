@@ -28,6 +28,9 @@ config = ConfigHandler({
 	# Allow toggling Range of Interest
 	"ROI": Config(value=False),
 
+	# "Remove" or "Round"
+	"ROI_Mode": Config(selected="Remove"),
+
 	# Any number; the minimum/maximum bound for ROI
 	"Min": Config(value=0),
 	"Max": Config(value=0),
