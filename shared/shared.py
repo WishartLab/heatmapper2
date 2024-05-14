@@ -225,7 +225,13 @@ class Cache:
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		else:
-			n = str(source + example_file)
+
+			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running 
+			# in server-mode).
+			if example_file.startswith("https://"):
+				n = example_file if Pyodide else str(source + example_file.split("/")[-1])
+			else:
+				n = str(source + example_file)
 			raw = await self._download(n)
 
 			# WASM needs a temporary file, but they are deleted out of their scope.

@@ -56,7 +56,11 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+	async def UpdateData():
+		with ui.Progress() as p:
+			p.inc(message="Loading Data...")
+			Data.set((await DataCache.Load(input)))
+			Valid.set(False)
 
 
 	@reactive.effect

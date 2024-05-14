@@ -73,6 +73,8 @@ def server(input, output, session):
 			and then parse them into the correct structure.
 		"""
 
+		p = ui.Progress()
+		p.inc(message="Loading Data...")
 		if input.SourceFile() == "Upload":
 
 			# Get all the files, to generate a name.

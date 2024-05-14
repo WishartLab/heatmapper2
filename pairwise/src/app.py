@@ -58,7 +58,11 @@ def server(input, output, session):
 	# We add Matrix and Method as they are calculated in the Matrix handlers.
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): Data.set((await DataCache.Load(input))); Valid.set(False)
+	async def UpdateData():
+		with ui.Progress() as p:
+			p.inc(message="Loading Data...")
+			Data.set((await DataCache.Load(input)))
+			Valid.set(False)
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
