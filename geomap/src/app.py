@@ -23,9 +23,13 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps, Error
 from geojson import Mappings
-from config import config
+
+try:
+	from user import config
+except ImportError:
+	from config import config
 
 # Fine, Shiny
 import branca, certifi, xyzservices
@@ -238,7 +242,7 @@ def server(input, output, session):
 					elif config.ROI_Mode() == "Round": df.at[index, v_col] = u if value > u else l
 			df = df.drop(to_drop)
 			if len(df) == 0:
-				ui.notification_show(ui="No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!", type="error", duration=3)
+				Error("No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!")
 				return
 
 			# Load the choropleth.
@@ -257,7 +261,7 @@ def server(input, output, session):
 			names = [feature['properties'][config.KeyProperty()] for feature in geojson['features']]
 			return DataFrame({config.KeyProperty(): names})
 		except Exception:
-			ui.notification_show(ui="Could not render the GeoJSON table!", type="error", duration=3)
+			Error("Could not render the GeoJSON table!")
 
 
 	@output

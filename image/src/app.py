@@ -20,7 +20,11 @@ from matplotlib.cm import get_cmap
 from PIL import Image
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps
-from config import config
+
+try:
+	from user import config
+except ImportError:
+	from config import config
 
 
 def server(input, output, session):

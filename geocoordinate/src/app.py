@@ -23,8 +23,12 @@ from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
 from numpy import vstack
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements
-from config import config
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements, Error
+
+try:
+	from user import config
+except ImportError:
+	from config import config
 
 # Fine, Shiny
 import branca, certifi, xyzservices, requests
@@ -208,7 +212,7 @@ def server(input, output, session):
 						elif config.ROI_Mode() == "Round": df.at[index, v_col] = u if value > u else l
 				df = df.drop(to_drop)
 				if len(df) == 0:
-					ui.notification_show(ui="No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!", type="error", duration=3)
+					Error("No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!")
 					return
 			
 			# Generate the right heatmap.
@@ -241,11 +245,11 @@ def server(input, output, session):
 		if not "Uniform" in config.Features(): 
 			column = UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn")
 			if column is None:
-				ui.notification_show(ui="Couldn't find a Value Column! You may need to select Uniform in the Features to visualize the HeatMap!", type="error", duration=3)
+				Error("Couldn't find a Value Column! You may need to select Uniform in the Features to visualize the HeatMap!")
 		if "Temporal" in config.Features(): 
 			column = UpdateColumn(columns, ColumnType.Time, config.TimeColumn(), "TimeColumn")
 			if column is None:
-				ui.notification_show(ui="Couldn't find a Temporal Column! You may need to deselect Temporal in the Features to visualize the HeatMap!", type="error", duration=3)
+				Error("Couldn't find a Temporal Column! You may need to deselect Temporal in the Features to visualize the HeatMap!")
 		
 
 

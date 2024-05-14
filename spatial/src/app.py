@@ -21,7 +21,11 @@ from scanpy import pp, tl
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, UpdateColumn, GenerateConditionalElements
-from config import config
+
+try:
+	from user import config
+except ImportError:
+	from config import config
 
 
 def server(input, output, session):

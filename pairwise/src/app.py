@@ -22,8 +22,12 @@ from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig
-from config import config
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error
+
+try:
+	from user import config
+except ImportError:
+	from config import config
 
 
 def server(input, output, session):
@@ -180,14 +184,18 @@ def server(input, output, session):
 			if data is None or len(data.index) == 0: return
 			
 			p.inc(message="Calculating...")
-			# Calculate matrix
-			if config.MatrixType() == "Distance":
-				metric = config.DistanceMethod().lower()
-				distances = pdist(data, metric=metric)
-				df = DataFrame(squareform(distances), columns=data.index, index=data.index)
-			else:
-				method = config.CorrelationMethod().lower()
-				df = data.T.corr(method=method)
+			try:
+				# Calculate matrix
+				if config.MatrixType() == "Distance":
+					metric = config.DistanceMethod().lower()
+					distances = pdist(data, metric=metric)
+					df = DataFrame(squareform(distances), columns=data.index, index=data.index)
+				else:
+					method = config.CorrelationMethod().lower()
+					df = data.T.corr(method=method)
+			except Exception:
+				Error("Could not compute matrix. Ensure your input data is correct!")
+				return
 
 			p.inc(message="Plotting...")
 			fig, ax = subplots()

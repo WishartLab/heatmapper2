@@ -465,3 +465,7 @@ def GenerateConditionalElements(pairs):
 	for conditional, element in pairs:
 		if conditional: elements.append(element)
 	return elements
+
+
+def Error(message):
+	return ui.notification_show(ui=message, type="error", duration=3)

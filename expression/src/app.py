@@ -21,7 +21,11 @@ from scipy.cluster import hierarchy
 from scipy.stats import zscore
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn
-from config import config
+
+try:
+	from user import config
+except ImportError:
+	from config import config
 
 
 def server(input, output, session):
