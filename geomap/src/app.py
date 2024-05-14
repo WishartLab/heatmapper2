@@ -296,7 +296,7 @@ app_ui = ui.page_fluid(
 		ui.sidebar(
 
 			FileSelection(
-				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3", "example6.csv": "Example 4"},
+				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3", "example6.csv": "Example 4", "owid-covid-data.csv": "Example 5"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Geomap"
 			),
