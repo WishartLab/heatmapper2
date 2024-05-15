@@ -15,10 +15,14 @@
 
 
 from shiny import App, reactive, render, ui, types
-from matplotlib.pyplot import figure, subplots, colorbar
+from matplotlib.pyplot import figure
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster import hierarchy
 from scipy.stats import zscore
+from tempfile import NamedTemporaryFile
+from io import BytesIO
+from PIL import Image
+
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn
 
@@ -141,85 +145,110 @@ def server(input, output, session):
 
 
 	@output
-	@render.plot
+	@render.image(delete_file=True)
 	def Heatmap(): 
 		"""
 		@brief Generates the Heatmap
 		@returns The heatmap
 		"""
 
-		with ui.Progress() as p:
-			p.inc(message="Reading input...")
-			index_labels, x_labels, data = ProcessData(GetData())
-			if data is None: return
+		# A list of all the inputs for caching.
+		inputs = [
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			config.Features(),
+			config.ScaleType(),
+			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Interpolation(),
+			config.Bins(),
+			config.TextSize(),
+		]
 
-			# Create a figure with a heatmap and associated dendrograms
-			p.inc(message="Plotting...")
-			fig = figure(figsize=(12, 10))
 
-			gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
+		# If we're rendering as images, fetch from the cache if we can
+		if not DataCache.In(inputs): 
+			with ui.Progress() as p:
+				p.inc(message="Reading input...")
+				index_labels, x_labels, data = ProcessData(GetData())
+				if data is None: return
 
-			# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
-			# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
-			# To data, so the order changes when turning the toggle.
-			if "row" in config.Features():
-				ax_row = fig.add_subplot(gs[1, 0])
-				row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
-				ax_row.axis("off")
-				leaves = row_dendrogram["leaves"]
-				leaves.reverse()
+				# Create a figure with a heatmap and associated dendrograms
+				p.inc(message="Plotting...")
+				fig = figure(figsize=(12, 10))
 
-				index_labels = [index_labels[i] for i in leaves]
-				df = data.iloc[leaves]
-			else:
-				df = data
+				gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
 
-			# If we render the column dendrogram.
-			if "col" in config.Features():
-				ax_col = fig.add_subplot(gs[0, 1])
-				col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
-				ax_col.axis("off")
+				# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
+				# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
+				# To data, so the order changes when turning the toggle.
+				if "row" in config.Features():
+					ax_row = fig.add_subplot(gs[1, 0])
+					row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
+					ax_row.axis("off")
+					leaves = row_dendrogram["leaves"]
+					leaves.reverse()
 
-			# Handle scaling
-			if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
-		
-			# Render the heatmap.
-			ax_heatmap = fig.add_subplot(gs[1, 1])
+					index_labels = [index_labels[i] for i in leaves]
+					df = data.iloc[leaves]
+				else:
+					df = data
 
-			colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
-			interpolation = config.Interpolation().lower()
-			bins = config.Bins()
+				# If we render the column dendrogram.
+				if "col" in config.Features():
+					ax_col = fig.add_subplot(gs[0, 1])
+					col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
+					ax_col.axis("off")
 
-			heatmap = ax_heatmap.imshow(
-				df,
-				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=bins),
-				interpolation=interpolation,
-				aspect="auto",
-			)
+				# Handle scaling
+				if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
+			
+				# Render the heatmap.
+				ax_heatmap = fig.add_subplot(gs[1, 1])
 
-			text_size = config.TextSize()
+				colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
+				interpolation = config.Interpolation().lower()
+				bins = config.Bins()
 
-			# If we render the Y axis.
-			if "y" in config.Features():
-				ax_heatmap.set_yticks(range(len(index_labels)))
-				ax_heatmap.set_yticklabels(index_labels, fontsize=text_size)
-				ax_heatmap.yaxis.tick_right()
-			else:
-				ax_heatmap.set_yticklabels([])
+				heatmap = ax_heatmap.imshow(
+					df,
+					cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=bins),
+					interpolation=interpolation,
+					aspect="auto",
+				)
 
-			# If we render the X axis.
-			if "x" in config.Features():
-				ax_heatmap.set_xticks(range(len(x_labels)))
-				ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=text_size)
-			else:
-				ax_heatmap.set_xticklabels([])
+				text_size = config.TextSize()
 
-			# If we render the legend.
-			if "legend" in config.Features():
-				ax_cbar = fig.add_subplot(gs[3, 1])
-				cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
-				cbar.ax.tick_params(labelsize=text_size)
-			return fig
+				# If we render the Y axis.
+				if "y" in config.Features():
+					ax_heatmap.set_yticks(range(len(index_labels)))
+					ax_heatmap.set_yticklabels(index_labels, fontsize=text_size)
+					ax_heatmap.yaxis.tick_right()
+				else:
+					ax_heatmap.set_yticklabels([])
+
+				# If we render the X axis.
+				if "x" in config.Features():
+					ax_heatmap.set_xticks(range(len(x_labels)))
+					ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=text_size)
+				else:
+					ax_heatmap.set_xticklabels([])
+
+				# If we render the legend.
+				if "legend" in config.Features():
+					ax_cbar = fig.add_subplot(gs[3, 1])
+					cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
+					cbar.ax.tick_params(labelsize=text_size)
+
+				b = BytesIO()
+				fig.savefig(b, format="png", dpi=config.DPI())
+				b.seek(0)
+				DataCache.Store(b.read(), inputs)
+
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh", "width": f"{config.Size()}wh"}
+			return img
 
 
 	@output
@@ -246,6 +275,20 @@ def server(input, output, session):
 
 	@render.download(filename="table.csv")
 	def DownloadTable(): yield GetData().to_string()
+
+
+	@render.download(filename="heatmap.png")
+	def DownloadHeatmap():
+		yield DataCache.Get([
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			config.Features(),
+			config.ScaleType(),
+			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Interpolation(),
+			config.Bins(),
+			config.TextSize(),
+		])
+
 
 
 	@reactive.Effect
@@ -349,12 +392,18 @@ app_ui = ui.page_fluid(
 				# Define the Orientation of the dendrogram in the Tab
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
+
+
+			config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
+			config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
+			ui.download_button(id="DownloadHeatmap", label="Download"),
 		),
 
 		# Add the main interface tabs.
 		MainTab(
 			ui.nav_panel("Row Dendrogram", ui.output_plot("RowDendrogram", height="90vh"), value="RowTab"),
 			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="ColumnTab"),
+			m_type=ui.output_image
 		),
 	)
 )

@@ -73,57 +73,57 @@ def server(input, output, session):
 			and then parse them into the correct structure.
 		"""
 
-		p = ui.Progress()
-		p.inc(message="Loading Data...")
-		if input.SourceFile() == "Upload":
+		with ui.Progress() as p:
+			p.inc(message="Loading Data...")
+			if input.SourceFile() == "Upload":
 
-			# Get all the files, to generate a name.
-			if input.File() is None: return
-			name = [f["datapath"] for f in input.File()]
-			
-	
-			# If the name hasn't been cached, we need to construct the object.
-			if not DataCache.In(name):
+				# Get all the files, to generate a name.
+				if input.File() is None: return
+				name = [f["datapath"] for f in input.File()]
+				
+		
+				# If the name hasn't been cached, we need to construct the object.
+				if not DataCache.In(name):
 
-				# For each file uploaded, dump it into a temporary directory
-				temp = TemporaryDirectory()
-				Path(f"{temp.name}/spatial").mkdir()
-				counts = None
-				for file in input.File():
-					n = file["datapath"]
-					base = file["name"]
+					# For each file uploaded, dump it into a temporary directory
+					temp = TemporaryDirectory()
+					Path(f"{temp.name}/spatial").mkdir()
+					counts = None
+					for file in input.File():
+						n = file["datapath"]
+						base = file["name"]
 
-					# These files are located in the spatial subdir
-					suffix = Path(base).suffix
+						# These files are located in the spatial subdir
+						suffix = Path(base).suffix
 
-					# These files are considered spatial.
-					if suffix in [".png", ".json", ".csv"]: base = f"spatial/{base}"
-					elif suffix == ".h5": counts = base
+						# These files are considered spatial.
+						if suffix in [".png", ".json", ".csv"]: base = f"spatial/{base}"
+						elif suffix == ".h5": counts = base
 
-					# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
-					elif suffix == ".h5ad": return await DataCache.Load(input, default=None)
+						# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
+						elif suffix == ".h5ad": return await DataCache.Load(input, default=None)
 
-					open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
+						open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
 
-				# Make SquidPy generate an object from the folder.
-				adata = read.visium(temp.name, counts_file=counts)
+					# Make SquidPy generate an object from the folder.
+					adata = read.visium(temp.name, counts_file=counts)
 
-				# Post-processing so all the needed statistics are present.
-				adata.var_names_make_unique()
-				pp.filter_genes(adata, inplace=True, min_counts=100)
-				gr.spatial_neighbors(adata)
-				pp.calculate_qc_metrics(adata, inplace=True)
-				tl.leiden(adata, key_added="cluster", neighbors_key="spatial_neighbors")
-				pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
+					# Post-processing so all the needed statistics are present.
+					adata.var_names_make_unique()
+					pp.filter_genes(adata, inplace=True, min_counts=100)
+					gr.spatial_neighbors(adata)
+					pp.calculate_qc_metrics(adata, inplace=True)
+					tl.leiden(adata, key_added="cluster", neighbors_key="spatial_neighbors")
+					pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
 
-				# Throw it into the Cache.
-				DataCache.Store(adata, name)
+					# Throw it into the Cache.
+					DataCache.Store(adata, name)
 
-			# Return the cached information.
-			Data.set(DataCache.Get(name))
+				# Return the cached information.
+				Data.set(DataCache.Get(name))
 
-		# With an example, just return it.
-		else: Data.set(await DataCache.Load(input, default=None))
+			# With an example, just return it.
+			else: Data.set(await DataCache.Load(input, default=None))
 
 
 	@output
