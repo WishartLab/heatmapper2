@@ -1,0 +1,45 @@
+.shinylive-viewer .loading-wrapper {
+  font-family: monospace;
+  font-size: 2vw;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 75vw;
+  transform: translate(-50%, -50%);
+  text-align: center; /* Center the text horizontally */
+}
+
+.shinylive-viewer .loading-wrapper .loading-animation {
+  position: absolute;
+  top: 65%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.shinylive-viewer .loading-wrapper::before {
+  content: "";
+  white-space: pre;
+  overflow: hidden;
+  animation: change-content 60s infinite, typing 5s steps(60, end) infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes typing {
+  0% { width: 0 }
+  75% { width: 100% }
+  100% { width: 100% }
+}
+
+@keyframes change-content {
+	0%, 6% {content:	"Welcome to Heatmapper 2!";}
+  14.5% {content: "This version is built with WebAssembly!";}
+  22% {content: "Once loaded, Heatmapper will run locally in your browser!";}
+  33% {content: "With no need for a server, you'll have better performance";}
+  40% {content: "With no need for worry about congestion from other users";}
+  46% {content: "Immediate uploading as you simply fetch from disk";}
+  60% {content: "You can even work offline once Heatmapper has loaded!";}
+  60.5% {content: "You can consider it an upfront time investment";}
+  82% {content: "Where you can wait now, rather than waiting on a slow server";}
+}
+
