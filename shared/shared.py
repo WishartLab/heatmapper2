@@ -269,7 +269,7 @@ class Cache:
 				return self._objects[h]
 		else: return None
 
-	def In(inputs):
+	def In(self, inputs):
 		h = "".join(str(i) for i in inputs)
 		return h in self._objects
 
@@ -374,7 +374,7 @@ def TableOptions(config):
 
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
-		ui.nav_panel("Heatmap", m_type(id="Heatmap", height="90vh"), value="HeatmapTab"),
+		ui.nav_panel("Heatmap", m_type(id="Heatmap"), value="HeatmapTab"),
 		ui.nav_panel("Table", ui.output_data_frame(id="Table"), value="TableTab"),
 		*args,
 		id="MainTab"

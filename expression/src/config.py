@@ -47,6 +47,12 @@ config = ConfigHandler({
 	# Any number between 3-100 to define amount of bins for color mapping
 	"Bins": Config(value=50),
 
+	# Any value greater than 1.
+	"Size": Config(value=650),
+
+	# Any value greater than 1.
+	"DPI": Config(value=100),
+
 	# "Top", "Bottom", "Left", "Right"
 	"Orientation": Config(selected="Left"),
 

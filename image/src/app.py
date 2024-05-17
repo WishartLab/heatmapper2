@@ -18,6 +18,8 @@ from matplotlib.pyplot import subplots, colorbar
 from matplotlib.tri import Triangulation
 from matplotlib.cm import get_cmap
 from PIL import Image
+from tempfile import NamedTemporaryFile
+from io import BytesIO
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps
 
@@ -88,67 +90,91 @@ def server(input, output, session):
 
 
 	@output
-	@render.plot
+	@render.image
 	def Heatmap():
-		with ui.Progress() as p:
 
-			p.inc(message="Loading input...")
-			df = GetData()
+		inputs = [
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			input.Image(),
+			config.ColorMap(),
+			config.Opacity(),
+			config.Algorithm(),
+			config.Levels(),
+			config.Features(),
+			config.TextSize(),
+			config.DPI(),
+		]
 
-			# We need to reflect the DataFrame so that the first row is plotted at the top
-			df = df.iloc[::-1]
+		if not DataCache.In(inputs):
+			with ui.Progress() as p:
 
-			p.inc(message="Loading image...")
-			img = IMG()
-			if img is None or df.empty: return None
+				p.inc(message="Loading input...")
+				df = GetData()
 
-			# Wrangle into an acceptable format.
-			p.inc(message="Formatting...")
-			v_col = Filter(df.columns, ColumnType.Value, only_one=True, reject_unknown=True)
-			x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
-			y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
+				# We need to reflect the DataFrame so that the first row is plotted at the top
+				df = df.iloc[::-1]
 
-			if {v_col, x_col, y_col}.issubset(df.columns):
-				df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
+				p.inc(message="Loading image...")
+				img = IMG()
+				if img is None or df.empty: return None
 
-			p.inc(message="Plotting...")
-			fig, ax = subplots()
+				# Wrangle into an acceptable format.
+				p.inc(message="Formatting...")
+				v_col = Filter(df.columns, ColumnType.Value, only_one=True, reject_unknown=True)
+				x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
+				y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
 
-			# Add the image as an overlay, if we have one.
-			if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
+				if {v_col, x_col, y_col}.issubset(df.columns):
+					df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
 
-			cmap = config.ColorMap().lower()
-			alpha = config.Opacity()
-			algorithm = config.Algorithm().lower()
-			levels = config.Levels()
+				p.inc(message="Plotting...")
+				fig, ax = subplots()
 
-			# Make 0 values transparent.
-			df = df.replace(0, -1)
-			cmap = get_cmap(cmap)
-			cmap.set_under(alpha=0)
+				# Add the image as an overlay, if we have one.
+				if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
 
-			im = ax.contourf(
-				df,
-				cmap=cmap,
-				extent=[0, 1, 0, 1],
-				zorder=1,
-				alpha=alpha,
-				algorithm=algorithm,
-				levels=levels,
-			)
+				cmap = config.ColorMap().lower()
+				alpha = config.Opacity()
+				algorithm = config.Algorithm().lower()
+				levels = config.Levels()
 
-		# Visibility of features
-		if "legend" in config.Features(): 
-			cbar = colorbar(im, ax=ax, label="Value")
-			cbar.ax.tick_params(labelsize=config.TextSize())
+				# Make 0 values transparent.
+				df = df.replace(0, -1)
+				cmap = get_cmap(cmap)
+				cmap.set_under(alpha=0)
 
-		if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
-		else: ax.set_yticklabels([])
+				im = ax.contourf(
+					df,
+					cmap=cmap,
+					extent=[0, 1, 0, 1],
+					zorder=1,
+					alpha=alpha,
+					algorithm=algorithm,
+					levels=levels,
+				)
 
-		if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
-		else: ax.set_xticklabels([])
+				# Visibility of features
+				if "legend" in config.Features(): 
+					cbar = colorbar(im, ax=ax, label="Value")
+					cbar.ax.tick_params(labelsize=config.TextSize())
 
-		return ax
+				if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
+				else: ax.set_yticklabels([])
+
+				if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
+				else: ax.set_xticklabels([])
+
+				b = BytesIO()
+				fig.savefig(b, format="png", dpi=config.DPI())
+				b.seek(0)
+				DataCache.Store(b.read(), inputs)
+
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			return img
 
 
 	@output
@@ -160,6 +186,20 @@ def server(input, output, session):
 	@render.download(filename="table.csv")
 	def DownloadTable(): yield GetData().to_string()
 
+	@render.download(filename="heatmap.png")
+	def DownloadHeatmap():
+		yield DataCache.Get([
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			input.Image(),
+			config.ColorMap(),
+			config.Opacity(),
+			config.Algorithm(),
+			config.Levels(),
+			config.Features(),
+			config.TextSize(),
+			config.DPI(),
+		])
+
 
 app_ui = ui.page_fluid(
 
@@ -170,29 +210,37 @@ app_ui = ui.page_fluid(
 
 			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], project="Image"),
 
-			TableOptions(config),
-
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", 
 				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"], 
 				multiple=False)),
 
-			# Customize the text size of the axes.
-			config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),
+			TableOptions(config),
 
-			# Customize the opacity of the heatmap, making the background image more visible.
-			config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
+			ui.panel_conditional(
+				"input.MainTab === 'HeatmapTab'",
 
-			# Set the ColorMap used.
-			config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
+				# Customize the text size of the axes.
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),
 
-			# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
-			config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
+				# Customize the opacity of the heatmap, making the background image more visible.
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
 
-			config.Levels.UI(ui.input_slider, id="Levels", label="Number of Levels", min=1, max=100, step=1),
+				# Set the ColorMap used.
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
 
-			# Customize what aspects of the heatmap are visible
-			config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features",
-					choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
+				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
+
+				config.Levels.UI(ui.input_slider, id="Levels", label="Number of Levels", min=1, max=100, step=1),
+
+				# Customize what aspects of the heatmap are visible
+				config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features",
+						choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+				),
+
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
+				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 		),
 

@@ -21,6 +21,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
+from tempfile import NamedTemporaryFile
+from io import BytesIO
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error
 
@@ -180,64 +182,90 @@ def server(input, output, session):
 
 
 	@output
-	@render.plot
+	@render.image(delete_file=True)
 	def Heatmap():
-		with ui.Progress() as p:
-			p.inc(message="Reading input...")
-			data = GetData()
-			if data is None or len(data.index) == 0: return
-			
-			p.inc(message="Calculating...")
-			try:
-				# Calculate matrix
-				if config.MatrixType() == "Distance":
-					metric = config.DistanceMethod().lower()
-					distances = pdist(data, metric=metric)
-					df = DataFrame(squareform(distances), columns=data.index, index=data.index)
+
+		inputs = [
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
+			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Interpolation(),
+			config.Bins(),
+			config.TextSize(),
+			config.Features(),
+			config.DPI(),
+		]
+
+		if not DataCache.In(inputs):
+			with ui.Progress() as p:
+				p.inc(message="Reading input...")
+				data = GetData()
+				if data is None or len(data.index) == 0: return
+				
+				p.inc(message="Calculating...")
+				try:
+					# Calculate matrix
+					if config.MatrixType() == "Distance":
+						metric = config.DistanceMethod().lower()
+						distances = pdist(data, metric=metric)
+						df = DataFrame(squareform(distances), columns=data.index, index=data.index)
+					else:
+						method = config.CorrelationMethod().lower()
+						df = data.T.corr(method=method)
+				except Exception:
+					Error("Could not compute matrix. Ensure your input data is correct!")
+					return
+
+				p.inc(message="Plotting...")
+				fig, ax = subplots()
+
+				colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
+				interpolation = config.Interpolation().lower()
+				im = ax.imshow(
+					df, 
+					cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()), 
+					interpolation=interpolation,
+					aspect="equal",
+				)
+
+				text_size = config.TextSize()
+
+				# Visibility of features
+				if "legend" in config.Features(): 
+					cbar = colorbar(im, ax=ax, label="Distance")
+					cbar.ax.tick_params(labelsize=text_size)
+
+				if "y" in config.Features():
+					ax.tick_params(axis="y", labelsize=text_size)
+					ax.set_yticks(range(len(df.columns)))
+					ax.set_yticklabels(df.columns)
 				else:
-					method = config.CorrelationMethod().lower()
-					df = data.T.corr(method=method)
-			except Exception:
-				Error("Could not compute matrix. Ensure your input data is correct!")
-				return
+					ax.set_yticklabels([])
 
-			p.inc(message="Plotting...")
-			fig, ax = subplots()
+				if "x" in config.Features():
+					ax.tick_params(axis="x", labelsize=text_size)
+					ax.set_xticks(range(len(df.columns)))
+					ax.set_xticklabels(df.columns, rotation=90)
+				else:
+					ax.set_xticklabels([])
 
-			colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
-			interpolation = config.Interpolation().lower()
-			im = ax.imshow(
-				df, 
-				cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()), 
-				interpolation=interpolation
-			)
+				# Annotate each cell with its value
+				if "label" in config.Features():
+					for i in range(df.shape[0]):
+							for j in range(df.shape[1]):
+									ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 
-			text_size = config.TextSize()
+				b = BytesIO()
+				fig.savefig(b, format="png", dpi=config.DPI())
+				b.seek(0)
+				DataCache.Store(b.read(), inputs)
 
-			# Visibility of features
-			if "legend" in config.Features(): 
-				cbar = colorbar(im, ax=ax, label="Distance")
-				cbar.ax.tick_params(labelsize=text_size)
-
-			if "y" in config.Features():
-				ax.tick_params(axis="y", labelsize=text_size)
-				ax.set_yticks(range(len(df.columns)))
-				ax.set_yticklabels(df.columns)
-			else:
-				ax.set_yticklabels([])
-
-			if "x" in config.Features():
-				ax.tick_params(axis="x", labelsize=text_size)
-				ax.set_xticks(range(len(df.columns)))
-				ax.set_xticklabels(df.columns, rotation=90)
-			else:
-				ax.set_xticklabels([])
-
-			# Annotate each cell with its value
-			if "label" in config.Features():
-				for i in range(df.shape[0]):
-						for j in range(df.shape[1]):
-								ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			return img
 
 
 	@output
@@ -248,6 +276,20 @@ def server(input, output, session):
 
 	@render.download(filename="table.csv")
 	def DownloadTable(): yield GetData().to_string()
+
+
+	@render.download(filename="heatmap.png")
+	def DownloadHeatmap():
+		yield DataCache.Get([
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
+			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Interpolation(),
+			config.Bins(),
+			config.TextSize(),
+			config.Features(),
+			config.DPI(),
+		])
 
 
 	@render.ui
@@ -355,11 +397,15 @@ app_ui = ui.page_fluid(
 
 				# Customize the K-mer to compute for FASTA sequences
 				config.K.UI(ui.input_numeric, id="K", label="K-Mer Length", min=3, max=5, step=1),
+
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
+				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 		),
 
 		# Add the main interface tabs.
-		MainTab(),
+		MainTab(m_type=ui.output_image),
 	)
 )
 
