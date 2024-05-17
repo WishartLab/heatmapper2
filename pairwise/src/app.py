@@ -192,7 +192,8 @@ def server(input, output, session):
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
-			config.Features()
+			config.Features(),
+			config.DPI(),
 		]
 
 		if not DataCache.In(inputs):
@@ -286,7 +287,8 @@ def server(input, output, session):
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
-			config.Features()
+			config.Features(),
+			config.DPI(),
 		])
 
 

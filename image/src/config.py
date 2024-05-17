@@ -30,6 +30,9 @@ config = ConfigHandler({
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
 
-	# No value, just toggle visibility.
-	"DownloadTable": Config(),
+	# Any value greater than 1.
+	"Size": Config(value=700),
+
+	# Any value greater than 1.
+	"DPI": Config(value=300),
 })

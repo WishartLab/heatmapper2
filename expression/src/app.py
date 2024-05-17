@@ -160,6 +160,7 @@ def server(input, output, session):
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
+			config.DPI(),
 		]
 
 
@@ -286,6 +287,7 @@ def server(input, output, session):
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
+			config.DPI(),
 		])
 
 
