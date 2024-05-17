@@ -21,7 +21,6 @@ from scipy.cluster import hierarchy
 from scipy.stats import zscore
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from PIL import Image
 
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn
@@ -247,7 +246,7 @@ def server(input, output, session):
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)
 			temp.close()
-			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh", "width": f"{config.Size()}wh"}
+			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
 			return img
 
 
@@ -392,7 +391,6 @@ app_ui = ui.page_fluid(
 				# Define the Orientation of the dendrogram in the Tab
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
-
 
 			config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
 			config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
