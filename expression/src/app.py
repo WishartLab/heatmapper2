@@ -384,7 +384,12 @@ app_ui = ui.page_fluid(
 
 				# Toggle rendering features. All are on by default.
 				config.Features.UI(ui.input_checkbox_group, id="Features", label="Visibility",
-					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"})
+					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+				),
+
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
+				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 
 			# Settings pertaining to the dendrogram view.
@@ -393,10 +398,6 @@ app_ui = ui.page_fluid(
 				# Define the Orientation of the dendrogram in the Tab
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
-
-			config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
-			config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
-			ui.download_button(id="DownloadHeatmap", label="Download"),
 		),
 
 		# Add the main interface tabs.
