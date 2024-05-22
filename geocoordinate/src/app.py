@@ -23,7 +23,7 @@ from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
 from numpy import vstack
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements, Error
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements, Error, Update
 
 try:
 	from user import config
@@ -183,9 +183,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.ui
-	def Heatmap(): 
+	def GenerateHeatmap(): 
 		with ui.Progress() as p:
 			p.inc(message="Loading input...")
 			df = GetData()
@@ -226,6 +224,17 @@ def server(input, output, session):
 				GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
 			else: GenerateMap(df.copy(deep=True), map, v_col, lon_col, lat_col)
 			return map
+
+
+	@output
+	@render.ui
+	def Heatmap(): return GenerateHeatmap()
+
+
+	@output
+	@render.ui
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
 
 
 	@output
@@ -294,14 +303,18 @@ app_ui = ui.page_fluid(
 
 			TableOptions(config),
 
+			Update(),
+
+
+			ui.panel_conditional(
+				"input.MainTab === 'HeatmapTab'",
+
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", label="Features", 
 					choices=["Temporal", "Uniform", "Scaled"], 
 					inline=True
 				),
-
-			ui.panel_conditional(
-				"input.MainTab === 'HeatmapTab'",
+				
 				ui.output_ui(id="ConditionalElements"),
 
 				# Only OpenStreatMap and CartoDB Positron seem to work.
