@@ -361,13 +361,15 @@ app_ui = ui.page_fluid(
 				project="Expression"
 			),
 
-			Update(),
 
 			TableOptions(config),
 
 			# Shared, Non-Table settings.
 			ui.panel_conditional(
 				"input.MainTab != 'TableTab'",
+
+				Update(),
+
 				# The column that holds names for the data.
 				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Names", choices=[], multiple=False),
 

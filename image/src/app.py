@@ -222,12 +222,12 @@ app_ui = ui.page_fluid(
 				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"], 
 				multiple=False)),
 
-			Update(),
-
 			TableOptions(config),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
+
+				Update(),
 
 				# Customize the text size of the axes.
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),

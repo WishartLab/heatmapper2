@@ -303,11 +303,10 @@ app_ui = ui.page_fluid(
 
 			TableOptions(config),
 
-			Update(),
-
-
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
+
+				Update(),
 
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", label="Features", 

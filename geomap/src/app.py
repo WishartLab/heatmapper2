@@ -333,12 +333,14 @@ app_ui = ui.page_fluid(
 				ui.input_select(id="JSONSelection", label=None, choices=Mappings, multiple=False, selected="canada.geojson"),
 			),
 
-			Update(),
 
 			TableOptions(config),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
+
+				Update(),
+
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal Choropleth"),
 
 				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[]),
