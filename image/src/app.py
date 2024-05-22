@@ -175,12 +175,12 @@ def server(input, output, session):
 
 
 	@output
-	@render.image
+	@render.image(delete_file=True)
 	def Heatmap(): return GenerateHeatmap()
 
 
 	@output
-	@render.image
+	@render.image(delete_file=True)
 	@reactive.event(input.Update)
 	def HeatmapReactive(): return GenerateHeatmap()
 
