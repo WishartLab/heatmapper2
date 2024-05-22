@@ -23,7 +23,7 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps, Error
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps, Error, Update
 from geojson import Mappings
 
 try:
@@ -205,9 +205,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.ui
-	def Heatmap():
+	def GenerateHeatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
@@ -257,6 +255,16 @@ def server(input, output, session):
 
 			map.fit_bounds(map.get_bounds())
 			return map
+
+	@output
+	@render.ui
+	def Heatmap(): return GenerateHeatmap()
+
+	@output
+	@render.ui
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
+
 
 	@output
 	@render.data_frame
@@ -324,6 +332,8 @@ app_ui = ui.page_fluid(
 				"input.JSONFile === 'Provided'",
 				ui.input_select(id="JSONSelection", label=None, choices=Mappings, multiple=False, selected="canada.geojson"),
 			),
+
+			Update(),
 
 			TableOptions(config),
 
