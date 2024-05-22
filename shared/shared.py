@@ -374,7 +374,17 @@ def TableOptions(config):
 
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
-		ui.nav_panel("Heatmap", m_type(id="Heatmap"), value="HeatmapTab"),
+		ui.nav_panel("Heatmap",
+			ui.panel_conditional(
+				"input.UpdateToggle",
+				m_type(id="HeatmapReactive"),
+			), 
+			ui.panel_conditional(
+				"!input.UpdateToggle",
+				m_type(id="Heatmap"),
+			), 
+			value="HeatmapTab"
+		),
 		ui.nav_panel("Table", ui.output_data_frame(id="Table"), value="TableTab"),
 		*args,
 		id="MainTab"
@@ -475,3 +485,13 @@ def GenerateConditionalElements(pairs):
 
 def Error(message):
 	return ui.notification_show(ui=message, type="error", duration=3)
+
+
+def Update():
+		return [
+			ui.input_switch(id="UpdateToggle", label="Manual Updating"),
+			ui.panel_conditional(
+				"input.UpdateToggle",
+				ui.input_action_button(id="Update", label="Update")
+			),
+		]
