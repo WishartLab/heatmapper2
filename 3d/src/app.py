@@ -17,7 +17,7 @@ from pandas import DataFrame
 from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update
 
 try:
 	from user import config
@@ -97,9 +97,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.ui
-	def Heatmap():
+	def GenerateHeatmap():
 		with ui.Progress() as p:
 
 			# Get the model and data. 
@@ -158,6 +156,17 @@ def server(input, output, session):
 
 
 	@output
+	@render.ui
+	def Heatmap(): return GenerateHeatmap()
+
+
+	@output
+	@render.ui
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
+
+
+	@output
 	@render.text
 	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]["Description"]
@@ -178,6 +187,8 @@ app_ui = ui.page_fluid(
 		ui.sidebar(
 
 			FileSelection(examples={"example1.csv": "Example 1", "texture.jpg": "Example 2"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"], project="3D"),
+
+			Update(),
 
 			TableOptions(config),
 
