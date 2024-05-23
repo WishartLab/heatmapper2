@@ -337,6 +337,7 @@ app_ui = ui.page_fluid(
 		),
 
 		MainTab(m_type=ui.output_ui),
+		height="90vh",
 	)
 )
 

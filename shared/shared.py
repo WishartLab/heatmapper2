@@ -375,14 +375,8 @@ def TableOptions(config):
 def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
 		ui.nav_panel("Heatmap",
-			ui.panel_conditional(
-				"input.UpdateToggle",
-				m_type(id="HeatmapReactive"),
-			), 
-			ui.panel_conditional(
-				"!input.UpdateToggle",
-				m_type(id="Heatmap"),
-			), 
+			ui.panel_conditional("input.UpdateToggle", m_type(id="Heatmap")),
+			ui.panel_conditional("!input.UpdateToggle", m_type(id="HeatmapReactive")), 
 			value="HeatmapTab"
 		),
 		ui.nav_panel("Table", ui.output_data_frame(id="Table"), value="TableTab"),
@@ -487,11 +481,14 @@ def Error(message):
 	return ui.notification_show(ui=message, type="error", duration=3)
 
 
-def Update():
-		return [
-			ui.input_switch(id="UpdateToggle", label="Manual Updating"),
-			ui.panel_conditional(
-				"input.UpdateToggle",
-				ui.input_action_button(id="Update", label="Update")
-			),
-		]
+def Update(): return ui.input_action_button(
+		id="Update", 
+		label=ui.layout_columns(
+			ui.panel_conditional("input.UpdateToggle", "Auto"),
+			"Update",
+			ui.input_switch(id="UpdateToggle", label=None, value=False),
+			col_widths=[1,9,1],
+			gap="1px",
+			height="1px", 	# Make it as small as possible
+		)
+	)

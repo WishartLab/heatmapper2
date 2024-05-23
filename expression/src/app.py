@@ -421,6 +421,7 @@ app_ui = ui.page_fluid(
 			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="ColumnTab"),
 			m_type=ui.output_image
 		),
+		height="90vh",
 	)
 )
 

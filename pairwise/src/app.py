@@ -417,6 +417,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(m_type=ui.output_image),
+		height="90vh",
 	)
 )
 

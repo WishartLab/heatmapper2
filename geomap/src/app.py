@@ -368,6 +368,7 @@ app_ui = ui.page_fluid(
 		),
 
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),
+		height="90vh",
 	)
 )
 
