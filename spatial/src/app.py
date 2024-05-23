@@ -20,7 +20,7 @@ from squidpy import gr, pl, read
 from scanpy import pp, tl
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, UpdateColumn, GenerateConditionalElements
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, UpdateColumn, GenerateConditionalElements, Update
 
 try:
 	from user import config
@@ -136,10 +136,7 @@ def server(input, output, session):
 		elif state == "var": return render.DataGrid(df.var)
 
 
-	@output
-	@render.plot
-	def Heatmap():
-
+	def GenerateHeatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
@@ -200,6 +197,17 @@ def server(input, output, session):
 				wspace=spacing,
 				hspace=spacing,
 			)
+
+
+	@output
+	@render.plot
+	def Heatmap(): return GenerateHeatmap()
+
+
+	@output
+	@render.plot
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
 
 
 	@output
@@ -362,6 +370,7 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
+				Update(),
 				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
 				config.Keys.UI(ui.input_select, id="Keys", label="Annotation Keys", choices=[], selectize=True, multiple=True),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
@@ -419,6 +428,7 @@ app_ui = ui.page_fluid(
 			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="90vh"), value="Ripley"),
 			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="90vh"), value="Occurrence")
 		),
+		height="90vh",
 	)
 )
 

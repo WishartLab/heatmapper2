@@ -23,7 +23,7 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps, Error
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps, Error, Update
 from geojson import Mappings
 
 try:
@@ -205,9 +205,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.ui
-	def Heatmap():
+	def GenerateHeatmap():
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
@@ -257,6 +255,16 @@ def server(input, output, session):
 
 			map.fit_bounds(map.get_bounds())
 			return map
+
+	@output
+	@render.ui
+	def Heatmap(): return GenerateHeatmap()
+
+	@output
+	@render.ui
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
+
 
 	@output
 	@render.data_frame
@@ -325,10 +333,14 @@ app_ui = ui.page_fluid(
 				ui.input_select(id="JSONSelection", label=None, choices=Mappings, multiple=False, selected="canada.geojson"),
 			),
 
+
 			TableOptions(config),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
+
+				Update(),
+
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal Choropleth"),
 
 				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[]),
@@ -356,6 +368,7 @@ app_ui = ui.page_fluid(
 		),
 
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),
+		height="90vh",
 	)
 )
 

@@ -23,7 +23,7 @@ from tempfile import NamedTemporaryFile
 from io import BytesIO
 
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn, Update
 
 try:
 	from user import config
@@ -143,9 +143,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.image(delete_file=True)
-	def Heatmap(): 
+	def GenerateHeatmap(): 
 		"""
 		@brief Generates the Heatmap
 		@returns The heatmap
@@ -154,15 +152,17 @@ def server(input, output, session):
 		# A list of all the inputs for caching.
 		inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			config.NameColumn(),
 			config.Features(),
 			config.ScaleType(),
 			config.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
+			config.ClusterMethod(),
+			config.DistanceMethod(),
 			config.DPI(),
 		]
-
 
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs): 
@@ -249,6 +249,17 @@ def server(input, output, session):
 			temp.close()
 			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
 			return img
+
+
+	@output
+	@render.image(delete_file=True)
+	def Heatmap(): return GenerateHeatmap()
+
+
+	@output
+	@render.image(delete_file=True)
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
 
 
 	@output
@@ -350,11 +361,15 @@ app_ui = ui.page_fluid(
 				project="Expression"
 			),
 
+
 			TableOptions(config),
 
 			# Shared, Non-Table settings.
 			ui.panel_conditional(
 				"input.MainTab != 'TableTab'",
+
+				Update(),
+
 				# The column that holds names for the data.
 				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Names", choices=[], multiple=False),
 
@@ -406,6 +421,7 @@ app_ui = ui.page_fluid(
 			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="ColumnTab"),
 			m_type=ui.output_image
 		),
+		height="90vh",
 	)
 )
 

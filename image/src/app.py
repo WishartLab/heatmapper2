@@ -21,7 +21,7 @@ from PIL import Image
 from tempfile import NamedTemporaryFile
 from io import BytesIO
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update
 
 try:
 	from user import config
@@ -89,10 +89,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.image
-	def Heatmap():
-
+	def GenerateHeatmap():
 		inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			input.Image(),
@@ -178,6 +175,17 @@ def server(input, output, session):
 
 
 	@output
+	@render.image(delete_file=True)
+	def Heatmap(): return GenerateHeatmap()
+
+
+	@output
+	@render.image(delete_file=True)
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
+
+
+	@output
 	@render.text
 	@reactive.event(input.SourceFile, input.Example)
 	def ExampleInfo(): return Info[input.Example()]["Description"]
@@ -219,6 +227,8 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 
+				Update(),
+
 				# Customize the text size of the axes.
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),
 
@@ -240,6 +250,7 @@ app_ui = ui.page_fluid(
 
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
 				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
+
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 		),

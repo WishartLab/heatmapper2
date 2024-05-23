@@ -6,3 +6,4 @@ meshio
 pywebview
 trame-vuetify
 nest_asyncio
+biopython

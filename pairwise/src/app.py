@@ -24,7 +24,7 @@ from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update
 
 try:
 	from user import config
@@ -181,9 +181,7 @@ def server(input, output, session):
 		return value
 
 
-	@output
-	@render.image(delete_file=True)
-	def Heatmap():
+	def GenerateHeatmap():
 
 		inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
@@ -266,6 +264,17 @@ def server(input, output, session):
 			temp.close()
 			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
 			return img
+
+
+	@output
+	@render.image(delete_file=True)
+	def Heatmap(): return GenerateHeatmap()
+
+
+	@output
+	@render.image(delete_file=True)
+	@reactive.event(input.Update)
+	def HeatmapReactive(): return GenerateHeatmap()
 
 
 	@output
@@ -373,6 +382,8 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab != 'TableTab'",
 
+				Update(),
+
 				config.MatrixType.UI(ui.input_radio_buttons, id="MatrixType",  label="Matrix Type",  choices=["Distance", "Correlation"], inline=True),
 
 				# Customize the text size of the axes.
@@ -406,6 +417,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(m_type=ui.output_image),
+		height="90vh",
 	)
 )
 
