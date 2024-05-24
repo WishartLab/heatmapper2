@@ -224,7 +224,7 @@ class Cache:
 			if n not in self._primary: self._primary[n] = self._handler(Path(n))
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
-		else:
+		elif input_switch == "Example":
 
 			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running 
 			# in server-mode).
@@ -241,6 +241,9 @@ class Cache:
 				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
 
 			elif n not in self._primary: self._primary[n] = self._handler(raw)
+
+		# If the application has a unique method of input (IE 3D's ID, don't handle it.)
+		else: return None
 
 		# If the object cannot be copied, then we can just return it directly
 		try:
@@ -311,7 +314,7 @@ def NavBar():
 	)
 
 
-def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Upload", project="Overview"):
+def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Upload", project="Overview", extras=[]):
 	"""
 	@brief Returns the file selection dialog for the user to upload/select an example
 	@param examples: Either a list of example file names, or a dictionary mapping
@@ -320,6 +323,7 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	@param multiple: Whether to accept multiple files. 
 	@param default: Whether to start on the example, or upload dialog
 	@param project: The name of a project, to specify a specified header within the Interface documentation
+	@param extras: Extra options for giving the application information no render. You are responsible for handling it.
 	@returns A list, containing the necessary ui components for uploading/selecting
 	@info The returns elements are named:
 		input.SourceFile: The ui.input_radio_buttons for whether the user wants to choose an "Example" or "Upload"
@@ -339,7 +343,7 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	),
 
 	# Specify whether to use example files, or upload one.
-	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"], selected=default, inline=True),
+	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"] + extras, selected=default, inline=True),
 
 	# Only display an input dialog if the user is one Upload
 	ui.panel_conditional(

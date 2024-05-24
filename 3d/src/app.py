@@ -73,8 +73,13 @@ def server(input, output, session):
 
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): Data.set((await DataCache.Load(input, default=None))); Valid.set(False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.ID)
+	async def UpdateData(): 
+		if input.SourceFile() == "ID": 
+			Data.set(input.ID())
+		else: 
+			Data.set((await DataCache.Load(input, default=None)))
+		Valid.set(False)
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.Object, input.Example)
@@ -114,17 +119,21 @@ def server(input, output, session):
 	def PDBViewer(source, p):
 
 		# Store computations
-		inputs = [input.File() if input.SourceFile() == "Upload" else input.Example()]
-		if not DataCache.In(inputs):
-			pio = PDBIO()
-			pio.set_structure(source)
+		if input.SourceFile() == "ID":
+			print(source)
+			viewer = view(query=f"pdb:{source}", width=input.Size(), height=input.Size())
+		else:
+			inputs = [input.File() if input.SourceFile() == "Upload" else input.Example()]
+			if not DataCache.In(inputs):
+				pio = PDBIO()
+				pio.set_structure(source)
 
-			pdb_data = StringIO()
-			pio.save(pdb_data)
-			DataCache.Store(pdb_data.getvalue(), inputs)
-		data = DataCache.Get(inputs)
+				pdb_data = StringIO()
+				pio.save(pdb_data)
+				DataCache.Store(pdb_data.getvalue(), inputs)
+			data = DataCache.Get(inputs)
+			viewer = view(data=data, width=input.Size(), height=input.Size())
 
-		viewer = view(data=data, width=input.Size(), height=input.Size())
 		color = config.ColorScheme() == "spectrum"
 
 		viewer.setStyle({config.PStyle().lower(): {
@@ -208,11 +217,10 @@ def server(input, output, session):
 
 			source = GetData()
 
-			if source is None: return
-			elif type(source) == Structure.Structure:
+			if type(source) == Structure.Structure or input.SourceFile() == "ID":
 				return PDBViewer(source, p)
-			else:
-				return ModelViewer(source, p)
+			elif source is None: return
+			else: return ModelViewer(source, p)
 
 
 	@output
@@ -242,7 +250,7 @@ def server(input, output, session):
 		if data is None: return
 		elements.append(config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1))
 
-		if type(data) == Structure.Structure:
+		if type(data) == Structure.Structure or input.SourceFile() == "ID":
 			elements += [
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
 				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
@@ -275,7 +283,16 @@ app_ui = ui.page_fluid(
 
 	ui.layout_sidebar(
 		ui.sidebar(
-			FileSelection(examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"], project="3D"),
+			FileSelection(
+				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"}, 
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"], 
+				project="3D",
+				extras=["ID"]),
+
+			ui.panel_conditional(
+				"input.SourceFile === 'ID'",
+				ui.input_text(id="ID", label="PDB ID", value="1ubq"),
+			),
 
 			TableOptions(config),
 
