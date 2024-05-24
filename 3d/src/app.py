@@ -17,7 +17,7 @@ from pandas import DataFrame
 from os.path import basename
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error
 
 if not Pyodide:
 	from pyvista import Plotter, plotting, read_texture, read as VistaRead
@@ -44,7 +44,7 @@ def server(input, output, session):
 			"Object": "FinalBaseMesh.obj",
 			"Description": "A human model with a sample heatmap texture applied. Sourced from https://free3d.com/3d-model/male-base-mesh-6682.html"
 		},
-		"4K8X.pdf": {
+		"4K8X.pdb": {
 			"Description": "An example protein PDB from dash-bio at https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
@@ -59,8 +59,8 @@ def server(input, output, session):
 		"""
 
 		suffix = path.suffix
-		if suffix == ".obj": return VistaRead(path.resolve())
-		if suffix == ".png" or suffix == ".jpg": return read_texture(path.resolve())
+		if suffix == ".obj": return None if Pyodide else VistaRead(path.resolve())
+		if suffix == ".png" or suffix == ".jpg": return None if Pyodide else read_texture(path.resolve())
 		if suffix == ".pdb": return PDBParser().get_structure(basename(path), str(path))
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("3d", DataHandler=HandleData)
@@ -100,8 +100,7 @@ def server(input, output, session):
 			Valid.set(True)
 			return grid
 		except TypeError:
-			ui.modal_show(ui.modal("The provided input format cannot be rendered",
-			title="Table cannot be rendered", easy_close=True, footer=None))
+			Error("The provided input format cannot be rendered")
 
 
 	@Table.set_patch_fn
@@ -147,6 +146,10 @@ def server(input, output, session):
 
 
 	def ModelViewer(source, p):
+		if Pyodide:
+			Error("The Object Viewer is not supported in WebAssembly Mode!")
+			return
+
 		model = Object()
 		if model is None: return
 
@@ -272,7 +275,7 @@ app_ui = ui.page_fluid(
 
 	ui.layout_sidebar(
 		ui.sidebar(
-			FileSelection(examples={"example1.csv": "Example 1", "texture.jpg": "Example 2", "4K8X.pdb": "Example 3"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"], project="3D"),
+			FileSelection(examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"], project="3D"),
 
 			TableOptions(config),
 

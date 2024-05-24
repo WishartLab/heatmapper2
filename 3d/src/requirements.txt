@@ -1,9 +1,11 @@
-pyvista
-trame
-vtk
-trame-vtk
-meshio
-pywebview
-trame-vuetify
-nest_asyncio
+# shinylive will try and pull these, but they aren't supported in WASM yet
+# pyvista
+# trame
+# vtk
+# trame-vtk
+# meshio
+# pywebview
+# trame-vuetify
+# nest_asyncio
 biopython
+py3Dmol

@@ -6,7 +6,7 @@ for dir in $(find -type d -name "__pycache__"); do
 done
 
 # Define the list of subfolder names
-subfolders=("expression" "geocoordinate" "geomap" "image" "pairwise")
+subfolders=("expression" "geocoordinate" "geomap" "image" "pairwise" "3d")
 stylesheet='    <link rel="stylesheet" href="./../shinylive/heatmapper.css" />'
 
 # Iterate through each subfolder
