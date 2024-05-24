@@ -13,6 +13,8 @@ config = ConfigHandler({
 	"TimeColumn": Config(),
 	"ValueColumn": Config(),
 
+	"RenderMode": Config(selected="Raster"),
+
 	# "CartoDB Positron", "OpenStreetMap"
 	"MapType": Config(selected="CartoDB Positron"),
 
@@ -24,6 +26,8 @@ config = ConfigHandler({
 
 	# Any numerical value from 1-30
 	"Blur": Config(value=15),
+
+	"Scale": Config(value=0.0),
 
 	# Allow toggling Range of Interest
 	"ROI": Config(value=False),

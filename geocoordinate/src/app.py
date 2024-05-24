@@ -15,13 +15,14 @@
 
 
 from shiny import App, reactive, render, ui
-from folium import Map as FoliumMap
+from folium import Map as FoliumMap, Circle
 from folium.plugins import HeatMap, HeatMapWithTime
 from folium.raster_layers import ImageOverlay
 from tempfile import NamedTemporaryFile
 from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
-from numpy import vstack
+from numpy import vstack, convolve, ones
+from branca.colormap import LinearColormap
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements, Error, Update
 
@@ -84,6 +85,7 @@ def server(input, output, session):
 			min_opacity=opacity,
 			radius=radius,
 			blur=blur).add_to(map)
+
 		else:
 			latitude = df[lat_col]
 			longitude = df[lon_col]
@@ -96,34 +98,61 @@ def server(input, output, session):
 			# Calculate kernel density estimation
 			kde = gaussian_kde(stack)
 			density = kde(stack)
-			values = values + density * threshold
+			df[v_col] = values + density * threshold
 
-			# Generate the contour
-			fig, ax = subplots()
-			contour = ax.scatter(
-				longitude, 
-				latitude, 
-				c=values * 100, 
-				s=[radius] * len(values), 
-				cmap="jet", 
-				alpha=opacity, 
-				linewidths=0
-			)
+			if config.RenderMode() == "Vector":
+				print("Vector")
+				# Define a linear colormap
+				colormap = LinearColormap(
+					colors=['#8000ff', '#00bfff', '#00ff80', '#ffff00', '#ff8000', '#ff0000'],
+					vmin=df[v_col].min(),
+					vmax=df[v_col].max()
+				)
 
-			ax.axis('off')  # Turn off axes
-			ax.get_xaxis().set_visible(False)  # Hide x-axis
-			ax.get_yaxis().set_visible(False)  # Hide y-axis
+				# Add CircleMarkers to the map for each data point, applying colors based on values
+				for index, row in df.iterrows():
+					value = row[v_col]
+					color = colormap(value)
+					Circle(
+						location=[row[lat_col], row[lon_col]], 
+						radius=radius * 100, 
+						color=color, 
+						fill=True,
+						opacity=opacity,
+						fill_opacity=opacity,
+						stroke=False
+					).add_to(map)
 
-			# Save the contour as an image, add to the map
-			temp = NamedTemporaryFile(suffix='.png')
-			fig.savefig(temp, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=500)
-			image_overlay = ImageOverlay(
-				image=temp.name,
-				bounds=[[min(latitude), min(longitude)], [max(latitude), max(longitude)]],
-				opacity=opacity,
-				pixelated=False,
-			)
-			image_overlay.add_to(map)
+			else:
+				print("Raster")
+				# Generate the contour
+				fig, ax = subplots()
+				contour = ax.scatter(
+					longitude, 
+					latitude, 
+					c=values * 100, 
+					s=[radius] * len(values), 
+					cmap="jet", 
+					alpha=opacity, 
+					linewidths=0,
+				)
+
+				ax.axis('off')  # Turn off axes
+				ax.get_xaxis().set_visible(False)  # Hide x-axis
+				ax.get_yaxis().set_visible(False)  # Hide y-axis
+
+				# Save the contour as an image, add to the map
+				temp = NamedTemporaryFile(suffix='.png')
+				fig.savefig(temp, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=500)
+
+				scale = config.Scale()
+				image_overlay = ImageOverlay(
+					image=temp.name,
+					bounds=[[min(latitude) - scale, min(longitude) - scale], [max(latitude) + scale, max(longitude) + scale]],
+					opacity=opacity,
+					pixelated=False,
+				)
+				image_overlay.add_to(map)
 		map.fit_bounds(map.get_bounds())
 
 
@@ -216,7 +245,31 @@ def server(input, output, session):
 				if len(df) == 0:
 					Error("No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!")
 					return
-			
+
+			if "Smoothing" in config.Features():
+				print("Smoothing")
+				p.inc(message="Smoothing...")
+				df = df.sort_values(by=[lat_col, lon_col])
+				df[v_col] = convolve(df[v_col], ones(5) / 5 , mode='same')
+
+				"""
+				# Reduce the amount of data
+				df[lon_col] = df[lon_col].round(3)
+				df[lat_col] = df[lat_col].round(3)
+
+				df = df.sort_values(by=[lon_col, lat_col])
+				grid = df.pivot(index=lat_col, columns=lon_col, values=v_col)
+
+				conv_kernel = ones((3, 3)) / 9
+				smoothed_grid = convolve2d(grid, conv_kernel, mode='same', boundary='fill', fillvalue=0)
+
+				smoothed_df = DataFrame(smoothed_grid, index=grid.index, columns=grid.columns)
+				smoothed_df = smoothed_df.reset_index()
+				smoothed_df = melt(smoothed_df, id_vars=lat_col, var_name=lon_col, value_name=v_col)
+				smoothed_df = smoothed_df.sort_values(by=[lon_col, lat_col])
+				df = smoothed_df.reset_index(drop=True)
+				"""
+						
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
 			if "Temporal" in config.Features(): 
@@ -275,7 +328,11 @@ def server(input, output, session):
 			(
 				not "Uniform" in config.Features(), 
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False)
-			)
+			),
+			(
+				"Scaled" not in config.Features(),
+				config.RenderMode.UI(ui.input_radio_buttons, id="RenderMode", label="Rendering Method", choices=["Raster", "Vector"], inline=True)
+			),
 		])
 
 
@@ -310,7 +367,7 @@ app_ui = ui.page_fluid(
 
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", label="Features", 
-					choices=["Temporal", "Uniform", "Scaled"], 
+					choices=["Temporal", "Uniform", "Scaled", "Smoothing"], 
 					inline=True
 				),
 				
@@ -322,6 +379,8 @@ app_ui = ui.page_fluid(
 				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
 				config.Radius.UI(ui.input_slider, id="Radius", label="Size of Points", min=5, max=100, step=5),
 				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
+				config.Scale.UI(ui.input_slider, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
+
 				
 				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
 				config.ROI_Mode.UI(ui.input_radio_buttons, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),

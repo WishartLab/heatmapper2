@@ -486,7 +486,7 @@ def Update(): return ui.input_action_button(
 		label=ui.layout_columns(
 			ui.panel_conditional("input.UpdateToggle", "Auto"),
 			"Update",
-			ui.input_switch(id="UpdateToggle", label=None, value=False),
+			ui.input_switch(id="UpdateToggle", label=None, value=True),
 			col_widths=[1,9,1],
 			gap="1px",
 			height="1px", 	# Make it as small as possible
