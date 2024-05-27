@@ -52,6 +52,8 @@ config = ConfigHandler({
 	"Scale": Config(value=1),
 
 	# Any numerical value
-	"Size": Config(value=600)
+	"Size": Config(value=600),
+
+	"HeatmapType": Config(selected="Builtin")
 
 })

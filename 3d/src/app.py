@@ -25,6 +25,7 @@ if not Pyodide:
 from py3Dmol import view
 from Bio.PDB import PDBParser, Structure, PDBIO
 from io import StringIO
+from matplotlib.cm import get_cmap
 
 try:
 	from user import config
@@ -61,7 +62,7 @@ def server(input, output, session):
 		suffix = path.suffix
 		if suffix == ".obj": return None if Pyodide else VistaRead(path.resolve())
 		if suffix == ".png" or suffix == ".jpg": return None if Pyodide else read_texture(path.resolve())
-		if suffix == ".pdb": return PDBParser().get_structure(basename(path), str(path))
+		if suffix == ".pdb": return PDBParser().get_structure("protein", str(path))
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("3d", DataHandler=HandleData)
 
@@ -120,7 +121,6 @@ def server(input, output, session):
 
 		# Store computations
 		if input.SourceFile() == "ID":
-			print(source)
 			viewer = view(query=f"pdb:{source}", width=input.Size(), height=input.Size())
 		else:
 			inputs = [input.File() if input.SourceFile() == "Upload" else input.Example()]
@@ -134,22 +134,55 @@ def server(input, output, session):
 			data = DataCache.Get(inputs)
 			viewer = view(data=data, width=input.Size(), height=input.Size())
 
-		color = config.ColorScheme() == "spectrum"
+		if config.HeatmapType() == "Flexibility" and input.SourceFile() != "ID":
+			atoms = [list(filter(None, entry.split(" "))) for entry in data.split("\n") if entry.startswith("ATOM")]
+			b_factors = [(atom[1], float(atom[10])) for atom in atoms if not atom[10].isalpha()]
+			m, M = min(b_factors, key=lambda item: item[1])[1], max(b_factors, key=lambda item: item[1])[1]
 
-		viewer.setStyle({config.PStyle().lower(): {
-			"color" if color else "colorscheme": config.ColorScheme(), 
-			"arrows": "Arrows" in config.PFeatures(), 
-			"style": config.PCStyle().lower(),
-			"thickness": config.Thickness(),
-			"tubes": "Tubes" in config.PFeatures(),
-			"width": config.Width(),
-			"opacity": config.Opacity(),
-			"dashedBonds": "Dashed Bonds" in config.PFeatures(),
-			"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
-			"singleBonds": "Single Bonds" in config.PFeatures(),
-			"radius": config.Radius(),
-			"scale": config.Scale(),
-		}})
+			cmap = get_cmap("RdBu_r")
+
+			for serial, b_factor in b_factors:
+				color = cmap((b_factor - m) / (M - m))
+				hex_color = "#{:02x}{:02x}{:02x}".format(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
+				viewer.setStyle({"serial": serial}, {config.PStyle().lower(): {
+					"color": hex_color,
+					"arrows": "Arrows" in config.PFeatures(), 
+					"style": config.PCStyle().lower(),
+					"thickness": config.Thickness(),
+					"tubes": "Tubes" in config.PFeatures(),
+					"width": config.Width(),
+					"opacity": config.Opacity(),
+					"dashedBonds": "Dashed Bonds" in config.PFeatures(),
+					"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
+					"singleBonds": "Single Bonds" in config.PFeatures(),
+					"radius": config.Radius(),
+					"scale": config.Scale(),
+				}})
+
+		else:
+			if config.ColorScheme() == "spectrum":
+				color_property = "color"
+				color_name = config.ColorScheme()
+			else: 
+				color_property = "colorscheme"
+				color_name = config.ColorScheme()
+
+			color = config.ColorScheme() == "spectrum"
+			viewer.setStyle({config.PStyle().lower(): {
+				color_property: color_name,
+				"arrows": "Arrows" in config.PFeatures(), 
+				"style": config.PCStyle().lower(),
+				"thickness": config.Thickness(),
+				"tubes": "Tubes" in config.PFeatures(),
+				"width": config.Width(),
+				"opacity": config.Opacity(),
+				"dashedBonds": "Dashed Bonds" in config.PFeatures(),
+				"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
+				"singleBonds": "Single Bonds" in config.PFeatures(),
+				"radius": config.Radius(),
+				"scale": config.Scale(),
+			}})
+
 
 		return ui.HTML(viewer.write_html())
 
@@ -251,6 +284,8 @@ def server(input, output, session):
 		elements.append(config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1))
 
 		if type(data) == Structure.Structure or input.SourceFile() == "ID":
+			if input.SourceFile() != "ID":
+				elements.append(config.HeatmapType.UI(ui.input_radio_buttons, id="HeatmapType", label="Heatmap Type", choices=["Builtin", "Flexibility"], inline=True))
 			elements += [
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
 				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
