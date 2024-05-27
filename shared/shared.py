@@ -192,7 +192,17 @@ class Cache:
 			self._source = "../example_input/"
 
 
-	async def Load(self, input, source_file=None, example_file=None, source=None, input_switch=None, default=DataFrame()):
+	async def Load(self, 
+		input, 
+		source_file=None, 
+		example_file=None, 
+		source=None, 
+		input_switch=None, 
+		upload="Upload",
+		example="Example",
+		default=DataFrame()
+		):
+
 		"""
 		@brief Caches whatever the user has currently uploaded/selection, returning the identifier within the secondary cache.
 		@param input: The Shiny input variable. Importantly, these must be defined:
@@ -203,6 +213,8 @@ class Cache:
 		@param example_file: The input ID that should be used to fetch th example (Defaults to input.Example() if None)
 		@param input_switch:	The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user
 													uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
+		@param upload: The value of the input_switch such that we should fetch a source file from source_file
+		@param example: The value of the input_switch such that we should fetch an example from example_file
 		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
 										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
 										initialize without arguments.
@@ -214,7 +226,7 @@ class Cache:
 		if input_switch is None: input_switch = input.SourceFile()
 
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
-		if input_switch == "Upload":
+		if input_switch == upload:
 			file: list[FileInfo] | None = source_file
 			if file is None: return default
 
@@ -224,7 +236,7 @@ class Cache:
 			if n not in self._primary: self._primary[n] = self._handler(Path(n))
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
-		elif input_switch == "Example":
+		elif input_switch == example:
 
 			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running 
 			# in server-mode).

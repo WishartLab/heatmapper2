@@ -11,7 +11,7 @@ python -m venv venv
 
 echo "Installing Dependencies"
 source venv/bin/activate
-pip install shiny shinylive matplotlib scipy pandas biopython folium branca certifi xyzservices pyvista trame vtk trame-vtk meshio pywebview trame-vuetify nest_asyncio squidpy anndata scanpy scikit-misc
+pip install shiny shinylive matplotlib scipy pandas biopython folium branca certifi xyzservices pyvista trame vtk trame-vtk meshio pywebview trame-vuetify nest_asyncio squidpy anndata scanpy scikit-misc py3Dmol
 
 echo "Setting up Repository"
 git clone https://github.com/WishartLab/heatmapper2.git

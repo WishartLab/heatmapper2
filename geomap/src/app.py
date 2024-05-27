@@ -74,12 +74,15 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.JSONUpload, input.JSONSelection, input.JSONFile)
-	async def UpdateGeoJSON(): JSON.set(await DataCache.Load(
+	async def UpdateGeoJSON(): 
+		print("Updating...")
+		JSON.set(await DataCache.Load(
 			input,
 			source_file=input.JSONUpload(),
 			example_file=input.JSONSelection(),
 			source=URL,
 			input_switch=input.JSONFile(),
+			example="Provided",
 			default=None
 		))
 
