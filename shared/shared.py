@@ -493,8 +493,8 @@ def GenerateConditionalElements(pairs):
 	return elements
 
 
-def Error(message):
-	return ui.notification_show(ui=message, type="error", duration=3)
+def Error(message): return ui.notification_show(ui=message, type="error", duration=3)
+def Msg(message): return ui.notification_show(ui=message, type="default", duration=3)
 
 
 def Update(): return ui.input_action_button(

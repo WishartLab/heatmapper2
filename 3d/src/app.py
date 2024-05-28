@@ -17,7 +17,7 @@ from pandas import DataFrame
 from os.path import basename
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error, Msg
 
 if not Pyodide:
 	from pyvista import Plotter, plotting, read_texture, read as VistaRead
@@ -134,15 +134,41 @@ def server(input, output, session):
 			data = DataCache.Get(inputs)
 			viewer = view(data=data, width=input.Size(), height=input.Size())
 
-		if config.ColorScheme() == "b-factor":
-			viewer.startjs += """\n
-				let customColorize = function(atom){
-					if (atom.b < 10) return "blue"
-					else if (atom.b < 15) return "lightblue"
-					else if (atom.b < 20) return "white"
-					else if (atom.b < 40) return "orange"
+		if config.ColorScheme() == "b-factor" or config.ColorScheme() == "b-factor (norm)":
+			blue, light, white, red = 10, 15, 20, 40
+
+			if "norm" in config.ColorScheme():
+				if input.SourceFile() == "ID":
+					Error("Normalization cannot be performed on fetched PDB's")
+				else:
+					entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
+					d = 0
+					if not DataCache.In(entry):
+						m = float('inf')
+						M = float('-inf')
+
+						for model in source:
+							for chain in model:
+								for residue in chain:
+									for atom in residue:
+										b_factor = atom.bfactor
+										if b_factor < m: m = b_factor
+										if b_factor > M: M = b_factor
+						d = M - m
+						DataCache.Store((m + d * 0.2, m + d * 0.4, m + d * 0.6, m + d * 0.8), entry)
+					blue, light, white, red = DataCache.Get(entry)
+
+					# So we only display once
+					if d != 0: Msg(f"Using normalized cutoffs at {blue:.2f}, {light:.2f}, {white:.2f}, and {red:.2f}")
+
+			viewer.startjs += f"""\n
+				let customColorize = function(atom) {{
+					if (atom.b < {blue}) return "blue"
+					else if (atom.b < {light}) return "lightblue"
+					else if (atom.b < {white}) return "white"
+					else if (atom.b < {red}) return "orange"
 					else return "red"
-				}\n"""
+				}}\n"""
 			color_property = "colorfunc"
 			color_name = "customColorize"
 
@@ -273,7 +299,7 @@ def server(input, output, session):
 		if type(data) == Structure.Structure or input.SourceFile() == "ID":
 			elements += [
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "b-factor", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "b-factor", "b-factor (norm)", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
 				config.PCStyle.UI(ui.input_select, id="PCStyle", label="Cartoon Style", choices=["Trace", "Oval", "Rectangle", "Parabola", "Edged"]),
 				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Strand Thickness", min=0, max=10, step=0.1),
 				config.Width.UI(ui.input_numeric, id="Width", label="Strand Width", min=0, max=10, step=1),
