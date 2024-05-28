@@ -53,7 +53,4 @@ config = ConfigHandler({
 
 	# Any numerical value
 	"Size": Config(value=600),
-
-	"HeatmapType": Config(selected="Builtin")
-
 })

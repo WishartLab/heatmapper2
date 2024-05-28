@@ -134,55 +134,42 @@ def server(input, output, session):
 			data = DataCache.Get(inputs)
 			viewer = view(data=data, width=input.Size(), height=input.Size())
 
-		if config.HeatmapType() == "Flexibility" and input.SourceFile() != "ID":
-			atoms = [list(filter(None, entry.split(" "))) for entry in data.split("\n") if entry.startswith("ATOM")]
-			b_factors = [(atom[1], float(atom[10])) for atom in atoms if not atom[10].isalpha()]
-			m, M = min(b_factors, key=lambda item: item[1])[1], max(b_factors, key=lambda item: item[1])[1]
+		if config.ColorScheme() == "b-factor":
+			viewer.startjs += """\n
+				let customColorize = function(atom){
+					if (atom.b < 10) return "blue"
+					else if (atom.b < 15) return "lightblue"
+					else if (atom.b < 20) return "white"
+					else if (atom.b < 40) return "orange"
+					else return "red"
+				}\n"""
+			color_property = "colorfunc"
+			color_name = "customColorize"
 
-			cmap = get_cmap("RdBu_r")
+		elif config.ColorScheme() == "spectrum":
+			color_property = "color"
+			color_name = config.ColorScheme()
+		else: 
+			color_property = "colorscheme"
+			color_name = config.ColorScheme()
 
-			for serial, b_factor in b_factors:
-				color = cmap((b_factor - m) / (M - m))
-				hex_color = "#{:02x}{:02x}{:02x}".format(int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
-				viewer.setStyle({"serial": serial}, {config.PStyle().lower(): {
-					"color": hex_color,
-					"arrows": "Arrows" in config.PFeatures(), 
-					"style": config.PCStyle().lower(),
-					"thickness": config.Thickness(),
-					"tubes": "Tubes" in config.PFeatures(),
-					"width": config.Width(),
-					"opacity": config.Opacity(),
-					"dashedBonds": "Dashed Bonds" in config.PFeatures(),
-					"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
-					"singleBonds": "Single Bonds" in config.PFeatures(),
-					"radius": config.Radius(),
-					"scale": config.Scale(),
-				}})
+		viewer.setStyle({config.PStyle().lower(): {
+			color_property: color_name,
+			"arrows": "Arrows" in config.PFeatures(), 
+			"style": config.PCStyle().lower(),
+			"thickness": config.Thickness(),
+			"tubes": "Tubes" in config.PFeatures(),
+			"width": config.Width(),
+			"opacity": config.Opacity(),
+			"dashedBonds": "Dashed Bonds" in config.PFeatures(),
+			"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
+			"singleBonds": "Single Bonds" in config.PFeatures(),
+			"radius": config.Radius(),
+			"scale": config.Scale(),
+		}})
 
-		else:
-			if config.ColorScheme() == "spectrum":
-				color_property = "color"
-				color_name = config.ColorScheme()
-			else: 
-				color_property = "colorscheme"
-				color_name = config.ColorScheme()
-
-			color = config.ColorScheme() == "spectrum"
-			viewer.setStyle({config.PStyle().lower(): {
-				color_property: color_name,
-				"arrows": "Arrows" in config.PFeatures(), 
-				"style": config.PCStyle().lower(),
-				"thickness": config.Thickness(),
-				"tubes": "Tubes" in config.PFeatures(),
-				"width": config.Width(),
-				"opacity": config.Opacity(),
-				"dashedBonds": "Dashed Bonds" in config.PFeatures(),
-				"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
-				"singleBonds": "Single Bonds" in config.PFeatures(),
-				"radius": config.Radius(),
-				"scale": config.Scale(),
-			}})
-
+		if color_property == "colorfunc": 
+			viewer.startjs = viewer.startjs.replace(f'"{color_name}"', f'{color_name}')
 
 		return ui.HTML(viewer.write_html())
 
@@ -284,11 +271,9 @@ def server(input, output, session):
 		elements.append(config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1))
 
 		if type(data) == Structure.Structure or input.SourceFile() == "ID":
-			if input.SourceFile() != "ID":
-				elements.append(config.HeatmapType.UI(ui.input_radio_buttons, id="HeatmapType", label="Heatmap Type", choices=["Builtin", "Flexibility"], inline=True))
 			elements += [
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "b-factor", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
 				config.PCStyle.UI(ui.input_select, id="PCStyle", label="Cartoon Style", choices=["Trace", "Oval", "Rectangle", "Parabola", "Edged"]),
 				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Strand Thickness", min=0, max=10, step=0.1),
 				config.Width.UI(ui.input_numeric, id="Width", label="Strand Width", min=0, max=10, step=1),
@@ -326,7 +311,7 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.SourceFile === 'ID'",
-				ui.input_text(id="ID", label="PDB ID", value="1ubq"),
+				ui.input_text(id="ID", label="PDB ID", value="1upp"),
 			),
 
 			TableOptions(config),
