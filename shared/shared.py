@@ -423,7 +423,6 @@ class Config:
 			self.default = None
 		self.resolve = None
 
-
 	def __call__(self): 
 		try:
 			resolved = self.resolve()
@@ -450,6 +449,9 @@ class Config:
 		for key in kwargs.keys():
 			if key in self.kwargs: duplicates.append(key)
 		for key in duplicates: del kwargs[key]
+
+		if "selected" in self.kwargs: self.kwargs["selected"] = self()
+		else: self.kwargs["value"] = self()
 
 		# Return the correct UI.
 		if self.visible: return ui(*args, **kwargs, **self.kwargs)

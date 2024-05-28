@@ -119,85 +119,107 @@ def server(input, output, session):
 
 	def PDBViewer(source, p):
 
-		# Store computations
-		if input.SourceFile() == "ID":
-			viewer = view(query=f"pdb:{source}", width=input.Size(), height=input.Size())
-		else:
-			inputs = [input.File() if input.SourceFile() == "Upload" else input.Example()]
-			if not DataCache.In(inputs):
-				pio = PDBIO()
-				pio.set_structure(source)
+		global_inputs = [
+			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(),
+			config.Size(),
+			config.ColorScheme(),
+			config.PStyle(),
+			config.PFeatures(),
+			config.PCStyle(),
+			config.Thickness(),
+			config.Width(),
+			config.Opacity(),
+			config.Radius(),
+			config.Scale(),
+		]
 
-				pdb_data = StringIO()
-				pio.save(pdb_data)
-				DataCache.Store(pdb_data.getvalue(), inputs)
-			data = DataCache.Get(inputs)
-			viewer = view(data=data, width=input.Size(), height=input.Size())
+		if not DataCache.In(global_inputs):
+			# Store computations
+			if input.SourceFile() == "ID":
+				p.inc(message="Fetching PDB...")
+				viewer = view(query=f"pdb:{source}", width=config.Size(), height=config.Size())
+			else:
+				inputs = [input.File() if input.SourceFile() == "Upload" else input.Example()]
+				if not DataCache.In(inputs):
+					p.inc(message="Formatting PDB...")
+					pio = PDBIO()
+					pio.set_structure(source)
 
-		if config.ColorScheme() == "b-factor" or config.ColorScheme() == "b-factor (norm)":
-			blue, light, white, red = 10, 15, 20, 40
+					pdb_data = StringIO()
+					pio.save(pdb_data)
+					DataCache.Store(pdb_data.getvalue(), inputs)
+				data = DataCache.Get(inputs)
+				viewer = view(data=data, width=config.Size(), height=config.Size())
 
-			if "norm" in config.ColorScheme():
-				if input.SourceFile() == "ID":
-					Error("Normalization cannot be performed on fetched PDB's")
-				else:
-					entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
-					d = 0
-					if not DataCache.In(entry):
-						m = float('inf')
-						M = float('-inf')
+			if config.ColorScheme() == "b-factor" or config.ColorScheme() == "b-factor (norm)":
+				blue, light, white, red = 10, 15, 20, 40
 
-						for model in source:
-							for chain in model:
-								for residue in chain:
-									for atom in residue:
-										b_factor = atom.bfactor
-										if b_factor < m: m = b_factor
-										if b_factor > M: M = b_factor
-						d = M - m
-						DataCache.Store((m + d * 0.2, m + d * 0.4, m + d * 0.6, m + d * 0.8), entry)
-					blue, light, white, red = DataCache.Get(entry)
+				if "norm" in config.ColorScheme():
+					p.inc(message="Normalizing...")
+					if input.SourceFile() == "ID":
+						Error("Normalization cannot be performed on fetched PDB's")
+					else:
+						entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
+						d = 0
+						if not DataCache.In(entry):
+							m = float('inf')
+							M = float('-inf')
 
-					# So we only display once
-					if d != 0: Msg(f"Using normalized cutoffs at {blue:.2f}, {light:.2f}, {white:.2f}, and {red:.2f}")
+							for model in source:
+								for chain in model:
+									for residue in chain:
+										for atom in residue:
+											b_factor = atom.bfactor
+											if b_factor < m: m = b_factor
+											if b_factor > M: M = b_factor
+							d = M - m
+							DataCache.Store((m + d * 0.2, m + d * 0.4, m + d * 0.6, m + d * 0.8), entry)
+						blue, light, white, red = DataCache.Get(entry)
 
-			viewer.startjs += f"""\n
-				let customColorize = function(atom) {{
-					if (atom.b < {blue}) return "blue"
-					else if (atom.b < {light}) return "lightblue"
-					else if (atom.b < {white}) return "white"
-					else if (atom.b < {red}) return "orange"
-					else return "red"
-				}}\n"""
-			color_property = "colorfunc"
-			color_name = "customColorize"
+						# So we only display once
+						if d != 0: Msg(f"Using normalized cutoffs at {blue:.2f}, {light:.2f}, {white:.2f}, and {red:.2f}")
 
-		elif config.ColorScheme() == "spectrum":
-			color_property = "color"
-			color_name = config.ColorScheme()
-		else: 
-			color_property = "colorscheme"
-			color_name = config.ColorScheme()
+				viewer.startjs += f"""\n
+					let customColorize = function(atom) {{
+						if (atom.b < {blue}) return "blue"
+						else if (atom.b < {light}) return "lightblue"
+						else if (atom.b < {white}) return "white"
+						else if (atom.b < {red}) return "orange"
+						else return "red"
+					}}\n"""
+				color_property = "colorfunc"
+				color_name = "customColorize"
 
-		viewer.setStyle({config.PStyle().lower(): {
-			color_property: color_name,
-			"arrows": "Arrows" in config.PFeatures(), 
-			"style": config.PCStyle().lower(),
-			"thickness": config.Thickness(),
-			"tubes": "Tubes" in config.PFeatures(),
-			"width": config.Width(),
-			"opacity": config.Opacity(),
-			"dashedBonds": "Dashed Bonds" in config.PFeatures(),
-			"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
-			"singleBonds": "Single Bonds" in config.PFeatures(),
-			"radius": config.Radius(),
-			"scale": config.Scale(),
-		}})
+			elif config.ColorScheme() == "spectrum":
+				color_property = "color"
+				color_name = config.ColorScheme()
+			else: 
+				color_property = "colorscheme"
+				color_name = config.ColorScheme()
 
-		if color_property == "colorfunc": 
-			viewer.startjs = viewer.startjs.replace(f'"{color_name}"', f'{color_name}')
+			p.inc(message="Styling...")
+			viewer.setStyle({config.PStyle().lower(): {
+				color_property: color_name,
+				"arrows": "Arrows" in config.PFeatures(), 
+				"style": config.PCStyle().lower(),
+				"thickness": config.Thickness(),
+				"tubes": "Tubes" in config.PFeatures(),
+				"width": config.Width(),
+				"opacity": config.Opacity(),
+				"dashedBonds": "Dashed Bonds" in config.PFeatures(),
+				"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
+				"singleBonds": "Single Bonds" in config.PFeatures(),
+				"radius": config.Radius(),
+				"scale": config.Scale(),
+			}})
 
-		return ui.HTML(viewer.write_html())
+			if color_property == "colorfunc": 
+				viewer.startjs = viewer.startjs.replace(f'"{color_name}"', f'{color_name}')
+
+			p.inc(message="Exporting...")
+			DataCache.Store(viewer.write_html(), global_inputs)
+
+		return DataCache.Get(global_inputs)
 
 
 	def ModelViewer(source, p):
@@ -252,7 +274,7 @@ def server(input, output, session):
 
 		# Exporting as None returns the HTML as a file handle, which we read.
 		p.inc(message="Exporting...")
-		return ui.HTML(pl.export_html(filename=None).read())
+		return pl.export_html(filename=None).read()
 
 
 	def GenerateHeatmap():
@@ -264,9 +286,9 @@ def server(input, output, session):
 			source = GetData()
 
 			if type(source) == Structure.Structure or input.SourceFile() == "ID":
-				return PDBViewer(source, p)
+				return ui.HTML(PDBViewer(source, p))
 			elif source is None: return
-			else: return ModelViewer(source, p)
+			else: return ui.HTML(ModelViewer(source, p))
 
 
 	@output
