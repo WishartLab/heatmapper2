@@ -40,7 +40,7 @@ config = ConfigHandler({
 	"Max": Config(value=0),
 
 	# "Temporal", "Uniform", "Scaled"
-	"Features": Config(selected=["Scaled"]),
+	"Features": Config(selected=["Scaled", "KDE"]),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),

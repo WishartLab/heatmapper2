@@ -58,11 +58,7 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData():
-		with ui.Progress() as p:
-			p.inc(message="Loading Data...")
-			Data.set((await DataCache.Load(input)))
-			Valid.set(False)
+	async def UpdateData(): Data.set((await DataCache.Load(input, p=ui.Progress()))); Valid.set(False)
 
 
 	@reactive.effect
@@ -117,11 +113,11 @@ def server(input, output, session):
 
 				# Wrangle into an acceptable format.
 				p.inc(message="Formatting...")
-				v_col = Filter(df.columns, ColumnType.Value, only_one=True, reject_unknown=True)
-				x_col = Filter(df.columns, ColumnType.X, only_one=True, bad = [v_col], reject_unknown=True)
-				y_col = Filter(df.columns, ColumnType.Y, only_one=True, bad = [v_col, x_col], reject_unknown=True)
+				v_col = Filter(df.columns, ColumnType.Value)
+				x_col = Filter(df.columns, ColumnType.X)
+				y_col = Filter(df.columns, ColumnType.Y)
 
-				if {v_col, x_col, y_col}.issubset(df.columns):
+				if v_col != x_col and x_col != y_col and {v_col, x_col, y_col}.issubset(df.columns):
 					df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
 
 				p.inc(message="Plotting...")

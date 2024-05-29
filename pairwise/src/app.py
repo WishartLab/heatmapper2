@@ -60,11 +60,7 @@ def server(input, output, session):
 	# We add Matrix and Method as they are calculated in the Matrix handlers.
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData():
-		with ui.Progress() as p:
-			p.inc(message="Loading Data...")
-			Data.set((await DataCache.Load(input)))
-			Valid.set(False)
+	async def UpdateData(): Data.set((await DataCache.Load(input, p=ui.Progress()))); Valid.set(False)
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -132,15 +128,15 @@ def server(input, output, session):
 		"""
 
 		# If "Name" is found, its assumed to be the label for the points.
-		name_col = Filter(df.columns, ColumnType.Name, only_one=True, reject_unknown=True)
+		name_col = Filter(df.columns, ColumnType.Name)
 		if name_col: point_names = df[name_col]
 
 		# If explicit coordinates are provided, use them, with the final column used as labels.
-		x_col = Filter(df.columns, ColumnType.X, only_one=True, reject_unknown=True)
-		y_col = Filter(df.columns, ColumnType.Y, only_one=True, reject_unknown=True)
-		z_col = Filter(df.columns, ColumnType.Z, only_one=True, reject_unknown=True)
+		x_col = Filter(df.columns, ColumnType.X)
+		y_col = Filter(df.columns, ColumnType.Y)
+		z_col = Filter(df.columns, ColumnType.Z)
 
-		if x_col and y_col and z_col:
+		if x_col != y_col and y_col != z_col:
 			coordinates = df[[x_col, y_col, z_col]].values
 			point_names = df[list(set(df.columns) - set([x_col, y_col, z_col]))[0]].values
 

@@ -23,7 +23,7 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, UpdateColumn, ColorMaps, Error, Update
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update
 from geojson import Mappings
 
 try:
@@ -66,16 +66,23 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData(): 
-		with ui.Progress() as p:
-			p.inc(message="Loading Data...")
-			Data.set((await DataCache.Load(input)))
-			Valid.set(False)
+		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+		Valid.set(False)
+
+		columns = Data().columns
+		key = Filter(columns, ColumnType.Name, id="KeyColumn")
+		val = Filter(columns, ColumnType.Value, id="ValueColumn", all=True)
+		if val:
+			choice = 0
+			while choice < len(val) and val[choice] == key: choice += 1
+			ui.update_select(id="ValueColumn", selected=val[choice])
+
+
 
 
 	@reactive.effect
 	@reactive.event(input.JSONUpload, input.JSONSelection, input.JSONFile)
 	async def UpdateGeoJSON(): 
-		print("Updating...")
 		JSON.set(await DataCache.Load(
 			input,
 			source_file=input.JSONUpload(),
@@ -83,8 +90,14 @@ def server(input, output, session):
 			source=URL,
 			input_switch=input.JSONFile(),
 			example="Provided",
-			default=None
+			default=None,
+			p=ui.Progress(),
+			p_name="GeoJSON"
 		))
+
+		geojson = JSON()
+		properties = list(geojson['features'][0]['properties'].keys())
+		Filter(properties, ColumnType.NameGeoJSON, id="KeyProperty")
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -140,7 +153,7 @@ def server(input, output, session):
 
 
 		# Check if we have a dedicated time column, or separate columns for each time slot.
-		column = Filter(df.columns, ColumnType.Time, bad = [k_col, v_col], only_one=True, reject_unknown=True)
+		column = Filter(df.columns, ColumnType.Time)
 
 		color = config.ColorMap()
 		if color == "Inferno": cmap = linear.inferno.scale
@@ -292,20 +305,6 @@ def server(input, output, session):
 
 	@render.download(filename="heatmap.html")
 	def DownloadHeatmap(): yield LoadMap().get_root().render()
-
-
-	@reactive.Effect
-	def UpdateColumns():
-		df = GetData()
-		columns = df.columns
-		key = UpdateColumn(columns, ColumnType.Name, config.KeyColumn(), "KeyColumn")
-		UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn", bad=[key])
-
-		try:
-			geojson = JSON()
-			properties = list(geojson['features'][0]['properties'].keys())
-			UpdateColumn(properties, ColumnType.NameGeoJSON, config.KeyProperty(), "KeyProperty")
-		except Exception: pass
 
 
 app_ui = ui.page_fluid(

@@ -57,60 +57,46 @@ Columns = {
 }
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], bad: list = [], only_one=False, reject_unknown=False):
+def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
 	@param ctype: The type of column we're looking for (Look at the ColumnType Enum)
 	@param good: A list of column names on top of those defined by the type to be included
-	@param bad: A list of column names on top of those defined by the type to be excluded from the result.
-	@param only_one: Only return a single result, so the variable can be used immediately.
-	@param reject_unknown: Only include columns explicitly defined
+	@param id: An element id to update with a new value.
+	@param all: Return all matches columns
 	@return: A list of column names to use.
+
+	@info This purpose of this function is to try and remove irrelevant columns from user selection,
+	but returning everything if by filtering so we remove all the columns. In essence, it folds the case
+	of all columns, and performs a set intersection on the required column type. This set is then returned
+	to the case of the original columns, and then good and bad are applied (Therefore, they are case-sensitive)
+	Since both good and bad are applied after the intersection, they don't need to be valid names (So long as)
+	the application can handle that exception. Look at Geocoordinate to see how it uses a "None" and "Uniform"
+	value in the good list, despite these values both not a valid ValueColumn, and not existing in the data.
+
+	The logic for the UI updating can be confusing, but in essence we don't just want to return the good
+	list, because that means we removed all actual columns. If this happens, we return all the columns, and
+	add the good list onto the START (So its the default), that way users can choose a column if Heatmapper
+	doesn't like their column names.
 	"""
 
 	# Fold cases
-	folded = [column.lower() for column in columns]
+	folded = [column.lower() for column in columns] 
+	options = set(folded) & Columns[ctype]
+	indices = [folded.index(value) for value in options]; indices.sort()
+	reassembled = [columns[index] for index in indices] + good
 
-	# Add and remove what user asked for, filtering None
-	options = set(folded)
-	if bad: options -= set([b.lower() for b in bad if b])
-	if good: options &= set([g.lower() for g in good if g])
-
-	# Take an intersection of our columns and the type we want. If there is a match, return those
-	# Otherwise, remove all columns we know it shouldn't be, and return that instead.
-	intersection = options & Columns[ctype]
-	if intersection or reject_unknown: options = intersection
-	else:
-		for key, value in Columns.items():
-			if key != ctype: options -= value
-
-	# Get the valid indices, and sort them in ascending order
-	indices = [folded.index(value) for value in options]
-	indices.sort()
-
-	# Get the original column names, without case-folding, and return as a list.
-	reassembled = [columns[index] for index in indices]
-	if not reassembled: return None
-	return reassembled[0] if only_one else reassembled
-
-
-def UpdateColumn(columns, ctype, default, id, **kwargs):
-	"""
-	@brief Update a input_select element based on columns
-	@pararm columns: The list of columns to source
-	@param ctype: The ColumnType to search for
-	@param default: The default value to use
-	@param id: The ID of the UI element
-	@param kwargs: Keyword arguments to be passed to filter. 
-	@returns The new value of the element..
-	"""
-
-	filtered = Filter(columns, ctype, **kwargs)
-	if filtered is None: return
-	selected = default if default in columns else filtered[0]
-	ui.update_select(id=id, choices=filtered, selected=selected)
-	return selected
+	if id: 
+		if reassembled == good:
+			options = set(folded)
+			for type in Columns:
+				if type != ctype: options -= Columns[type]
+			indices = [folded.index(value) for value in options]; indices.sort()
+			reassembled = good + [columns[index] for index in indices]
+		ui.update_select(id=id, choices=reassembled)
+	if all: return reassembled
+	return reassembled[0] if reassembled and len(reassembled) > 0 else None
 
 
 class Cache:
@@ -200,7 +186,11 @@ class Cache:
 		input_switch=None, 
 		upload="Upload",
 		example="Example",
-		default=DataFrame()
+		default=DataFrame(),
+		p=None,
+		p_name="file",
+		wasm=True,
+		wasm_blacklist=tuple()
 		):
 
 		"""
@@ -218,7 +208,16 @@ class Cache:
 		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
 										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
 										initialize without arguments.
+		@param p: A progress bar to increment; optional.
+		@param p_name: What we're fetching, to be displayed in the progress bar; optional
+		@param wasm: Whether this fetch can run in WebAssembly 
+		@param wasm_blacklist: A tuple of file extensions that should not be fetched in WebAssembly.
+		@returns The data if it exists; default if no file can be found; 0 if there's a WebAssembly violation
 		"""
+
+		if not wasm and Pyodide:
+			if p: p.close()
+			return 0
 
 		if source_file is None: source_file = input.File()
 		if example_file is None: example_file = input.Example()
@@ -227,16 +226,24 @@ class Cache:
 
 		# Grab an uploaded file, if its done, or grab an example (Using a cache to prevent redownload)
 		if input_switch == upload:
+			if p: p.inc(message=f"Loading Uploaded {p_name}...")
 			file: list[FileInfo] | None = source_file
-			if file is None: return default
+			if file is None: 
+				if p: p.close()
+				return default
 
+			if p: p.inc(message=f"Handling {p_name}...")
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
 			n = str(file[0]["datapath"])
+			if n.endswith(wasm_blacklist) and Pyodide: 
+				if p: p.close()
+				return 0
 			if n not in self._primary: self._primary[n] = self._handler(Path(n))
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		elif input_switch == example:
+			if p: p.inc(message=f"Fetching {p_name}...")
 
 			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running 
 			# in server-mode).
@@ -244,8 +251,13 @@ class Cache:
 				n = example_file if Pyodide else str(source + example_file.split("/")[-1])
 			else:
 				n = str(source + example_file)
+
+			if n.endswith(wasm_blacklist) and Pyodide: 
+				if p: p.close()
+				return 0
 			raw = await self._download(n)
 
+			if p: p.inc(message=f"Handling {p_name}...")
 			# WASM needs a temporary file, but they are deleted out of their scope.
 			if Pyodide:
 				temp = NamedTemporaryFile(suffix=Path(n).suffix); 
@@ -255,8 +267,11 @@ class Cache:
 			elif n not in self._primary: self._primary[n] = self._handler(raw)
 
 		# If the application has a unique method of input (IE 3D's ID, don't handle it.)
-		else: return None
+		else: 
+			if p: p.close()
+			return None
 
+		if p: p.close()
 		# If the object cannot be copied, then we can just return it directly
 		try:
 			return deepcopy(self._primary[n])
@@ -451,7 +466,7 @@ class Config:
 		for key in duplicates: del kwargs[key]
 
 		if "selected" in self.kwargs: self.kwargs["selected"] = self()
-		else: self.kwargs["value"] = self()
+		elif "value" in self.kwargs: self.kwargs["value"] = self()
 
 		# Return the correct UI.
 		if self.visible: return ui(*args, **kwargs, **self.kwargs)
@@ -486,13 +501,6 @@ def InitializeConfig(config, input):
 	if 
 	"""
 	for conf, var in config.items(): var.Resolve(input[conf])
-
-
-def GenerateConditionalElements(pairs):
-	elements = []
-	for conditional, element in pairs:
-		if conditional: elements.append(element)
-	return elements
 
 
 def Error(message): return ui.notification_show(ui=message, type="error", duration=3)

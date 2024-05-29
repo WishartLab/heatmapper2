@@ -23,7 +23,7 @@ from tempfile import NamedTemporaryFile
 from io import BytesIO
 
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, UpdateColumn, Update
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update
 
 try:
 	from user import config
@@ -47,11 +47,10 @@ def server(input, output, session):
 	
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData():
-		with ui.Progress() as p:
-			p.inc(message="Loading Data...")
-			Data.set((await DataCache.Load(input)))
-			Valid.set(False)
+	async def UpdateData(): 
+		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+		Valid.set(False)
+		Filter(Data().columns, ColumnType.Name, id="NameColumn")
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -68,7 +67,7 @@ def server(input, output, session):
 		if name not in df: return None, None , None
 
 		# Drop the naming columns before linkage.
-		data = df.drop(columns=Filter(df.columns, ColumnType.Name))
+		data = df.drop(columns=Filter(df.columns, ColumnType.Name, all=True))
 		x_labels = ["X" + name if list(data.columns).count(name) == 1 else "X" + name + f".{i+1}" for i, name in enumerate(data.columns)]
 		return list(df[name]), x_labels, data
 
@@ -87,6 +86,7 @@ def server(input, output, session):
 		if progress is not None: progress.inc(message="Creating linkage matrix...")
 		method = config.ClusterMethod().lower()
 		metric = config.DistanceMethod().lower()
+
 		matrix = hierarchy.linkage(data.values.T if invert else data.values, method=method, metric=metric)
 
 		if progress is not None: progress.inc(message="Creating dendrogram...")
@@ -300,13 +300,6 @@ def server(input, output, session):
 			config.TextSize(),
 			config.DPI(),
 		])
-
-
-
-	@reactive.Effect
-	def UpdateColumnSelection(): 
-		columns = GetData().columns
-		UpdateColumn(columns, ColumnType.Name, config.NameColumn(), "NameColumn")
 
 
 	@render.ui

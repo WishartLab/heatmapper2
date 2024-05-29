@@ -19,8 +19,7 @@ from os.path import basename
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error, Msg
 
-if not Pyodide:
-	from pyvista import Plotter, plotting, read_texture, read as VistaRead
+if not Pyodide: from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 from py3Dmol import view
 from Bio.PDB import PDBParser, Structure, PDBIO
@@ -60,8 +59,8 @@ def server(input, output, session):
 		"""
 
 		suffix = path.suffix
-		if suffix == ".obj": return None if Pyodide else VistaRead(path.resolve())
-		if suffix == ".png" or suffix == ".jpg": return None if Pyodide else read_texture(path.resolve())
+		if suffix == ".obj": return VistaRead(path.resolve())
+		if suffix == ".png" or suffix == ".jpg": return read_texture(path.resolve())
 		if suffix == ".pdb": return PDBParser().get_structure("protein", str(path))
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("3d", DataHandler=HandleData)
@@ -79,19 +78,25 @@ def server(input, output, session):
 		if input.SourceFile() == "ID": 
 			Data.set(input.ID())
 		else: 
-			Data.set((await DataCache.Load(input, default=None)))
+			Data.set((await DataCache.Load(input, default=None, p=ui.Progress(), wasm_blacklist=(".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"))))
 		Valid.set(False)
+
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.Object, input.Example)
 	async def UpdateObject():
+
 		example = input.Example()
 		if not example.endswith(".pdb"):
-			Object.set(await DataCache.Load(input,
-				source_file=input.Object(),
-				example_file=Info[input.Example()]["Object"],
-				default=None
-			))
+			with ui.Progress() as p:
+				Object.set(await DataCache.Load(input,
+					source_file=input.Object(),
+					example_file=Info[input.Example()]["Object"],
+					default=None,
+					p=p,
+					p_name="object",
+					wasm=False
+				))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -152,40 +157,43 @@ def server(input, output, session):
 				viewer = view(data=data, width=config.Size(), height=config.Size())
 
 			if config.ColorScheme() == "b-factor" or config.ColorScheme() == "b-factor (norm)":
-				blue, light, white, red = 10, 15, 20, 40
-
+				darkblue, blue, lightblue, white, orange, red = 5, 10, 15, 20, 40, 50
 				if "norm" in config.ColorScheme():
 					p.inc(message="Normalizing...")
 					if input.SourceFile() == "ID":
 						Error("Normalization cannot be performed on fetched PDB's")
 					else:
 						entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
-						d = 0
+						a = 0.0
+						l = 0
 						if not DataCache.In(entry):
-							m = float('inf')
-							M = float('-inf')
+							l = 0
 
 							for model in source:
 								for chain in model:
 									for residue in chain:
 										for atom in residue:
 											b_factor = atom.bfactor
-											if b_factor < m: m = b_factor
-											if b_factor > M: M = b_factor
-							d = M - m
-							DataCache.Store((m + d * 0.2, m + d * 0.4, m + d * 0.6, m + d * 0.8), entry)
-						blue, light, white, red = DataCache.Get(entry)
+											a += atom.bfactor
+											l += 1
+							a /= l
+
+							# White is the average
+							DataCache.Store((a * 0.25, a * 0.50, a * 0.75, a, a * 1.25, a * 1.5), entry)
+						darkblue, blue, lightblue, white, orange, red = DataCache.Get(entry)
 
 						# So we only display once
-						if d != 0: Msg(f"Using normalized cutoffs at {blue:.2f}, {light:.2f}, {white:.2f}, and {red:.2f}")
+						if l != 0: Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
 
 				viewer.startjs += f"""\n
 					let customColorize = function(atom) {{
+						if (atom.b < {darkblue}) return "darkblue"
 						if (atom.b < {blue}) return "blue"
-						else if (atom.b < {light}) return "lightblue"
+						else if (atom.b < {lightblue}) return "lightblue"
 						else if (atom.b < {white}) return "white"
-						else if (atom.b < {red}) return "orange"
-						else return "red"
+						else if (atom.b < {orange}) return "orange"
+						else if (atom.b < {red}) return "red"
+						else return "darkred"
 					}}\n"""
 				color_property = "colorfunc"
 				color_name = "customColorize"
@@ -224,57 +232,68 @@ def server(input, output, session):
 
 	def ModelViewer(source, p):
 		if Pyodide:
-			Error("The Object Viewer is not supported in WebAssembly Mode!")
+			Error(f"Cannot render objects in WebAssembly! Please use the Server version for this functionality.")
 			return
 
-		model = Object()
-		if model is None: return
+		inputs = [
+			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			config.Style(),
+			config.Opacity(),
+			config.Features(),
+			config.ColorMap(),
+			config.Colors(),
+		]
 
-		p.inc(message="Plotting...")
-		pl = Plotter()
+		if not DataCache.In(inputs):
+			model = Object()
+			if model is None: return
 
-		style = config.Style().lower()
-		opacity = config.Opacity()
-		features = config.Features()
-		cmap = config.ColorMap().lower()
-		colors = config.Colors()
+			p.inc(message="Plotting...")
+			pl = Plotter()
 
-		# If there's no source, just render the model
-		if source is None:
-			pl.add_mesh(
-				model,
-				style=style,
-				opacity=opacity,
-				show_edges="Edges" in features,
-				lighting="Lighting" in features,
-				interpolate_before_map="Interpolation" in features,
-				smooth_shading="Smooth Shading" in features,
-			)
+			style = config.Style().lower()
+			opacity = config.Opacity()
+			features = config.Features()
+			cmap = config.ColorMap().lower()
+			colors = config.Colors()
 
-		# If are data source is a table, render it as a heatmap.
-		elif type(source) is DataFrame:
-			values = source[Filter(source.columns, ColumnType.Name, only_one=True)]
-			pl.add_mesh(
-				model,
-				scalars=values,
-				style=style,
-				cmap=cmap,
-				opacity=opacity,
-				n_colors=colors,
-				show_edges="Edges" in features,
-				lighting="Lighting" in features,
-				interpolate_before_map="Interpolation" in features,
-				smooth_shading="Smooth Shading" in features,
-			)
+			# If there's no source, just render the model
+			if source is None:
+				pl.add_mesh(
+					model,
+					style=style,
+					opacity=opacity,
+					show_edges="Edges" in features,
+					lighting="Lighting" in features,
+					interpolate_before_map="Interpolation" in features,
+					smooth_shading="Smooth Shading" in features,
+				)
 
-		# If we have a texture, map it.
-		elif type(source) is plotting.texture.Texture:
-			mesh = model.texture_map_to_plane()
-			pl.add_mesh(mesh, texture=source)
+			# If are data source is a table, render it as a heatmap.
+			elif type(source) is DataFrame:
+				values = source[Filter(source.columns, ColumnType.Name)]
+				pl.add_mesh(
+					model,
+					scalars=values,
+					style=style,
+					cmap=cmap,
+					opacity=opacity,
+					n_colors=colors,
+					show_edges="Edges" in features,
+					lighting="Lighting" in features,
+					interpolate_before_map="Interpolation" in features,
+					smooth_shading="Smooth Shading" in features,
+				)
 
-		# Exporting as None returns the HTML as a file handle, which we read.
-		p.inc(message="Exporting...")
-		return pl.export_html(filename=None).read()
+			# If we have a texture, map it.
+			elif type(source) is plotting.texture.Texture:
+				mesh = model.texture_map_to_plane()
+				pl.add_mesh(mesh, texture=source)
+
+			# Exporting as None returns the HTML as a file handle, which we read.
+			p.inc(message="Exporting...")
+			DataCache.Store(pl.export_html(filename=None).read(), inputs)
+		return DataCache.Get(inputs)
 
 
 	def GenerateHeatmap():
@@ -284,11 +303,11 @@ def server(input, output, session):
 			p.inc(message="Loading input...")
 
 			source = GetData()
+			if source is None: return
 
 			if type(source) == Structure.Structure or input.SourceFile() == "ID":
 				return ui.HTML(PDBViewer(source, p))
-			elif source is None: return
-			else: return ui.HTML(ModelViewer(source, p))
+			return ui.HTML(ModelViewer(source, p))
 
 
 	@output

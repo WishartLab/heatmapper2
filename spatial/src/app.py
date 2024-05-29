@@ -20,7 +20,7 @@ from squidpy import gr, pl, read
 from scanpy import pp, tl
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, UpdateColumn, GenerateConditionalElements, Update
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update
 
 try:
 	from user import config
@@ -73,6 +73,16 @@ def server(input, output, session):
 			and then parse them into the correct structure.
 		"""
 
+		def ColumnNames(adata):
+			p.inc(message="Generating Annotation Keys...")
+			key = Filter(adata.obs.columns, ColumnType.Cluster)
+			if key is not None:
+				Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, id="Cluster")
+				
+			choices = adata.var.gene_ids.index.drop_duplicates().to_list()
+			ui.update_select(id="Keys", label="Annotation Keys", choices=choices, selected=choices[0])
+
+
 		with ui.Progress() as p:
 			p.inc(message="Loading Data...")
 			if input.SourceFile() == "Upload":
@@ -85,6 +95,7 @@ def server(input, output, session):
 				# If the name hasn't been cached, we need to construct the object.
 				if not DataCache.In(name):
 
+					p.inc(message="Organizing Data...")
 					# For each file uploaded, dump it into a temporary directory
 					temp = TemporaryDirectory()
 					Path(f"{temp.name}/spatial").mkdir()
@@ -101,20 +112,30 @@ def server(input, output, session):
 						elif suffix == ".h5": counts = base
 
 						# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
-						elif suffix == ".h5ad": return await DataCache.Load(input, default=None)
+						elif suffix == ".h5ad": 
+							adata = await DataCache.Load(input, default=None, p=p)
+							ColumnNames(adata)
+							p.close()
+							return adata
+
 
 						open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
 
 					# Make SquidPy generate an object from the folder.
+					p.inc(message="Consolidating Data...")
 					adata = read.visium(temp.name, counts_file=counts)
 
 					# Post-processing so all the needed statistics are present.
+					p.inc(message="Generating metrics...")
 					adata.var_names_make_unique()
 					pp.filter_genes(adata, inplace=True, min_counts=100)
 					gr.spatial_neighbors(adata)
 					pp.calculate_qc_metrics(adata, inplace=True)
 					tl.leiden(adata, key_added="cluster", neighbors_key="spatial_neighbors")
 					pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
+
+					ColumnNames(adata)
+					p.close()
 
 					# Throw it into the Cache.
 					DataCache.Store(adata, name)
@@ -123,7 +144,9 @@ def server(input, output, session):
 				Data.set(DataCache.Get(name))
 
 			# With an example, just return it.
-			else: Data.set(await DataCache.Load(input, default=None))
+			else: 
+				Data.set(await DataCache.Load(input, default=None))
+				ColumnNames(Data())
 
 
 	@output
@@ -221,7 +244,7 @@ def server(input, output, session):
 
 			if adata is None: return
 
-			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+			key = Filter(adata.obs.columns, ColumnType.Cluster)
 			location = f"{key}_centrality_scores"
 
 			p.inc(message="Computing score...")
@@ -257,7 +280,7 @@ def server(input, output, session):
 			hash_list = [config.Function(), input.SourceFile(), input.Example(), input.File()]
 			old_metric = DataCache.Get(hash_list)
 
-			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+			key = Filter(adata.obs.columns, ColumnType.Cluster)
 
 			p.inc(message="Generating function...")
 			if f"{key}_ripley_{function}" not in adata.uns or metric != old_metric:
@@ -282,7 +305,7 @@ def server(input, output, session):
 			adata = Data()
 			if adata is None: return
 
-			key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
+			key = Filter(adata.obs.columns, ColumnType.Cluster)
 
 			p.inc(message="Calculating...")
 
@@ -319,30 +342,6 @@ def server(input, output, session):
 		adata.write(temp.name)
 		yield open(temp.name, "rb").read()
 
-
-	@reactive.Effect
-	def UpdateColumnSelection():
-		with ui.Progress() as p:
-			p.inc(message="Loading data...")
-			adata = Data()
-
-			p.inc(message="Generating Annotation Keys...")
-			if adata is None: return
-			if input.MainTab() == "Occurrence":
-				key = Filter(adata.obs.columns, ColumnType.Cluster, only_one=True)
-				if key is not None:
-					UpdateColumn(adata.obs[key].cat.categories.tolist(), ColumnType.Free, config.Cluster(), "Cluster")
-			if not config.Keys():
-				try:
-					choices = adata.var.gene_ids.index.drop_duplicates().to_list()
-					ui.update_select(id="Keys", label="Annotation Keys", choices=choices, selected=choices[0])
-				except AttributeError:
-					pass
-
-	@render.ui
-	def ConditionalElements(): return GenerateConditionalElements([
-			(config.OccurrenceGraph() == "Line", config.Cluster.UI(ui.input_select, id="Cluster", label="Cluster", choices=[], selected=None)),
-		])
 
 app_ui = ui.page_fluid(
 
@@ -407,7 +406,7 @@ app_ui = ui.page_fluid(
 
 				config.OccurrenceGraph.UI(ui.input_radio_buttons, id="OccurrenceGraph", label="Graph Type", choices=["Scatter", "Line"], inline=True),
 
-				ui.output_ui(id="ConditionalElements"),
+				config.Cluster.UI(ui.input_select, id="Cluster", label="Cluster", choices=[], selected=None),
 
 				config.Interval.UI(ui.input_slider, id="Interval", label="Distance Interval", min=1, max=100, step=1),
 				config.Splits.UI(ui.input_slider, id="Splits", label="Splits (0 = auto)", min=0, max=10, step=0),

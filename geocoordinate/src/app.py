@@ -24,7 +24,7 @@ from scipy.stats import gaussian_kde
 from numpy import vstack, convolve, ones
 from branca.colormap import LinearColormap
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, UpdateColumn, InitializeConfig, GenerateConditionalElements, Error, Update
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg
 
 try:
 	from user import config
@@ -54,12 +54,15 @@ def server(input, output, session):
 	InitializeConfig(config, input)
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData():
-		with ui.Progress() as p:
-			p.inc(message="Loading Data...")
-			Data.set((await DataCache.Load(input)))
-			Valid.set(False)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, ignore_init=True)
+	async def UpdateData(): 
+		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+		Valid.set(False)
+		columns = Data().columns
+		time = Filter(columns, ColumnType.Time, good=["None"], id="TimeColumn")
+		value = Filter(columns, ColumnType.Value, good=["Uniform"], id="ValueColumn")
+		if time == value:
+			ui.update_select(id="ValueColumn", selected=columns[1] if len(columns) > 1 else None)
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -76,10 +79,6 @@ def server(input, output, session):
 		radius = config.Radius()
 		blur = config.Blur()
 
-		if "Uniform" in config.Features():
-			df["Value"] = [1] * len(df[lat_col])
-			v_col = "Value"
-
 		if "Scaled" in config.Features():
 			HeatMap(list(zip(df[lat_col], df[lon_col], df[v_col])),
 			min_opacity=opacity,
@@ -91,14 +90,12 @@ def server(input, output, session):
 			longitude = df[lon_col]
 			values = df[v_col]
 
-			# Threshold for density estimation
-			threshold = 0.1
-			stack = vstack([longitude, latitude])
-
 			# Calculate kernel density estimation
-			kde = gaussian_kde(stack)
-			density = kde(stack)
-			df[v_col] = values + density * threshold
+			if "KDE" in config.Features():
+				stack = vstack([longitude, latitude])
+				kde = gaussian_kde(stack)
+				density = kde(stack)
+				df[v_col] = values + density * 0.1
 
 			if config.RenderMode() == "Vector":
 				print("Vector")
@@ -130,7 +127,7 @@ def server(input, output, session):
 				contour = ax.scatter(
 					longitude, 
 					latitude, 
-					c=values * 100, 
+					c=df[v_col] * 100, 
 					s=[radius] * len(values), 
 					cmap="jet", 
 					alpha=opacity, 
@@ -170,7 +167,7 @@ def server(input, output, session):
 		df = df.sort_values(by=t_col)
 
 		# Normalize
-		if not "Uniform" in config.Features():
+		if v_col != "Uniform":
 			values = df[v_col]
 			df[v_col] = (values - values.min()) / (values.max() - values.min())
 
@@ -181,7 +178,7 @@ def server(input, output, session):
 			for _, row in group_df.iterrows():
 				lat = row[lat_col]
 				lon = row[lon_col]
-				value = 1 if "Uniform" in config.Features() else row[v_col]
+				value = 1 if v_col == "Uniform" else row[v_col]
 				time_slice.append([lat, lon, value])
 			data.append(time_slice)
 
@@ -218,18 +215,20 @@ def server(input, output, session):
 			df = GetData()
 			if df is None: return
 
-			# Set the Value Column Accordingly (Helper functions handle None)
-			p.inc(message="Formatting...")
-			if not "Uniform" in config.Features():
-				v_col = config.ValueColumn()
-				if v_col not in df: return
-			else:
-				v_col = None
+			df = df.copy(deep=True)
 
-			# Get lat and lon, generate the map
-			lon_col = Filter(df.columns, ColumnType.Longitude, only_one=True)
-			lat_col = Filter(df.columns, ColumnType.Latitude, only_one=True)
+			p.inc(message="Formatting...")
+
+			lon_col = Filter(df.columns, ColumnType.Longitude)
+			lat_col = Filter(df.columns, ColumnType.Latitude)
 			if lat_col is None or lon_col is None: return
+
+			v_col = config.ValueColumn()
+			if v_col == "Uniform":
+				df["Heatmapper_Uniform_Values"] = [1] * len(df[lat_col])
+				v_col = "Heatmapper_Uniform_Values"
+
+			t_col = config.TimeColumn()
 
 			map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=config.MapType())
 
@@ -272,10 +271,8 @@ def server(input, output, session):
 						
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
-			if "Temporal" in config.Features(): 
-				t_col = config.TimeColumn()
-				GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
-			else: GenerateMap(df.copy(deep=True), map, v_col, lon_col, lat_col)
+			if t_col != "None": GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
+			else: GenerateMap(df, map, v_col, lon_col, lat_col)
 			return map
 
 
@@ -302,40 +299,6 @@ def server(input, output, session):
 
 	@render.download(filename="heatmap.html")
 	def DownloadHeatmap(): m = LoadMap(); yield m.get_root().render()
-
-
-	@reactive.Effect
-	def UpdateColumns():
-		columns = GetData().columns
-		if len(columns) == 0: return
-		if not "Uniform" in config.Features(): 
-			column = UpdateColumn(columns, ColumnType.Value, config.ValueColumn(), "ValueColumn")
-			if column is None:
-				Error("Couldn't find a Value Column! You may need to select Uniform in the Features to visualize the HeatMap!")
-		if "Temporal" in config.Features(): 
-			column = UpdateColumn(columns, ColumnType.Time, config.TimeColumn(), "TimeColumn")
-			if column is None:
-				Error("Couldn't find a Temporal Column! You may need to deselect Temporal in the Features to visualize the HeatMap!")
-		
-
-
-	@render.ui
-	def ConditionalElements(): return GenerateConditionalElements([
-			(
-				"Temporal" in config.Features(), 
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time Column", choices=[], multiple=False)
-			),
-			(
-				not "Uniform" in config.Features(), 
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False)
-			),
-			(
-				"Scaled" not in config.Features(),
-				config.RenderMode.UI(ui.input_radio_buttons, id="RenderMode", label="Rendering Method", choices=["Raster", "Vector"], inline=True)
-			),
-		])
-
-
 
 
 app_ui = ui.page_fluid(
@@ -367,11 +330,12 @@ app_ui = ui.page_fluid(
 
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", label="Features", 
-					choices=["Temporal", "Uniform", "Scaled", "Smoothing"], 
+					choices=["Scaled", "Smoothing", "KDE"], 
 					inline=True
 				),
 				
-				ui.output_ui(id="ConditionalElements"),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time Column", choices=[], multiple=False),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False),
 
 				# Only OpenStreatMap and CartoDB Positron seem to work.
 				config.MapType.UI(ui.input_radio_buttons,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
@@ -380,8 +344,8 @@ app_ui = ui.page_fluid(
 				config.Radius.UI(ui.input_slider, id="Radius", label="Size of Points", min=5, max=100, step=5),
 				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
 				config.Scale.UI(ui.input_slider, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
+				config.RenderMode.UI(ui.input_radio_buttons, id="RenderMode", label="Rendering Method", choices=["Raster", "Vector"], inline=True),
 
-				
 				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
 				config.ROI_Mode.UI(ui.input_radio_buttons, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
 					ui.layout_columns(
