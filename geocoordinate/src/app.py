@@ -337,14 +337,13 @@ app_ui = ui.page_fluid(
 				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time Column", choices=[], multiple=False),
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False),
 
-				# Only OpenStreatMap and CartoDB Positron seem to work.
+				config.RenderMode.UI(ui.input_radio_buttons, id="RenderMode", label="Rendering Method", choices=["Raster", "Vector"], inline=True),
 				config.MapType.UI(ui.input_radio_buttons,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
 
 				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
-				config.Radius.UI(ui.input_slider, id="Radius", label="Size of Points", min=5, max=100, step=5),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Size of Points", min=5),
 				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
 				config.Scale.UI(ui.input_slider, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
-				config.RenderMode.UI(ui.input_radio_buttons, id="RenderMode", label="Rendering Method", choices=["Raster", "Vector"], inline=True),
 
 				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
 				config.ROI_Mode.UI(ui.input_radio_buttons, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
