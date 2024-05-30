@@ -155,7 +155,7 @@ def server(input, output, session):
 			config.NameColumn(),
 			config.Features(),
 			config.ScaleType(),
-			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
@@ -204,7 +204,7 @@ def server(input, output, session):
 				# Render the heatmap.
 				ax_heatmap = fig.add_subplot(gs[1, 1])
 
-				colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
+				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 				interpolation = config.Interpolation().lower()
 				bins = config.Bins()
 
@@ -294,7 +294,7 @@ def server(input, output, session):
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			config.Features(),
 			config.ScaleType(),
-			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
@@ -303,42 +303,21 @@ def server(input, output, session):
 
 
 	@render.ui
-	def ConditionalElements():
-		"""
-		@brief Handle Conditional Panels.
-
-		Because we need access to config, we cannot use ui.panel_conditional, as that uses
-		JavaScript.
-		"""
-		elements = []
-
+	def Color():
 		if config.Custom():
-			elements.append(
-				config.CustomColors.UI(ui.input_select,
-					id="CustomColors",
-					label="Colors",
-					choices=Colors,
-					multiple=True,
-					selectize=True,
-				)
-			)
+			return ui.input_select(id="CustomColors", label=None, choices=Colors, multiple=True, selectize=True, selected=["Blue", "White", "Yellow"])
 		else:
-			elements.append(
-				config.ColorMap.UI(ui.input_select, 
-					id="ColorMap", label="Colors", 
-					choices={
-						"Blue White Yellow": "Blue/Yellow",
-						"Red Black Green": "Red/Green",
-						"Pink White Green": "Pink/Green",
-						"Blue Green Yellow": "Blue/Green/Yellow",
-						"Black Gray White": "Grayscale",
-						"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
-					}
-				)
-			)		
-		return elements
-
-
+			return config.ColorMap.UI(ui.input_select, 
+				make_inline=False, id="ColorMap", label=None, 
+				choices={
+					"Blue White Yellow": "Blue/Yellow",
+					"Red Black Green": "Red/Green",
+					"Pink White Green": "Pink/Green",
+					"Blue Green Yellow": "Blue/Green/Yellow",
+					"Black Gray White": "Grayscale",
+					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
+				}
+			)
 
 
 app_ui = ui.page_fluid(
@@ -363,14 +342,16 @@ app_ui = ui.page_fluid(
 
 				Update(),
 
+				ui.HTML("<b>Heatmap</b>"),
+
 				# The column that holds names for the data.
 				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Names", choices=[], multiple=False),
 
 				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
-				config.ClusterMethod.UI(ui.input_select, id="ClusterMethod", label="Clustering Method", choices=ClusteringMethods),
+				config.ClusterMethod.UI(ui.input_select, id="ClusterMethod", label="Clustering", choices=ClusteringMethods),
 
 				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html#scipy.spatial.distance.pdist
-				config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance Method", choices=DistanceMethods, selected="Euclidean"),
+				config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance", choices=DistanceMethods, selected="Euclidean"),
 
 				# Customize the text size of the axes.
 				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text Size", min=1, max=50, step=1),
@@ -380,23 +361,25 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 				# Define how the colors are scaled.
-				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale Type", choices=["Row", "Column", "None"], selected="Row"),
+				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Interpolation", choices=InterpolationMethods),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods),
 
-				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom ColorMap"),
-				config.Bins.UI(ui.input_slider, id="Bins", label="Number of Colors", min=3, max=100, step=1),
+				ui.HTML("<b>Colors</b>"),
+				ui.output_ui("Color"),
+				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom"),
+				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=100, step=1),
 
-				ui.output_ui("ConditionalElements"),
+				ui.HTML("<b>Image Settings</b>"),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
 
-				# Toggle rendering features. All are on by default.
-				config.Features.UI(ui.input_checkbox_group, id="Features", label="Visibility",
+				ui.HTML("<b>Features</b>"),
+				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None,
 					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"}
 				),
 
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 
@@ -406,6 +389,7 @@ app_ui = ui.page_fluid(
 				# Define the Orientation of the dendrogram in the Tab
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
+			padding="1rem",
 		),
 
 		# Add the main interface tabs.

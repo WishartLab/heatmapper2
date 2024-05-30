@@ -218,7 +218,7 @@ def server(input, output, session):
 				frameon="Frame" in features,
 				ncols=columns,
 				wspace=spacing,
-				hspace=spacing,
+				hspace=spacing
 			)
 
 
@@ -370,15 +370,24 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 				Update(),
+
+				ui.HTML("<b>Annotation Keys</b>"),
+				config.Keys.UI(ui.input_select, make_inline=False, id="Keys", label=None, choices=[], selectize=True, multiple=True),
+
+				ui.HTML("<b>Heatmap</b>"),
 				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
-				config.Keys.UI(ui.input_select, id="Keys", label="Annotation Keys", choices=[], selectize=True, multiple=True),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
 				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"]),
-				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image Opacity", min=0.0, max=1.0, step=0.1),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data Opacity", min=0.0, max=1.0, step=0.1),
 				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1),
 				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1),
-				config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features", choices=["Image", "Legend", "Frame"]),
+				config.Size.UI(ui.input_slider, id="Size", label="Spacing", min=1.0, max=1000.0, step=0.1),
+
+				ui.HTML("<b>Opacity</b>"),
+				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1),
+
+				ui.HTML("<b>Features</b>"),
+				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Image", "Legend", "Frame"]),
 			),
 
 			ui.panel_conditional(
@@ -419,6 +428,7 @@ app_ui = ui.page_fluid(
 				# Add the download buttons.
 				ui.download_button("DownloadTable", "Download Table"),
 			),
+			padding="1rem",
 		),
 
 		# Add the main interface tabs.

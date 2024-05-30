@@ -7,5 +7,4 @@
 # pywebview
 # trame-vuetify
 # nest_asyncio
-biopython
 py3Dmol

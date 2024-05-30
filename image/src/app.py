@@ -225,30 +225,26 @@ app_ui = ui.page_fluid(
 
 				Update(),
 
-				# Customize the text size of the axes.
+				ui.HTML("<b>Heatmap</b>"),
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
+				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
+				config.Levels.UI(ui.input_slider, id="Levels", label="Levels", min=1, max=100, step=1),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 
-				# Customize the opacity of the heatmap, making the background image more visible.
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
-
-				# Set the ColorMap used.
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
-
-				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.contourf.html#matplotlib.pyplot.contourf
-				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
-
-				config.Levels.UI(ui.input_slider, id="Levels", label="Number of Levels", min=1, max=100, step=1),
-
-				# Customize what aspects of the heatmap are visible
-				config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features",
-						choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"}
-				),
-
+				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
 				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
 
+				# Customize what aspects of the heatmap are visible
+				ui.HTML("<b>Features</b>"),
+				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None,
+						choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+				),
+
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
+			padding="1rem"
 		),
 
 		# Add the main interface tabs.

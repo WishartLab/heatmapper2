@@ -36,9 +36,6 @@ config = ConfigHandler({
 
 	# True or False to Use custom color maps or pre-defined ones.
 	"Custom": Config(value=False),
-
-	# A list of colors. See shared.py for Colors
-	"CustomColors": Config(selected=["Blue", "White", "Yellow"]),
 	
 	# See shared.py ColorMap for options. 
 	"ColorMap": Config(selected="Blue White Yellow"),

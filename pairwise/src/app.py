@@ -182,7 +182,7 @@ def server(input, output, session):
 		inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
-			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
@@ -213,7 +213,7 @@ def server(input, output, session):
 				p.inc(message="Plotting...")
 				fig, ax = subplots()
 
-				colors = config.CustomColors() if config.Custom() else config.ColorMap().split()
+				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 				interpolation = config.Interpolation().lower()
 				im = ax.imshow(
 					df, 
@@ -288,7 +288,7 @@ def server(input, output, session):
 		yield DataCache.Get([
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
-			config.CustomColors() if config.Custom() else config.ColorMap().split(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
@@ -298,60 +298,29 @@ def server(input, output, session):
 
 
 	@render.ui
-	def ConditionalElements():
-		"""
-		@brief Handle Conditional Panels.
-
-		Because we need access to config, we cannot use ui.panel_conditional, as that uses
-		JavaScript.
-		"""
-		elements = []
-
-		if config.Custom():
-			elements.append(
-				config.CustomColors.UI(ui.input_select,
-					id="CustomColors",
-					label="Colors",
-					choices=Colors,
-					multiple=True,
-					selectize=True,
-				)
-			)
-		else:
-			elements.append(
-				config.ColorMap.UI(ui.input_select, 
-					id="ColorMap", label="Colors", 
-					choices={
-						"Blue White Yellow": "Blue/Yellow",
-						"Red Black Green": "Red/Green",
-						"Pink White Green": "Pink/Green",
-						"Blue Green Yellow": "Blue/Green/Yellow",
-						"Black Gray White": "Grayscale",
-						"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
-					}
-				)
-			)		
-
-		# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html
+	def Method():
 		if config.MatrixType() == "Distance":
-			elements.append(
-				config.DistanceMethod.UI(ui.input_select,
-					id="DistanceMethod", 
-					label="Distance Method", 
-					choices=DistanceMethods,
-				)
-			)
-
-		# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.corr.html
+			return config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance", choices=DistanceMethods)
 		elif config.MatrixType() == "Correlation":
-			elements.append(
-				config.CorrelationMethod.UI(ui.input_select,
-					id="CorrelationMethod", 
-					label="Correlation Method", 
-					choices=["Pearson", "Kendall", "Spearman"], 
-				)
+			return config.CorrelationMethod.UI(ui.input_select, id="CorrelationMethod", label="Correlation", choices=["Pearson", "Kendall", "Spearman"])
+
+
+	@render.ui
+	def Color():
+		if config.Custom():
+			return ui.input_select(id="CustomColors", label=None, choices=Colors, multiple=True, selectize=True, selected=["Blue", "White", "Yellow"])
+		else:
+			return config.ColorMap.UI(ui.input_select, 
+				make_inline=False, id="ColorMap", label=None, 
+				choices={
+					"Blue White Yellow": "Blue/Yellow",
+					"Red Black Green": "Red/Green",
+					"Pink White Green": "Pink/Green",
+					"Blue Green Yellow": "Blue/Green/Yellow",
+					"Black Gray White": "Grayscale",
+					"Red Orange Yellow Green Blue Indigo Violet": "Rainbow",
+				}
 			)
-		return elements
 
 
 app_ui = ui.page_fluid(
@@ -380,35 +349,32 @@ app_ui = ui.page_fluid(
 
 				Update(),
 
-				config.MatrixType.UI(ui.input_radio_buttons, id="MatrixType",  label="Matrix Type",  choices=["Distance", "Correlation"], inline=True),
-
-				# Customize the text size of the axes.
+				ui.HTML("<b>Heatmap</b>"),
+				config.MatrixType.UI(ui.input_select, id="MatrixType",  label="Matrix",  choices=["Distance", "Correlation"]),
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods),
+				config.Chain.UI(ui.input_text, id="Chain", label="Chain"),
+				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1),
+				ui.output_ui("Method"),
 
-				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom ColorMap"),
-				config.Bins.UI(ui.input_slider, id="Bins", label="Number of Colors", min=3, max=100, step=1),
+				ui.HTML("<b>Colors</b>"),
+				ui.output_ui("Color"),
+				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom"),
+				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=100, step=1),
+				
+				ui.HTML("<b>Image Settings</b>"),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
 
-				ui.output_ui("ConditionalElements"),
-
-				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Interpolation", choices=InterpolationMethods),
-
-				# Customize what aspects of the heatmap are visible
+				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group,
-					id="Features", label="Heatmap Features",
+					make_inline=False, id="Features", label=None,
 					choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
 				),
 
-				# Specify the PDB Chain
-				config.Chain.UI(ui.input_text, id="Chain", label="PDB Chain"),
-
-				# Customize the K-mer to compute for FASTA sequences
-				config.K.UI(ui.input_numeric, id="K", label="K-Mer Length", min=3, max=5, step=1),
-
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
+			padding="1rem",
 		),
 
 		# Add the main interface tabs.

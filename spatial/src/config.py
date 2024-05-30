@@ -37,6 +37,9 @@ config = ConfigHandler({
 	# Any value from 0.0-1.0
 	"Spacing": Config(value=0.0),
 
+	# Any value from 1-100
+	"Size": Config(value=10.0),
+
 	# Any of "Image", "Legend", "Frame"
 	"Features": Config(selected=["Image", "Legend"]),
 

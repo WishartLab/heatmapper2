@@ -343,30 +343,31 @@ app_ui = ui.page_fluid(
 
 				Update(),
 
-				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal Choropleth"),
-
+				ui.HTML("<b>Columns/Properties</b>"),
 				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[]),
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[]),
-				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON Key", choices=[]),
+				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[]),
 
-				# Only OpenStreatMap and CartoDB Positron seem to work.
-				config.MapType.UI(ui.input_radio_buttons,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
+				ui.HTML("<b>Heatmap</b>"),
+				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal"),
+				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
+				config.Opacity.UI(ui.input_slider, height="7vh", id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
 
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
+				ui.HTML("<b>Colors</b>"),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
+				config.Bins.UI(ui.input_slider, height="7vh", id="Bins", label="Number", min=3, max=8, step=1),
 
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
-
-				config.Bins.UI(ui.input_slider,id="Bins", label="Number of Colors", min=3, max=8, step=1),
-
-				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
-				config.ROI_Mode.UI(ui.input_radio_buttons, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
+				ui.HTML("<b>Range of Interest</b>"),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
+				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
 				ui.layout_columns(
-					config.Min.UI(ui.input_numeric,id="Min", label=None, min=0),
-					config.Max.UI(ui.input_numeric, id="Max", label=None, min=0),
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0),
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
+			padding="1rem"
 		),
 
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),

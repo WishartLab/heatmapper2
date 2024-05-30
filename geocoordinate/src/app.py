@@ -161,7 +161,7 @@ def server(input, output, session):
 		"""
 
 		# Ensure we have a valid time column
-		if t_col not in df: return
+		if t_col not in df or v_col not in df: return
 
 		# Sort by time so we can work linearly.
 		df = df.sort_values(by=t_col)
@@ -327,35 +327,39 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'HeatmapTab'",
 
 				Update(),
+			
+				ui.HTML("<b>Columns</b>"),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False),
 
-				config.Features.UI(
-					ui.input_checkbox_group, id="Features", label="Features", 
-					choices=["Scaled", "Smoothing", "KDE"], 
-					inline=True
-				),
-				
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time Column", choices=[], multiple=False),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False),
+				ui.HTML("<b>Heatmap</b>"),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Rendering", choices=["Raster", "Vector"]),
+				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
 
-				config.RenderMode.UI(ui.input_radio_buttons, id="RenderMode", label="Rendering Method", choices=["Raster", "Vector"], inline=True),
-				config.MapType.UI(ui.input_radio_buttons,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, inline=True),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
 
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Size of Points", min=5),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
 				config.Scale.UI(ui.input_slider, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
 
-				config.ROI.UI(ui.input_checkbox, id="ROI", label="ROI (Lower/Upper)"),
-				config.ROI_Mode.UI(ui.input_radio_buttons, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
-					ui.layout_columns(
-						config.Min.UI(ui.input_numeric,id="Min", label=None, min=0),
-						config.Max.UI(ui.input_numeric, id="Max", label=None, min=0),
-					),
+				ui.HTML("<b>Range of Interest</b>"),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
+				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
+				ui.layout_columns(
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0),
+				),
 
+				ui.HTML("<b>Features</b>"),
+				config.Features.UI(
+					ui.input_checkbox_group, id="Features", make_inline=False, label=None, 
+					choices=["Scaled", "Smoothing", "KDE"], 
+				),
 
 				# Add the download buttons.
 				ui.download_button("DownloadHeatmap", "Heatmap")
 			),
+			padding="1rem",
 		),
 
 		MainTab(m_type=ui.output_ui),

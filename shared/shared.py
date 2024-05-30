@@ -30,8 +30,20 @@ Port = 8000
 if "pyodide" in modules:
 	from pyodide.http import pyfetch
 	Pyodide = True
+	async def fetch(url): 
+		response = await pyfetch(url)
+		if response.ok: return (await response.bytes())
+		else:
+			Error("Could not download file")
+			return None
 else:
+	from urllib.request import urlopen
 	Pyodide = False
+	async def fetch(url): 
+		try: return urlopen(url).read()
+		except Exception: 
+			Error("Could not download file!")
+			return None
 
 # Shared Values
 Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "Olive", "Cyan", "White", "Yellow"]
@@ -128,26 +140,23 @@ class Cache:
 	@staticmethod
 	def DefaultHandler(path):
 		"""
-		@brief The default handler. It can handle csv, xlsx, and defaults all other files to read_table
+		@brief The default handler. It can handle CSVs, Excel files, Tables, and all other files will simply
+		be stored as strings of the file content
+
 		@param n: The path to the file
-		@returns: An object, if the provided file is supported, None otherwise.
+		@returns: An object.
 		"""
 
 		suffix = path.suffix
 		if suffix == ".csv": return Cache.HandleDataFrame(path, read_csv)
-		elif suffix == ".xlsx" or suffix == ".xls" or suffix == ".odf": return Cache.HandleDataFrame(path, read_excel)
-		else: return Cache.HandleDataFrame(path, read_table)
-
-
-	async def _remote(self, url):
-			r = await pyfetch(url);
-			if not r.ok: return None
-			return await r.bytes()
+		elif suffix in {".xlsx", ".xls", ".odf"}: return Cache.HandleDataFrame(path, read_excel)
+		elif suffix in {".txt", ".dat", ".tsv", ".tab"}: return Cache.HandleDataFrame(path, read_table)
+		else: return open(path.resolve(), "r").read()
 
 
 	async def _local(self, url):
 		if not exists(url): return None
-		return Path(url)
+		return open(url, "rb").read()
 
 
 	def __init__(self, project, DataHandler = DefaultHandler):
@@ -169,13 +178,32 @@ class Cache:
 
 		# If we're in a Pyodide environment, we fetch resources from the web.
 		if Pyodide:
-			self._download = lambda url: self._remote(url)
+			self._download = fetch
 			self._source = f"{Raw}/{project}/example_input/"
 
 		# Otherwise, we fetch locally.
 		else:
-			self._download = lambda url: self._local(url)
+			self._download = self._local
 			self._source = "../example_input/"
+
+
+	async def Download(self, n):
+		"""
+		@brief Downloads any arbitrary URL and stores it in the cache
+		@param n: The URL name
+		@param p: A ui.Progress() if desired
+		@returns The handled data
+
+		"""
+		if n not in self._primary:
+			raw = await (fetch(n) if n.startswith("https://") else self._download(n))
+			if raw is None: return None
+			temp = NamedTemporaryFile(suffix=Path(n).suffix); 
+			temp.write(raw); 
+			temp.seek(0)
+			self._primary[n] = self._handler(Path(temp.name))
+		try: return deepcopy(self._primary[n])
+		except AttributeError: return self._primary[n]
 
 
 	async def Load(self, 
@@ -255,16 +283,9 @@ class Cache:
 			if n.endswith(wasm_blacklist) and Pyodide: 
 				if p: p.close()
 				return 0
-			raw = await self._download(n)
 
-			if p: p.inc(message=f"Handling {p_name}...")
-			# WASM needs a temporary file, but they are deleted out of their scope.
-			if Pyodide:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix); 
-				temp.write(BytesIO(raw).read()); temp.seek(0)
-				if n not in self._primary: self._primary[n] = self._handler(Path(temp.name))
-
-			elif n not in self._primary: self._primary[n] = self._handler(raw)
+			if p: p.close()
+			return await self.Download(n)
 
 		# If the application has a unique method of input (IE 3D's ID, don't handle it.)
 		else: 
@@ -397,7 +418,7 @@ def TableOptions(config):
 	"""
 	return  ui.panel_conditional(
 		"input.MainTab === 'TableTab'",
-		config.Type.UI(ui.input_radio_buttons, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+		config.Type.UI(ui.input_radio_buttons, make_inline=False, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
 		ui.input_action_button(id="Reset", label="Reset Values"),
 		ui.download_button(id="DownloadTable", label="Download Table"),
 	),
@@ -450,7 +471,7 @@ class Config:
 		self.resolve = input
 
 
-	def UI(self, ui, *args, **kwargs):
+	def UI(self, ui_element, make_inline=True, widths=[4,7], gap="22px", height="4vh", *args, **kwargs):
 		"""
 		@brief Displays the configured UI.
 		@param ui The Shiny interface element to use.
@@ -459,17 +480,30 @@ class Config:
 					arguments passed to this function. Duplicates are allowed.
 		"""
 
-		# Remove duplicates.
-		duplicates = []
+		combined = self.kwargs
+
 		for key in kwargs.keys():
-			if key in self.kwargs: duplicates.append(key)
-		for key in duplicates: del kwargs[key]
+			combined[key] = kwargs[key]
 
-		if "selected" in self.kwargs: self.kwargs["selected"] = self()
-		elif "value" in self.kwargs: self.kwargs["value"] = self()
+		if "selected" in combined: combined["selected"] = self()
+		elif "value" in combined: combined["value"] = self()
 
-		# Return the correct UI.
-		if self.visible: return ui(*args, **kwargs, **self.kwargs)
+		if make_inline and "label" in combined:
+
+			if ui == ui.input_slider: height="6vh"
+
+			label = combined["label"]
+			combined["label"] = None
+
+			# Return the correct UI.
+			if self.visible: return ui.layout_columns(
+				label,
+				ui_element(*args, **combined),
+				col_widths=widths,
+				gap=gap,
+				height=height
+			)
+		elif self.visible: return ui_element(*args, **combined)
 
 
 class ConfigHandler(dict):
@@ -504,6 +538,7 @@ def InitializeConfig(config, input):
 
 
 def Error(message): return ui.notification_show(ui=message, type="error", duration=3)
+
 def Msg(message): return ui.notification_show(ui=message, type="default", duration=3)
 
 

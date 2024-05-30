@@ -37,9 +37,6 @@ config = ConfigHandler({
 
 	# True or False to Use custom color maps or pre-defined ones.
 	"Custom": Config(value=False),
-
-	# A list of colors. See shared.py for Colors
-	"CustomColors": Config(selected=["Blue", "White", "Yellow"]),
 	
 	# See shared.py ColorMap for options. 
 	"ColorMap": Config(selected="Blue White Yellow"),
@@ -48,7 +45,7 @@ config = ConfigHandler({
 	"Bins": Config(value=50),
 
 	# Any value greater than 1.
-	"Size": Config(value=650),
+	"Size": Config(value=600),
 
 	# Any value greater than 1.
 	"DPI": Config(value=100),

@@ -22,9 +22,6 @@ from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, Ta
 if not Pyodide: from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
 from py3Dmol import view
-from Bio.PDB import PDBParser, Structure, PDBIO
-from io import StringIO
-from matplotlib.cm import get_cmap
 
 try:
 	from user import config
@@ -45,9 +42,12 @@ def server(input, output, session):
 			"Description": "A human model with a sample heatmap texture applied. Sourced from https://free3d.com/3d-model/male-base-mesh-6682.html"
 		},
 		"4K8X.pdb": {
+			"Object": None,
 			"Description": "An example protein PDB from dash-bio at https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
+
+	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
 
 
 	def HandleData(path):
@@ -61,7 +61,6 @@ def server(input, output, session):
 		suffix = path.suffix
 		if suffix == ".obj": return VistaRead(path.resolve())
 		if suffix == ".png" or suffix == ".jpg": return read_texture(path.resolve())
-		if suffix == ".pdb": return PDBParser().get_structure("protein", str(path))
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("3d", DataHandler=HandleData)
 
@@ -76,7 +75,8 @@ def server(input, output, session):
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.ID)
 	async def UpdateData(): 
 		if input.SourceFile() == "ID": 
-			Data.set(input.ID())
+			data = await DataCache.Download(f"https://files.rcsb.org/view/{input.ID()}.pdb")
+			Data.set(data)
 		else: 
 			Data.set((await DataCache.Load(input, default=None, p=ui.Progress(), wasm_blacklist=(".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"))))
 		Valid.set(False)
@@ -85,18 +85,15 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.Object, input.Example)
 	async def UpdateObject():
-
-		example = input.Example()
-		if not example.endswith(".pdb"):
-			with ui.Progress() as p:
-				Object.set(await DataCache.Load(input,
-					source_file=input.Object(),
-					example_file=Info[input.Example()]["Object"],
-					default=None,
-					p=p,
-					p_name="object",
-					wasm=False
-				))
+		if type(GetData()) != str:
+			Object.set(await DataCache.Load(input,
+				source_file=input.Object(),
+				example_file=Info[input.Example()]["Object"],
+				default=None,
+				p=ui.Progress(),
+				p_name="object",
+				wasm=False
+			))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -130,86 +127,69 @@ def server(input, output, session):
 			config.ColorScheme(),
 			config.PStyle(),
 			config.PFeatures(),
-			config.PCStyle(),
 			config.Thickness(),
 			config.Width(),
 			config.Opacity(),
 			config.Radius(),
 			config.Scale(),
+			config.SurfaceOpacity(),
+			config.SurfaceType(),
+			config.SurfaceScheme(),
 		]
 
 		if not DataCache.In(global_inputs):
-			# Store computations
-			if input.SourceFile() == "ID":
-				p.inc(message="Fetching PDB...")
-				viewer = view(query=f"pdb:{source}", width=config.Size(), height=config.Size())
-			else:
-				inputs = [input.File() if input.SourceFile() == "Upload" else input.Example()]
-				if not DataCache.In(inputs):
-					p.inc(message="Formatting PDB...")
-					pio = PDBIO()
-					pio.set_structure(source)
 
-					pdb_data = StringIO()
-					pio.save(pdb_data)
-					DataCache.Store(pdb_data.getvalue(), inputs)
-				data = DataCache.Get(inputs)
-				viewer = view(data=data, width=config.Size(), height=config.Size())
+			def GenerateScheme(initial_scheme, function_declared=False):
+				prop = "color"
+				scheme = initial_scheme
 
-			if config.ColorScheme() == "b-factor" or config.ColorScheme() == "b-factor (norm)":
-				darkblue, blue, lightblue, white, orange, red = 5, 10, 15, 20, 40, 50
-				if "norm" in config.ColorScheme():
-					p.inc(message="Normalizing...")
-					if input.SourceFile() == "ID":
-						Error("Normalization cannot be performed on fetched PDB's")
-					else:
+				if scheme == "b-factor" or scheme == "b-factor (norm)":
+					darkblue, blue, lightblue, white, orange, red = 5, 10, 15, 20, 40, 50
+					if "norm" in scheme:
 						entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
 						a = 0.0
 						l = 0
 						if not DataCache.In(entry):
+							p.inc(message="Normalizing...")
 							l = 0
-
-							for model in source:
-								for chain in model:
-									for residue in chain:
-										for atom in residue:
-											b_factor = atom.bfactor
-											a += atom.bfactor
-											l += 1
+							for atom in [atom for atom in source.split("\n") if atom.startswith("ATOM")]:
+								entries = list(filter(None, atom.split(" ")))
+								if not entries[10].isalpha():
+									a += float(entries[10])
+									l += 1
 							a /= l
+							Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
 
 							# White is the average
 							DataCache.Store((a * 0.25, a * 0.50, a * 0.75, a, a * 1.25, a * 1.5), entry)
 						darkblue, blue, lightblue, white, orange, red = DataCache.Get(entry)
+						scheme = "NormalizedScheme"
+					else: scheme = "Scheme"
 
-						# So we only display once
-						if l != 0: Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
+					if not function_declared:
+						viewer.startjs += f"""\n
+							let {scheme} = function(atom) {{
+								if (atom.b < {darkblue}) return "darkblue"
+								if (atom.b < {blue}) return "blue"
+								else if (atom.b < {lightblue}) return "lightblue"
+								else if (atom.b < {white}) return "white"
+								else if (atom.b < {orange}) return "orange"
+								else if (atom.b < {red}) return "red"
+								else return "darkred"
+							}}\n"""
+					prop = "colorfunc"
+				elif scheme != "spectrum": prop = "colorscheme"
+				return prop, scheme
 
-				viewer.startjs += f"""\n
-					let customColorize = function(atom) {{
-						if (atom.b < {darkblue}) return "darkblue"
-						if (atom.b < {blue}) return "blue"
-						else if (atom.b < {lightblue}) return "lightblue"
-						else if (atom.b < {white}) return "white"
-						else if (atom.b < {orange}) return "orange"
-						else if (atom.b < {red}) return "red"
-						else return "darkred"
-					}}\n"""
-				color_property = "colorfunc"
-				color_name = "customColorize"
+			viewer = view(data=source, width=f"{input.Size()}vw", height=f"{input.Size()}vh")
 
-			elif config.ColorScheme() == "spectrum":
-				color_property = "color"
-				color_name = config.ColorScheme()
-			else: 
-				color_property = "colorscheme"
-				color_name = config.ColorScheme()
+			heatmap_property, heatname_name = GenerateScheme(config.ColorScheme())
 
 			p.inc(message="Styling...")
 			viewer.setStyle({config.PStyle().lower(): {
-				color_property: color_name,
+				heatmap_property: heatname_name,
 				"arrows": "Arrows" in config.PFeatures(), 
-				"style": config.PCStyle().lower(),
+				"style": "trace" if "Trace" in config.PFeatures() else "rectangle",
 				"thickness": config.Thickness(),
 				"tubes": "Tubes" in config.PFeatures(),
 				"width": config.Width(),
@@ -221,8 +201,12 @@ def server(input, output, session):
 				"scale": config.Scale(),
 			}})
 
-			if color_property == "colorfunc": 
-				viewer.startjs = viewer.startjs.replace(f'"{color_name}"', f'{color_name}')
+			surface_property, surface_name = GenerateScheme(config.SurfaceScheme(), function_declared=config.SurfaceScheme() == config.ColorScheme())
+			viewer.addSurface(config.SurfaceType(), {"opacity": config.SurfaceOpacity(), surface_property: surface_name})
+
+			if heatmap_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{heatname_name}"', f'{heatname_name}')
+			if surface_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{surface_name}"', f'{surface_name}')
+
 
 			p.inc(message="Exporting...")
 			DataCache.Store(viewer.write_html(), global_inputs)
@@ -305,7 +289,7 @@ def server(input, output, session):
 			source = GetData()
 			if source is None: return
 
-			if type(source) == Structure.Structure or input.SourceFile() == "ID":
+			if type(source) == str:
 				return ui.HTML(PDBViewer(source, p))
 			return ui.HTML(ModelViewer(source, p))
 
@@ -335,29 +319,39 @@ def server(input, output, session):
 		data = GetData()
 
 		if data is None: return
-		elements.append(config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1))
 
-		if type(data) == Structure.Structure or input.SourceFile() == "ID":
+		if type(data) == str or input.SourceFile() == "ID":
 			elements += [
-				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=["spectrum", "b-factor", "b-factor (norm)", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]),
-				config.PCStyle.UI(ui.input_select, id="PCStyle", label="Cartoon Style", choices=["Trace", "Oval", "Rectangle", "Parabola", "Edged"]),
-				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Strand Thickness", min=0, max=10, step=0.1),
-				config.Width.UI(ui.input_numeric, id="Width", label="Strand Width", min=0, max=10, step=1),
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05),
-				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1),
-				config.Size.UI(ui.input_numeric, id="Size", label="Viewer Size", min=1, step=1),
-				config.PFeatures.UI(ui.input_checkbox_group, id="PFeatures", label="PDB Features", choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes"]),
+				ui.HTML("<b>Heatmap</b>"),
+				config.ColorScheme.UI(ui.input_select, height="2vh", id="ColorScheme", label="Scheme", choices=Schemes),
+				config.Opacity.UI(ui.input_slider, height="2vh", id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				ui.HTML("<b>Surface</b>"),
+				config.SurfaceScheme.UI(ui.input_select, height="2vh", id="SurfaceScheme", label="Scheme", choices=Schemes),
+				config.SurfaceOpacity.UI(ui.input_slider, height="2vh", id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				ui.HTML("<b>Customization</b>"),
+				config.PStyle.UI(ui.input_select, height="2vh", id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
+				config.SurfaceType.UI(ui.input_select, height="2vh", id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"]),
+				config.Thickness.UI(ui.input_numeric, height="2vh", id="Thickness", label="Thickness", min=0, max=10, step=0.1),
+				config.Width.UI(ui.input_numeric, height="2vh", id="Width", label="Width", min=0, max=10, step=1),
+				config.Radius.UI(ui.input_numeric, height="2vh", id="Radius", label="Radius", min=0, max=5, step=0.05),
+				config.Scale.UI(ui.input_numeric, height="2vh", id="Scale", label="Scale", min=0, max=10, step=1),
+				config.Size.UI(ui.input_slider, height="2vh", id="Size", label="Size", min=1, max=100, step=1),
+				ui.HTML("<b>Features</b>"),
+				config.PFeatures.UI(ui.input_checkbox_group, height="2vh",make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"]),
 			]	
 
 		else:
 			elements.append(ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Object", "Choose an Object File", accept=[".obj"], multiple=False)))
 			if type(data) == DataFrame:
 				elements += [
-					config.Colors.UI(ui.input_slider, id="Colors", label="Number of Colors", value=256, min=1, max=256, step=1),
-					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
-					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
-					config.Features.UI(ui.input_checkbox_group, id="Features", label="Heatmap Features", choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),
+					ui.HTML("<b>Heatmap</b>"),
+					config.Opacity.UI(ui.input_slider, height="2vh", id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+					config.Style.UI(ui.input_select, height="2vh", id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
+					ui.HTML("<b>Colors</b>"),
+					config.Colors.UI(ui.input_slider, height="2vh", id="Colors", label="Number", value=256, min=1, max=256, step=1),
+					config.ColorMap.UI(ui.input_select, height="2vh", id="ColorMap", label="Map", choices=ColorMaps),
+					ui.HTML("<b>Features</b>"),
+					config.Features.UI(ui.input_checkbox_group, make_inline=False, height="2vh", id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),
 			]
 
 		return elements
@@ -378,7 +372,7 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.SourceFile === 'ID'",
-				ui.input_text(id="ID", label="PDB ID", value="1upp"),
+				ui.input_text(id="ID", value="1upp", label="PDB ID"),
 			),
 
 			TableOptions(config),
@@ -387,7 +381,8 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'HeatmapTab'",
 
 				ui.output_ui(id="ConditionalElements")
-			)
+			),
+			padding="1rem",
 		),
 
 		# Add the main interface tabs.

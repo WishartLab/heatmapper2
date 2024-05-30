@@ -9,7 +9,7 @@ from shared import Config, ConfigHandler
 
 config = ConfigHandler({
 
-	# "Distance", "Correlation"
+	# Any value from 0.0-1.0
 	"Opacity": Config(value=1.0),
 
 	# Any numerical value between 1 and 256.
@@ -32,12 +32,10 @@ config = ConfigHandler({
 
 	# See 3D's ConditionalElements function for details
 	"ColorScheme": Config(selected="spectrum"),
+	"SurfaceScheme": Config(selected="spectrum"),
 
 	# Can vary depending on PStyle. See ConditionalElements for details.
 	"PFeatures": Config(selected=[]),
-
-	# "Trace", "Oval", "Rectangle", "Parabola", "Edged"
-	"PCStyle": Config(selected="Rectangle"),
 
 	# Any value from 0-10
 	"Thickness": Config(value=0.4),
@@ -52,5 +50,11 @@ config = ConfigHandler({
 	"Scale": Config(value=1),
 
 	# Any numerical value
-	"Size": Config(value=600),
+	"Size": Config(value=75),
+
+	# Any value from 0.0-1.0
+	"SurfaceOpacity": Config(value=0.0),
+
+	# VDW, MS, SAS, or SES
+	"SurfaceType": Config(selected="VDS")
 })
