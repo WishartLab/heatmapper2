@@ -178,7 +178,7 @@ def server(input, output, session):
 					if "norm" in scheme:
 
 						# For caching.
-						entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
+						entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example()]
 						a = 0.0
 						l = 0
 						if not DataCache.In(entry):
