@@ -1,8 +1,8 @@
 #
-# Heatmapper 
+# Heatmapper
 # Spatial Configuration
 #
-# This file contains configuration for Spatial. 
+# This file contains configuration for Spatial.
 
 
 from shared import Config, ConfigHandler
@@ -35,10 +35,13 @@ config = ConfigHandler({
 	"Columns": Config(value=2),
 
 	# Any value from 0.0-1.0
-	"Spacing": Config(value=0.0),
+	"Spacing": Config(value=0.1),
 
-	# Any value from 1-100
-	"Size": Config(value=10.0),
+	# Any value greater than 1.
+	"Size": Config(value=600),
+
+	# Any value greater than 1.
+	"DPI": Config(value=200),
 
 	# Any of "Image", "Legend", "Frame"
 	"Features": Config(selected=["Image", "Legend"]),

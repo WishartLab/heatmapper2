@@ -73,11 +73,16 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.ID)
-	async def UpdateData(): 
-		if input.SourceFile() == "ID": 
+	async def UpdateData():
+		"""
+		@brief Updates the Data variables when input changes.
+		@info When any relevant reactive input changes, this function requests data from the Cache,
+		and then invalidates the current data in the table.
+		"""
+		if input.SourceFile() == "ID":
 			data = await DataCache.Download(f"https://files.rcsb.org/view/{input.ID()}.pdb")
 			Data.set(data)
-		else: 
+		else:
 			Data.set((await DataCache.Load(input, default=None, p=ui.Progress(), wasm_blacklist=(".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"))))
 		Valid.set(False)
 
@@ -85,6 +90,11 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.Object, input.Example)
 	async def UpdateObject():
+		"""
+		@brief Updates the Object variable when input changes.
+		@info When the Object's source changes, this function fetches the most up to date information from the Cache.
+		@info This function will not do anything in WebAssembly.
+		"""
 		if type(GetData()) != str:
 			Object.set(await DataCache.Load(input,
 				source_file=input.Object(),
@@ -120,7 +130,14 @@ def server(input, output, session):
 
 
 	def PDBViewer(source, p):
+		"""
+		@brief Returns an HTML string containing the Py3DMol.js viewer of the source.
+		@param source: The source containing PDB data as a string.
+		@param p: The progress bar.
+		@returns An HTML string that should be wrapped with ui.HTML
+		"""
 
+		# Used for caching.
 		global_inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(),
 			config.Size(),
@@ -140,20 +157,38 @@ def server(input, output, session):
 		if not DataCache.In(global_inputs):
 
 			def GenerateScheme(initial_scheme, function_declared=False):
+				"""
+				@brief Py3DMol has a color, colorscheme, and colorfunc attribute. This function puts the right one in
+				without cluttering the interface with three different options.
+				@param initial_scheme: The value of the scheme. Spectrum is a color, B-Color requires a function, all others
+				use a colorscheme
+				@param function_declared: Since there is a colorscheme for both the heatmap and the structure, we can accidentally
+				redefine the same JavaScript function twice if they both use the same B-Color scheme. This avoids that.
+				"""
 				prop = "color"
 				scheme = initial_scheme
 
+				# B Color requires a custom function.
 				if scheme == "b-factor" or scheme == "b-factor (norm)":
+
+					# Initial weights
 					darkblue, blue, lightblue, white, orange, red = 5, 10, 15, 20, 40, 50
+
+					# If we're normalizing, get the average B-Factor, then assign that as white.
 					if "norm" in scheme:
+
+						# For caching.
 						entry = [input.File() if input.SourceFile() == "Upload" else input.Example(), "values"]
 						a = 0.0
 						l = 0
 						if not DataCache.In(entry):
 							p.inc(message="Normalizing...")
 							l = 0
+							# Get all the Atoms from the string, split by spaces, and remove empty entries.
 							for atom in [atom for atom in source.split("\n") if atom.startswith("ATOM")]:
 								entries = list(filter(None, atom.split(" ")))
+
+								# This should be B-Factor, but sometimes the B-Factor is absent, in which case its an element.
 								if not entries[10].isalpha():
 									a += float(entries[10])
 									l += 1
@@ -166,6 +201,7 @@ def server(input, output, session):
 						scheme = "NormalizedScheme"
 					else: scheme = "Scheme"
 
+					# Declare the function.
 					if not function_declared:
 						viewer.startjs += f"""\n
 							let {scheme} = function(atom) {{
@@ -188,7 +224,7 @@ def server(input, output, session):
 			p.inc(message="Styling...")
 			viewer.setStyle({config.PStyle().lower(): {
 				heatmap_property: heatname_name,
-				"arrows": "Arrows" in config.PFeatures(), 
+				"arrows": "Arrows" in config.PFeatures(),
 				"style": "trace" if "Trace" in config.PFeatures() else "rectangle",
 				"thickness": config.Thickness(),
 				"tubes": "Tubes" in config.PFeatures(),
@@ -215,10 +251,18 @@ def server(input, output, session):
 
 
 	def ModelViewer(source, p):
+		"""
+		@brief Generates an HTML string of the PyVista Model viewer.
+		@param source: The data to be applied to the object.
+		@param p: The progress bar.
+		@returns An HTML string that should be wrapped with ui.HTML
+		@info Object will also need to be defined.
+		"""
 		if Pyodide:
 			Error(f"Cannot render objects in WebAssembly! Please use the Server version for this functionality.")
 			return
 
+		# For Caching.
 		inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			config.Style(),
@@ -281,22 +325,26 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
+		"""
+		@brief Generates the Heatmap based on input, returns HTML
+		@returns HTML of the heatmap.
+		"""
 		with ui.Progress() as p:
 
-			# Get the model and data. 
+			# Get the model and data.
 			p.inc(message="Loading input...")
 
 			source = GetData()
 			if source is None: return
 
 			if type(source) == str:
-				return ui.HTML(PDBViewer(source, p))
-			return ui.HTML(ModelViewer(source, p))
+				return PDBViewer(source, p)
+			return ModelViewer(source, p)
 
 
 	@output
 	@render.ui
-	def HeatmapReactive(): return GenerateHeatmap()
+	def HeatmapReactive(): return ui.HTML(GenerateHeatmap())
 
 
 	@output
@@ -310,6 +358,13 @@ def server(input, output, session):
 		df = GetData()
 		if df is not None:
 			yield df.to_string()
+
+
+	@render.download(filename="heatmap.html")
+	def DownloadHeatmap():
+		html = GenerateHeatmap()
+		if html is not None:
+			yield html
 
 
 	@output
@@ -338,7 +393,7 @@ def server(input, output, session):
 				config.Size.UI(ui.input_slider, height="2vh", id="Size", label="Size", min=1, max=100, step=1),
 				ui.HTML("<b>Features</b>"),
 				config.PFeatures.UI(ui.input_checkbox_group, height="2vh",make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"]),
-			]	
+			]
 
 		else:
 			elements.append(ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Object", "Choose an Object File", accept=[".obj"], multiple=False)))
@@ -365,8 +420,8 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 			FileSelection(
-				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"}, 
-				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"], 
+				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"},
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"],
 				project="3D",
 				extras=["ID"]),
 
@@ -380,7 +435,9 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 
-				ui.output_ui(id="ConditionalElements")
+				ui.output_ui(id="ConditionalElements"),
+
+				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 			padding="1rem",
 		),

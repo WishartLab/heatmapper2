@@ -78,9 +78,9 @@ def server(input, output, session):
 			key = Filter(adata.obs.columns, ColumnType.Cluster)
 			if key is not None:
 				Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, id="Cluster")
-				
+
 			choices = adata.var.gene_ids.index.drop_duplicates().to_list()
-			ui.update_select(id="Keys", label="Annotation Keys", choices=choices, selected=choices[0])
+			ui.update_select(id="Keys", choices=choices, selected=choices[0])
 
 
 		with ui.Progress() as p:
@@ -90,8 +90,8 @@ def server(input, output, session):
 				# Get all the files, to generate a name.
 				if input.File() is None: return
 				name = [f["datapath"] for f in input.File()]
-				
-		
+
+
 				# If the name hasn't been cached, we need to construct the object.
 				if not DataCache.In(name):
 
@@ -112,7 +112,7 @@ def server(input, output, session):
 						elif suffix == ".h5": counts = base
 
 						# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
-						elif suffix == ".h5ad": 
+						elif suffix == ".h5ad":
 							adata = await DataCache.Load(input, default=None, p=p)
 							ColumnNames(adata)
 							p.close()
@@ -144,14 +144,14 @@ def server(input, output, session):
 				Data.set(DataCache.Get(name))
 
 			# With an example, just return it.
-			else: 
+			else:
 				Data.set(await DataCache.Load(input, default=None))
 				ColumnNames(Data())
 
 
 	@output
 	@render.data_frame
-	def Table(): 
+	def Table():
 		state = config.TableType()
 		df = Data()
 		if df is None: return
@@ -196,7 +196,7 @@ def server(input, output, session):
 
 			# Shiny does not seem to properly setup dependencies to reactive values if
 			# They are used directly in function invocations. Therefore, we need
-			# To create variables using these reactives, that way changes properly 
+			# To create variables using these reactives, that way changes properly
 			# Recall this function.
 			shape = config.Shape().lower()
 			features = config.Features()
@@ -205,31 +205,36 @@ def server(input, output, session):
 			alpha = config.Opacity()
 			columns = config.Columns()
 			spacing = config.Spacing()
+			dpi = config.DPI()
 
-			pl.spatial_scatter(
-				adata,
-				color=colors,
-				shape=shape,
-				img="Image" in features,
-				img_alpha=img_alpha,
-				cmap=get_cmap(cmap),
-				alpha=alpha,
-				colorbar=len(colors) > 1 and "Legend" in features,
-				frameon="Frame" in features,
-				ncols=columns,
-				wspace=spacing,
-				hspace=spacing
-			)
+			with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+				pl.spatial_scatter(
+					adata,
+					color=colors,
+					shape=shape,
+					img="Image" in features,
+					img_alpha=img_alpha,
+					cmap=get_cmap(cmap),
+					alpha=alpha,
+					colorbar=len(colors) > 1 and "Legend" in features,
+					frameon="Frame" in features,
+					ncols=columns,
+					wspace=spacing,
+					hspace=spacing,
+					save=temp.name,
+					dpi=dpi
+				)
+			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			return img
 
 
 	@output
-	@render.plot
+	@render.image(delete_file=True)
 	def Heatmap(): return GenerateHeatmap()
 
 
 	@output
-	@render.plot
-	@reactive.event(input.Update)
+	@render.image(delete_file=True)
 	def HeatmapReactive(): return GenerateHeatmap()
 
 
@@ -338,9 +343,17 @@ def server(input, output, session):
 	@render.download(filename="adata.h5ad")
 	def DownloadTable():
 		adata = Data()
-		temp = NamedTemporaryFile(); 
+		if adata is None: return
+		temp = NamedTemporaryFile();
 		adata.write(temp.name)
 		yield open(temp.name, "rb").read()
+
+
+	@render.download(filename="heatmap.png")
+	def DownloadHeatmap():
+		data = GenerateHeatmap()
+		if data is None: return
+		with open(data["src"], "rb") as file: yield file.read()
 
 
 app_ui = ui.page_fluid(
@@ -380,14 +393,19 @@ app_ui = ui.page_fluid(
 				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"]),
 				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1),
 				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1),
-				config.Size.UI(ui.input_slider, id="Size", label="Spacing", min=1.0, max=1000.0, step=0.1),
 
 				ui.HTML("<b>Opacity</b>"),
 				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1),
 				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1),
 
+				ui.HTML("<b>Image Settings</b>"),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
+
 				ui.HTML("<b>Features</b>"),
-				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Image", "Legend", "Frame"]),
+				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, 	choices=["Image", "Legend", "Frame"]),
+
+				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 
 			ui.panel_conditional(
@@ -396,7 +414,7 @@ app_ui = ui.page_fluid(
 					id="Score",
 					label="Score",
 					choices={
-						"closeness_centrality": "Closeness Centrality", 
+						"closeness_centrality": "Closeness Centrality",
 						"average_clustering": "Average Clustering",
 						"degree_centrality": "Degree Centrality"
 					},
@@ -405,20 +423,20 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'Ripley'",
-				config.Function.UI(ui.input_radio_buttons, id="Function", label="Function", choices=["L", "F", "G"], inline=True),
-				config.Distance.UI(ui.input_select, id="Distance", label="Distance Method", choices=DistanceMethods),
+				config.Function.UI(ui.input_select, id="Function", label="Function", choices=["L", "F", "G"]),
+				config.Distance.UI(ui.input_select, id="Distance", label="Distance", choices=DistanceMethods),
 			),
 
 
 			ui.panel_conditional(
 				"input.MainTab === 'Occurrence'",
 
-				config.OccurrenceGraph.UI(ui.input_radio_buttons, id="OccurrenceGraph", label="Graph Type", choices=["Scatter", "Line"], inline=True),
+				config.OccurrenceGraph.UI(ui.input_select, id="OccurrenceGraph", label="Graph", choices=["Scatter", "Line"]),
 
 				config.Cluster.UI(ui.input_select, id="Cluster", label="Cluster", choices=[], selected=None),
 
-				config.Interval.UI(ui.input_slider, id="Interval", label="Distance Interval", min=1, max=100, step=1),
-				config.Splits.UI(ui.input_slider, id="Splits", label="Splits (0 = auto)", min=0, max=10, step=0),
+				config.Interval.UI(ui.input_slider, id="Interval", label="Interval", min=1, max=100, step=1),
+				config.Splits.UI(ui.input_slider, id="Splits", label="Splits", min=0, max=10, step=0),
 			),
 
 

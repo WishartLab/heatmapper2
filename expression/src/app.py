@@ -44,11 +44,11 @@ def server(input, output, session):
 	Valid = reactive.value(False)
 
 	InitializeConfig(config, input)
-	
+
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): 
-		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+	async def UpdateData():
+		Data.set((await DataCache.Load(input, p=ui.Progress())));
 		Valid.set(False)
 		Filter(Data().columns, ColumnType.Name, id="NameColumn")
 
@@ -143,7 +143,7 @@ def server(input, output, session):
 		return value
 
 
-	def GenerateHeatmap(): 
+	def GenerateHeatmap():
 		"""
 		@brief Generates the Heatmap
 		@returns The heatmap
@@ -165,7 +165,7 @@ def server(input, output, session):
 		]
 
 		# If we're rendering as images, fetch from the cache if we can
-		if not DataCache.In(inputs): 
+		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				index_labels, x_labels, data = ProcessData(GetData())
@@ -200,7 +200,7 @@ def server(input, output, session):
 
 				# Handle scaling
 				if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
-			
+
 				# Render the heatmap.
 				ax_heatmap = fig.add_subplot(gs[1, 1])
 
@@ -264,8 +264,8 @@ def server(input, output, session):
 
 	@output
 	@render.plot
-	def RowDendrogram(): 
-		index_labels, _, data = ProcessData(GetData()); 
+	def RowDendrogram():
+		index_labels, _, data = ProcessData(GetData());
 		with ui.Progress() as p:
 			return RenderDendrogram(data=data, labels=index_labels, invert=False, progress=p)
 
@@ -273,7 +273,7 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def ColumnDendrogram():
-	 _, x_labels, data = ProcessData(GetData()); 
+	 _, x_labels, data = ProcessData(GetData());
 	 with ui.Progress() as p:
 	 	return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 
@@ -307,8 +307,8 @@ def server(input, output, session):
 		if config.Custom():
 			return ui.input_select(id="CustomColors", label=None, choices=Colors, multiple=True, selectize=True, selected=["Blue", "White", "Yellow"])
 		else:
-			return config.ColorMap.UI(ui.input_select, 
-				make_inline=False, id="ColorMap", label=None, 
+			return config.ColorMap.UI(ui.input_select,
+				make_inline=False, id="ColorMap", label=None,
 				choices={
 					"Blue White Yellow": "Blue/Yellow",
 					"Red Black Green": "Red/Green",
@@ -387,7 +387,7 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional(
 				"input.MainTab === 'RowTab' || input.MainTab === 'ColumnTab'",
 				# Define the Orientation of the dendrogram in the Tab
-				config.Orientation.UI(ui.input_select,id="Orientation", label="Dendrogram Orientation", choices=["Top", "Bottom", "Left", "Right"]),
+				config.Orientation.UI(ui.input_select,id="Orientation", label="Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
 			padding="1rem",
 		),
