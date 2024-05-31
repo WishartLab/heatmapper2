@@ -64,7 +64,7 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.Example, input.Image)
 	async def UpdateIMG(): IMG.set(await DataCache.Load(input,
-			source_file=input.Image(), 
+			source_file=input.Image(),
 			example_file=Info[input.Example()]["Image"]
 		))
 
@@ -147,7 +147,7 @@ def server(input, output, session):
 				)
 
 				# Visibility of features
-				if "legend" in config.Features(): 
+				if "legend" in config.Features():
 					cbar = colorbar(im, ax=ax, label="Value")
 					cbar.ax.tick_params(labelsize=config.TextSize())
 
@@ -214,8 +214,8 @@ app_ui = ui.page_fluid(
 
 			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], project="Image"),
 
-			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File", 
-				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"], 
+			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File",
+				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"],
 				multiple=False)),
 
 			TableOptions(config),
@@ -244,7 +244,8 @@ app_ui = ui.page_fluid(
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
-			padding="1rem"
+			padding="1rem",
+			width="255px",
 		),
 
 		# Add the main interface tabs.

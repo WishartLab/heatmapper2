@@ -55,8 +55,8 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, ignore_init=True)
-	async def UpdateData(): 
-		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+	async def UpdateData():
+		Data.set((await DataCache.Load(input, p=ui.Progress())));
 		Valid.set(False)
 		columns = Data().columns
 		time = Filter(columns, ColumnType.Time, good=["None"], id="TimeColumn")
@@ -111,9 +111,9 @@ def server(input, output, session):
 					value = row[v_col]
 					color = colormap(value)
 					Circle(
-						location=[row[lat_col], row[lon_col]], 
-						radius=radius * 100, 
-						color=color, 
+						location=[row[lat_col], row[lon_col]],
+						radius=radius * 100,
+						color=color,
 						fill=True,
 						opacity=opacity,
 						fill_opacity=opacity,
@@ -125,12 +125,12 @@ def server(input, output, session):
 				# Generate the contour
 				fig, ax = subplots()
 				contour = ax.scatter(
-					longitude, 
-					latitude, 
-					c=df[v_col] * 100, 
-					s=[radius] * len(values), 
-					cmap="jet", 
-					alpha=opacity, 
+					longitude,
+					latitude,
+					c=df[v_col] * 100,
+					s=[radius] * len(values),
+					cmap="jet",
+					alpha=opacity,
 					linewidths=0,
 				)
 
@@ -209,7 +209,7 @@ def server(input, output, session):
 		return value
 
 
-	def GenerateHeatmap(): 
+	def GenerateHeatmap():
 		with ui.Progress() as p:
 			p.inc(message="Loading input...")
 			df = GetData()
@@ -268,7 +268,7 @@ def server(input, output, session):
 				smoothed_df = smoothed_df.sort_values(by=[lon_col, lat_col])
 				df = smoothed_df.reset_index(drop=True)
 				"""
-						
+
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
 			if t_col != "None": GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
@@ -327,7 +327,7 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'HeatmapTab'",
 
 				Update(),
-			
+
 				ui.HTML("<b>Columns</b>"),
 				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False),
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False),
@@ -352,14 +352,15 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
-					ui.input_checkbox_group, id="Features", make_inline=False, label=None, 
-					choices=["Scaled", "Smoothing", "KDE"], 
+					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
+					choices=["Scaled", "Smoothing", "KDE"],
 				),
 
 				# Add the download buttons.
 				ui.download_button("DownloadHeatmap", "Heatmap")
 			),
 			padding="1rem",
+			width="255px",
 		),
 
 		MainTab(m_type=ui.output_ui),

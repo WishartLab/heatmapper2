@@ -65,8 +65,8 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): 
-		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+	async def UpdateData():
+		Data.set((await DataCache.Load(input, p=ui.Progress())));
 		Valid.set(False)
 
 		columns = Data().columns
@@ -82,7 +82,7 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.JSONUpload, input.JSONSelection, input.JSONFile)
-	async def UpdateGeoJSON(): 
+	async def UpdateGeoJSON():
 		JSON.set(await DataCache.Load(
 			input,
 			source_file=input.JSONUpload(),
@@ -163,7 +163,7 @@ def server(input, output, session):
 		elif color == "Cividis": cmap = linear.cividis.scale
 
 		m, M = df[v_col].min(), df[v_col].max()
-	
+
 		colormap = cmap(m, M)
 		style = {}
 
@@ -316,10 +316,10 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={
-				"example1.txt": "Example 1", 
-				"example2.txt": "Example 2", 
-				"example3.txt": "Example 3", 
-				"example6.csv": "Example 4", 
+				"example1.txt": "Example 1",
+				"example2.txt": "Example 2",
+				"example3.txt": "Example 3",
+				"example6.csv": "Example 4",
 				"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "Example 5"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Geomap"
@@ -367,7 +367,8 @@ app_ui = ui.page_fluid(
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
-			padding="1rem"
+			padding="1rem",
+			width="255px",
 		),
 
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),

@@ -164,7 +164,7 @@ def server(input, output, session):
 		if df.columns[0] == 0:
 			ui.modal_show(ui.modal("The provided input format cannot be rendered",
 			title="Table cannot be rendered", easy_close=True, footer=None))
-		else: 
+		else:
 			Valid.set(True)
 			return render.DataGrid(Data(), editable=True)
 
@@ -195,7 +195,7 @@ def server(input, output, session):
 				p.inc(message="Reading input...")
 				data = GetData()
 				if data is None or len(data.index) == 0: return
-				
+
 				p.inc(message="Calculating...")
 				try:
 					# Calculate matrix
@@ -216,8 +216,8 @@ def server(input, output, session):
 				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 				interpolation = config.Interpolation().lower()
 				im = ax.imshow(
-					df, 
-					cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()), 
+					df,
+					cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()),
 					interpolation=interpolation,
 					aspect="equal",
 				)
@@ -225,7 +225,7 @@ def server(input, output, session):
 				text_size = config.TextSize()
 
 				# Visibility of features
-				if "legend" in config.Features(): 
+				if "legend" in config.Features():
 					cbar = colorbar(im, ax=ax, label="Distance")
 					cbar.ax.tick_params(labelsize=text_size)
 
@@ -310,8 +310,8 @@ def server(input, output, session):
 		if config.Custom():
 			return ui.input_select(id="CustomColors", label=None, choices=Colors, multiple=True, selectize=True, selected=["Blue", "White", "Yellow"])
 		else:
-			return config.ColorMap.UI(ui.input_select, 
-				make_inline=False, id="ColorMap", label=None, 
+			return config.ColorMap.UI(ui.input_select,
+				make_inline=False, id="ColorMap", label=None,
 				choices={
 					"Blue White Yellow": "Blue/Yellow",
 					"Red Black Green": "Red/Green",
@@ -332,8 +332,8 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={
-				"example1.txt": "Example 1", 
-				"example2.txt": "Example 2", 
+				"example1.txt": "Example 1",
+				"example2.txt": "Example 2",
 				"example3.txt": "Example 3",
 				"example4.fasta": "Example 4",
 				"ala_phe_ala.pdb": "Example 5",
@@ -361,7 +361,7 @@ app_ui = ui.page_fluid(
 				ui.output_ui("Color"),
 				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom"),
 				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=100, step=1),
-				
+
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
 				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
@@ -375,6 +375,7 @@ app_ui = ui.page_fluid(
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
 			padding="1rem",
+			width="255px",
 		),
 
 		# Add the main interface tabs.

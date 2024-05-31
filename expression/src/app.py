@@ -390,6 +390,7 @@ app_ui = ui.page_fluid(
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
 			padding="1rem",
+			width="255px",
 		),
 
 		# Add the main interface tabs.

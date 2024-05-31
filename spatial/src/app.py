@@ -459,6 +459,7 @@ app_ui = ui.page_fluid(
 				ui.download_button("DownloadTable", "Download Table"),
 			),
 			padding="1rem",
+			width="255px",
 		),
 
 		# Add the main interface tabs.
