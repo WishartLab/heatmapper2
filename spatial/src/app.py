@@ -159,7 +159,17 @@ def server(input, output, session):
 		elif state == "var": return render.DataGrid(df.var)
 
 
-	def GenerateHeatmap():
+	def GenerateHeatmap(file=None):
+		"""
+		@brief Generates the Annotation Key Spatial Scatter Heatmap, returning an ImgData dictionary
+		@param file: An optional file to use.
+		@returns: An ImgData dictionary
+
+		@info By default, this function will generate a non-deleting TemporaryFile, which means the calling function has the
+		responsibility of deleting it (Which Shiny handles via render.image). However, for applications like DownloadHeatmap,
+		it has no way to tell Shiny to delete the file, so rather than manually dealing with cleanup, we can just pass it a
+		NamedTemporaryFile within the scope if it's function, and let the Operating System delete it after the call.
+		"""
 		with ui.Progress() as p:
 
 			p.inc(message="Loading input...")
@@ -207,24 +217,24 @@ def server(input, output, session):
 			spacing = config.Spacing()
 			dpi = config.DPI()
 
-			with NamedTemporaryFile(delete=False, suffix=".png") as temp:
-				pl.spatial_scatter(
-					adata,
-					color=colors,
-					shape=shape,
-					img="Image" in features,
-					img_alpha=img_alpha,
-					cmap=get_cmap(cmap),
-					alpha=alpha,
-					colorbar=len(colors) > 1 and "Legend" in features,
-					frameon="Frame" in features,
-					ncols=columns,
-					wspace=spacing,
-					hspace=spacing,
-					save=temp.name,
-					dpi=dpi
-				)
-			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			if file is None: file = NamedTemporaryFile(delete=False, suffix=".png")
+			pl.spatial_scatter(
+				adata,
+				color=colors,
+				shape=shape,
+				img="Image" in features,
+				img_alpha=img_alpha,
+				cmap=get_cmap(cmap),
+				alpha=alpha,
+				colorbar=len(colors) > 1 and "Legend" in features,
+				frameon="Frame" in features,
+				ncols=columns,
+				wspace=spacing,
+				hspace=spacing,
+				save=file.name,
+				dpi=dpi
+			)
+			img: types.ImgData = {"src": file.name, "height": f"{config.Size()}vh"}
 			return img
 
 
@@ -351,9 +361,11 @@ def server(input, output, session):
 
 	@render.download(filename="heatmap.png")
 	def DownloadHeatmap():
-		data = GenerateHeatmap()
-		if data is None: return
-		with open(data["src"], "rb") as file: yield file.read()
+		# Generate a TemporaryFile that deletes itself after scope.
+		with NamedTemporaryFile(suffix=".png") as file:
+			data = GenerateHeatmap(file)
+			if data is None: return
+			yield file.read()
 
 
 app_ui = ui.page_fluid(
