@@ -193,11 +193,11 @@ def server(input, output, session):
 									a += float(entries[10])
 									l += 1
 							a /= l
-							Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
 
 							# White is the average
 							DataCache.Store((a * 0.25, a * 0.50, a * 0.75, a, a * 1.25, a * 1.5), entry)
 						darkblue, blue, lightblue, white, orange, red = DataCache.Get(entry)
+						Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
 						scheme = "NormalizedScheme"
 					else: scheme = "Scheme"
 
