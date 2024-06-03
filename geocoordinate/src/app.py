@@ -338,9 +338,9 @@ app_ui = ui.page_fluid(
 
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
 
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01),
-				config.Blur.UI(ui.input_slider, id="Blur", label="Blurring", min=1, max=30, step=1),
-				config.Scale.UI(ui.input_slider, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01),
+				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1),
+				config.Scale.UI(ui.input_numeric, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
 
 				ui.HTML("<b>Range of Interest</b>"),
 				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),

@@ -379,10 +379,10 @@ def server(input, output, session):
 			elements += [
 				ui.HTML("<b>Heatmap</b>"),
 				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 				ui.HTML("<b>Surface</b>"),
 				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes),
-				config.SurfaceOpacity.UI(ui.input_slider, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 				ui.HTML("<b>Customization</b>"),
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
 				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"]),
@@ -390,7 +390,7 @@ def server(input, output, session):
 				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=1),
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05),
 				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1),
-				config.Size.UI(ui.input_slider, id="Size", label="Size", min=1, max=100, step=1),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, max=100, step=1),
 				ui.HTML("<b>Features</b>"),
 				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"]),
 			]
@@ -400,10 +400,10 @@ def server(input, output, session):
 			if type(data) == DataFrame:
 				elements += [
 					ui.HTML("<b>Heatmap</b>"),
-					config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+					config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
 					ui.HTML("<b>Colors</b>"),
-					config.Colors.UI(ui.input_slider, id="Colors", label="Number", value=256, min=1, max=256, step=1),
+					config.Colors.UI(ui.input_numeric, id="Colors", label="Number", value=256, min=1, step=1),
 					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
 					ui.HTML("<b>Features</b>"),
 					config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),

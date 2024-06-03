@@ -229,8 +229,8 @@ app_ui = ui.page_fluid(
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
 				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
-				config.Levels.UI(ui.input_slider, id="Levels", label="Levels", min=1, max=100, step=1),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),

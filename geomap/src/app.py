@@ -350,11 +350,11 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Heatmap</b>"),
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal"),
 				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 
 				ui.HTML("<b>Colors</b>"),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=8, step=1),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, max=253, step=1),
 
 				ui.HTML("<b>Range of Interest</b>"),
 				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),

@@ -361,7 +361,7 @@ app_ui = ui.page_fluid(
 					col_widths=[4,8]
 				),
 				ui.output_ui("Color"),
-				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=100, step=1),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1),
 
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
