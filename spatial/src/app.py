@@ -20,7 +20,7 @@ from squidpy import gr, pl, read
 from scanpy import pp, tl
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg
 
 try:
 	from user import config
@@ -344,10 +344,10 @@ def server(input, output, session):
 				pl.spatial_scatter(adata, color=key, size=10, shape=None)
 
 
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]))
 
 
 	@render.download(filename="adata.h5ad")
@@ -375,7 +375,6 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 			FileSelection(
-				upload_label="Upload Files",
 				examples={
 					"visium_hne_adata.h5ad": "Example 1",
 					"seqfish.h5ad": "Example 2",
@@ -388,14 +387,19 @@ app_ui = ui.page_fluid(
 			),
 
 			ui.panel_conditional(
-				"input.MainTab === 'TableTab'",
-				config.TableType.UI(ui.input_radio_buttons, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
+				"input.SourceFile === 'Upload'",
+				config.UploadType.UI(ui.input_select, make_inline=False, id="UploadType", label=None, choices=["Visium", "VizGen", "NanoString"])
 			),
 
 			ui.panel_conditional(
-				"input.MainTab === 'HeatmapTab'",
-				Update(),
+				"input.MainTab === 'TableTab'",
+				config.TableType.UI(ui.input_select, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
+			),
 
+			ui.panel_conditional("input.MainTab != 'TableTab'", Update()),
+
+			ui.panel_conditional(
+				"input.MainTab === 'HeatmapTab'",
 				ui.HTML("<b>Annotation Keys</b>"),
 				config.Keys.UI(ui.input_select, make_inline=False, id="Keys", label=None, choices=[], selectize=True, multiple=True),
 
@@ -458,8 +462,9 @@ app_ui = ui.page_fluid(
 				# Add the download buttons.
 				ui.download_button("DownloadTable", "Download Table"),
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		# Add the main interface tabs.

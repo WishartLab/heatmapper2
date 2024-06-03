@@ -21,7 +21,7 @@ from PIL import Image
 from tempfile import NamedTemporaryFile
 from io import BytesIO
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg
 
 try:
 	from user import config
@@ -181,10 +181,10 @@ def server(input, output, session):
 	def HeatmapReactive(): return GenerateHeatmap()
 
 
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]["Description"]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]["Description"]))
 
 
 	@render.download(filename="table.csv")
@@ -226,7 +226,7 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
 				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
 				config.Levels.UI(ui.input_slider, id="Levels", label="Levels", min=1, max=100, step=1),
@@ -244,8 +244,9 @@ app_ui = ui.page_fluid(
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		# Add the main interface tabs.

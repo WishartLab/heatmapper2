@@ -30,7 +30,7 @@ Port = 8000
 if "pyodide" in modules:
 	from pyodide.http import pyfetch
 	Pyodide = True
-	async def fetch(url): 
+	async def fetch(url):
 		response = await pyfetch(url)
 		if response.ok: return (await response.bytes())
 		else:
@@ -39,9 +39,9 @@ if "pyodide" in modules:
 else:
 	from urllib.request import urlopen
 	Pyodide = False
-	async def fetch(url): 
+	async def fetch(url):
 		try: return urlopen(url).read()
-		except Exception: 
+		except Exception:
 			Error("Could not download file!")
 			return None
 
@@ -66,7 +66,7 @@ Columns = {
 	ColumnType.Free: {None},
 	ColumnType.Spatial: {"spatial"},
 	ColumnType.NameGeoJSON: {"name", "admin", "iso_a3", "iso_a2", "iso"}
-}
+	}
 
 
 def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False):
@@ -94,12 +94,12 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False):
 	"""
 
 	# Fold cases
-	folded = [column.lower() for column in columns] 
+	folded = [column.lower() for column in columns]
 	options = set(folded) & Columns[ctype]
 	indices = [folded.index(value) for value in options]; indices.sort()
 	reassembled = [columns[index] for index in indices] + good
 
-	if id: 
+	if id:
 		if reassembled == good:
 			options = set(folded)
 			for type in Columns:
@@ -191,27 +191,26 @@ class Cache:
 		"""
 		@brief Downloads any arbitrary URL and stores it in the cache
 		@param n: The URL name
-		@param p: A ui.Progress() if desired
 		@returns The handled data
 
 		"""
 		if n not in self._primary:
 			raw = await (fetch(n) if n.startswith("https://") else self._download(n))
 			if raw is None: return None
-			temp = NamedTemporaryFile(suffix=Path(n).suffix); 
-			temp.write(raw); 
+			temp = NamedTemporaryFile(suffix=Path(n).suffix);
+			temp.write(raw);
 			temp.seek(0)
 			self._primary[n] = self._handler(Path(temp.name))
 		try: return deepcopy(self._primary[n])
 		except AttributeError: return self._primary[n]
 
 
-	async def Load(self, 
-		input, 
-		source_file=None, 
-		example_file=None, 
-		source=None, 
-		input_switch=None, 
+	async def Load(self,
+		input,
+		source_file=None,
+		example_file=None,
+		source=None,
+		input_switch=None,
 		upload="Upload",
 		example="Example",
 		default=DataFrame(),
@@ -238,7 +237,7 @@ class Cache:
 										initialize without arguments.
 		@param p: A progress bar to increment; optional.
 		@param p_name: What we're fetching, to be displayed in the progress bar; optional
-		@param wasm: Whether this fetch can run in WebAssembly 
+		@param wasm: Whether this fetch can run in WebAssembly
 		@param wasm_blacklist: A tuple of file extensions that should not be fetched in WebAssembly.
 		@returns The data if it exists; default if no file can be found; 0 if there's a WebAssembly violation
 		"""
@@ -256,7 +255,7 @@ class Cache:
 		if input_switch == upload:
 			if p: p.inc(message=f"Loading Uploaded {p_name}...")
 			file: list[FileInfo] | None = source_file
-			if file is None: 
+			if file is None:
 				if p: p.close()
 				return default
 
@@ -264,7 +263,7 @@ class Cache:
 			# The datapath can be immediately used to load examples, but we explicitly need to use
 			# Local as a user uploaded file will always be fetched on disk.
 			n = str(file[0]["datapath"])
-			if n.endswith(wasm_blacklist) and Pyodide: 
+			if n.endswith(wasm_blacklist) and Pyodide:
 				if p: p.close()
 				return 0
 			if n not in self._primary: self._primary[n] = self._handler(Path(n))
@@ -273,14 +272,14 @@ class Cache:
 		elif input_switch == example:
 			if p: p.inc(message=f"Fetching {p_name}...")
 
-			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running 
+			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running
 			# in server-mode).
 			if example_file.startswith("https://"):
 				n = example_file if Pyodide else str(source + example_file.split("/")[-1])
 			else:
 				n = str(source + example_file)
 
-			if n.endswith(wasm_blacklist) and Pyodide: 
+			if n.endswith(wasm_blacklist) and Pyodide:
 				if p: p.close()
 				return 0
 
@@ -288,7 +287,7 @@ class Cache:
 			return await self.Download(n)
 
 		# If the application has a unique method of input (IE 3D's ID, don't handle it.)
-		else: 
+		else:
 			if p: p.close()
 			return None
 
@@ -362,13 +361,13 @@ def NavBar():
 	)
 
 
-def FileSelection(examples, types, upload_label="Choose a File", multiple=False, default="Upload", project="Overview", extras=[]):
+def FileSelection(examples, types, upload_label=None, multiple=False, default="Upload", project="Overview", extras=[]):
 	"""
 	@brief Returns the file selection dialog for the user to upload/select an example
 	@param examples: Either a list of example file names, or a dictionary mapping
 	@param types: The valid file extensions for user uploaded files.
 	@param upload_label: The label for the upload input. Useful to define specifically what kind of files are needed
-	@param multiple: Whether to accept multiple files. 
+	@param multiple: Whether to accept multiple files.
 	@param default: Whether to start on the example, or upload dialog
 	@param project: The name of a project, to specify a specified header within the Interface documentation
 	@param extras: Extra options for giving the application information no render. You are responsible for handling it.
@@ -382,32 +381,26 @@ def FileSelection(examples, types, upload_label="Choose a File", multiple=False,
 	@info If you're examples are large files, or require significant computation, you may want to switch it to Upload instead.
 	"""
 
-	# If the user needs help with the formatting.
 	return [
-	ui.layout_columns(
-		ui.HTML("<a href=https://github.com/WishartLab/heatmapper2/wiki/Format target='_blank' rel='noopener noreferrer'>Format</a>"),
 		ui.HTML(f"<a href='https://github.com/WishartLab/heatmapper2/wiki/Interface#{project}' target='_blank' rel='noopener noreferrer'>Help</a>"),
-		col_widths=[6,6]
+
+		ui.input_radio_buttons(
+			id="SourceFile",
+			label=ui.HTML("Specify a File (<a href=https://github.com/WishartLab/heatmapper2/wiki/Format target='_blank' rel='noopener noreferrer'>Format</a>)"),
+			choices=["Example", "Upload"] + extras,
+			selected=default,
+			inline=True
 	),
 
-	# Specify whether to use example files, or upload one.
-	ui.input_radio_buttons(id="SourceFile", label="Specify a Source File", choices=["Example", "Upload"] + extras, selected=default, inline=True),
-
-	# Only display an input dialog if the user is one Upload
-	ui.panel_conditional(
-		"input.SourceFile === 'Upload'",
-		ui.input_file("File", upload_label, accept=types, multiple=multiple),
-	),
-
-	# Otherwise, add the example selection and an info button.
-	ui.panel_conditional(
-		"input.SourceFile === 'Example'",
-		ui.layout_columns(
-			ui.input_select(id="Example", label=None, choices=examples, multiple=False),
-			ui.popover(ui.input_action_link(id="ExampleInfoButton", label="Info"), ui.output_text("ExampleInfo")),
-			col_widths=[7,3],
-		)
-	),
+		# Only display an input dialog if the user is one Upload
+		ui.panel_conditional(
+			"input.SourceFile === 'Upload'",
+			ui.input_file(id="File", label=None, accept=types, multiple=multiple),
+		),
+		ui.panel_conditional(
+			"input.SourceFile === 'Example'",
+			Inlineify(ui.input_select, id="Example", label=ui.input_action_link(id="ExampleInfo", label="Example"), choices=examples),
+		),
 	]
 
 
@@ -428,7 +421,7 @@ def MainTab(*args, m_type=ui.output_plot):
 	return ui.navset_tab(
 		ui.nav_panel("Heatmap",
 			ui.panel_conditional("input.UpdateToggle", m_type(id="Heatmap")),
-			ui.panel_conditional("!input.UpdateToggle", m_type(id="HeatmapReactive")), 
+			ui.panel_conditional("!input.UpdateToggle", m_type(id="HeatmapReactive")),
 			value="HeatmapTab"
 		),
 		ui.nav_panel("Table", ui.output_data_frame(id="Table"), value="TableTab"),
@@ -436,6 +429,16 @@ def MainTab(*args, m_type=ui.output_plot):
 		id="MainTab"
 	)
 
+
+def Inlineify(ui_element, widths=[4,8], gap="20px", **kwargs):
+	label = kwargs["label"]
+	kwargs["label"] = None
+	return ui.layout_columns(
+		label,
+		ui_element(**kwargs),
+		col_widths=widths,
+		gap=gap,
+	)
 
 class Config:
 	"""
@@ -459,7 +462,7 @@ class Config:
 			self.default = None
 		self.resolve = None
 
-	def __call__(self): 
+	def __call__(self):
 		try:
 			resolved = self.resolve()
 			return self.default if resolved is None else resolved
@@ -467,11 +470,11 @@ class Config:
 			return self.default
 
 
-	def Resolve(self, input): 
+	def Resolve(self, input):
 		self.resolve = input
 
 
-	def UI(self, ui_element, make_inline=True, widths=[4,7], gap="22px", height="4vh", *args, **kwargs):
+	def UI(self, ui_element, make_inline=True, widths=[4,8], gap="20px", *args, **kwargs):
 		"""
 		@brief Displays the configured UI.
 		@param ui The Shiny interface element to use.
@@ -488,22 +491,10 @@ class Config:
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()
 
-		if make_inline and "label" in combined:
-
-			if ui == ui.input_slider: height="6vh"
-
-			label = combined["label"]
-			combined["label"] = None
-
-			# Return the correct UI.
-			if self.visible: return ui.layout_columns(
-				label,
-				ui_element(*args, **combined),
-				col_widths=widths,
-				gap=gap,
-				height=height
-			)
-		elif self.visible: return ui_element(*args, **combined)
+		if self.visible:
+			if make_inline and "label" in combined:
+				return Inlineify(ui_element, widths, gap, **combined)
+			else: return ui_element(*args, **combined)
 
 
 class ConfigHandler(dict):
@@ -516,7 +507,7 @@ class ConfigHandler(dict):
 	__delattr__ = dict.__delitem__
 
 
-	def Resolve(self, input): 
+	def Resolve(self, input):
 		"""
 		@brief Resolves all stored objects.
 		@param input The input to use for resolving.
@@ -525,14 +516,14 @@ class ConfigHandler(dict):
 			var.Resolve(input[conf])
 
 
-def InitializeConfig(config, input): 
+def InitializeConfig(config, input):
 	"""
 	@brief Initializes the configuration variable.
 	@param config: The configuration variable
 	@param input: The Shiny input
 
 	This function will update each configuration's resolve member, so that
-	if 
+	if
 	"""
 	for conf, var in config.items(): var.Resolve(input[conf])
 
@@ -543,7 +534,7 @@ def Msg(message): return ui.notification_show(ui=message, type="default", durati
 
 
 def Update(): return ui.input_action_button(
-		id="Update", 
+		id="Update",
 		label=ui.layout_columns(
 			ui.panel_conditional("input.UpdateToggle", "Auto"),
 			"Update",

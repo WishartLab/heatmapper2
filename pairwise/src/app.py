@@ -24,7 +24,7 @@ from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg
 
 try:
 	from user import config
@@ -160,13 +160,11 @@ def server(input, output, session):
 	def Table():
 		df = Data()
 		if df is None or len(df.columns) == 0: return
-
 		if df.columns[0] == 0:
-			ui.modal_show(ui.modal("The provided input format cannot be rendered",
-			title="Table cannot be rendered", easy_close=True, footer=None))
+			Error("The provided input format cannot be rendered")
 		else:
 			Valid.set(True)
-			return render.DataGrid(Data(), editable=True)
+			return render.DataGrid(df, editable=True)
 
 
 	@Table.set_patch_fn
@@ -273,10 +271,10 @@ def server(input, output, session):
 	def HeatmapReactive(): return GenerateHeatmap()
 
 
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]))
 
 
 	@render.download(filename="table.csv")
@@ -351,15 +349,18 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.MatrixType.UI(ui.input_select, id="MatrixType",  label="Matrix",  choices=["Distance", "Correlation"]),
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1),
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods),
 				config.Chain.UI(ui.input_text, id="Chain", label="Chain"),
 				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1),
 				ui.output_ui("Method"),
 
-				ui.HTML("<b>Colors</b>"),
+				ui.layout_columns(
+					ui.HTML("<b>Colors</b>"),
+					config.Custom.UI(ui.input_switch, make_inline=False, id="Custom", label="Custom"),
+					col_widths=[4,8]
+				),
 				ui.output_ui("Color"),
-				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom"),
 				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=100, step=1),
 
 				ui.HTML("<b>Image Settings</b>"),
@@ -374,8 +375,9 @@ app_ui = ui.page_fluid(
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		# Add the main interface tabs.

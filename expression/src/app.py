@@ -23,7 +23,7 @@ from tempfile import NamedTemporaryFile
 from io import BytesIO
 
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg
 
 try:
 	from user import config
@@ -273,15 +273,14 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def ColumnDendrogram():
-	 _, x_labels, data = ProcessData(GetData());
-	 with ui.Progress() as p:
-	 	return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
+		_, x_labels, data = ProcessData(GetData());
+		with ui.Progress() as p:
+			return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 
-
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]))
 
 
 	@render.download(filename="table.csv")
@@ -333,13 +332,11 @@ app_ui = ui.page_fluid(
 				project="Expression"
 			),
 
-
 			TableOptions(config),
 
-			# Shared, Non-Table settings.
+			# Settings pertaining to the Heatmap view.
 			ui.panel_conditional(
-				"input.MainTab != 'TableTab'",
-
+				"input.MainTab === 'HeatmapTab'",
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
@@ -354,21 +351,20 @@ app_ui = ui.page_fluid(
 				config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance", choices=DistanceMethods, selected="Euclidean"),
 
 				# Customize the text size of the axes.
-				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text Size", min=1, max=50, step=1),
-			),
+				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text", min=1, max=50, step=1),
 
-			# Settings pertaining to the Heatmap view.
-			ui.panel_conditional(
-				"input.MainTab === 'HeatmapTab'",
 				# Define how the colors are scaled.
 				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods),
 
-				ui.HTML("<b>Colors</b>"),
+				ui.layout_columns(
+					ui.HTML("<b>Colors</b>"),
+					config.Custom.UI(ui.input_switch, make_inline=False, id="Custom", label="Custom"),
+					col_widths=[4,8]
+				),
 				ui.output_ui("Color"),
-				config.Custom.UI(ui.input_checkbox, id="Custom", label="Custom"),
 				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=100, step=1),
 
 				ui.HTML("<b>Image Settings</b>"),
@@ -389,8 +385,9 @@ app_ui = ui.page_fluid(
 				# Define the Orientation of the dendrogram in the Tab
 				config.Orientation.UI(ui.input_select,id="Orientation", label="Orientation", choices=["Top", "Bottom", "Left", "Right"]),
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		# Add the main interface tabs.

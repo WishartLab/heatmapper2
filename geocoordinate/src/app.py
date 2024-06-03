@@ -287,10 +287,10 @@ def server(input, output, session):
 	def HeatmapReactive(): return GenerateHeatmap()
 
 
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]))
 
 
 	@render.download(filename="table.csv")
@@ -359,8 +359,9 @@ app_ui = ui.page_fluid(
 				# Add the download buttons.
 				ui.download_button("DownloadHeatmap", "Heatmap")
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		MainTab(m_type=ui.output_ui),

@@ -9,6 +9,8 @@ from shared import Config, ConfigHandler
 
 config = ConfigHandler({
 
+	# "Visium", "VizGen", "NanoString"
+	"UploadType": Config(selected="Visium"),
 
 	# "obs", "var"
 	"TableType": Config(selected="obs"),

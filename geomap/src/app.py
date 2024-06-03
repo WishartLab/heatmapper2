@@ -23,7 +23,7 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update, Msg
 from geojson import Mappings
 
 try:
@@ -78,8 +78,6 @@ def server(input, output, session):
 			ui.update_select(id="ValueColumn", selected=val[choice])
 
 
-
-
 	@reactive.effect
 	@reactive.event(input.JSONUpload, input.JSONSelection, input.JSONFile)
 	async def UpdateGeoJSON():
@@ -96,6 +94,7 @@ def server(input, output, session):
 		))
 
 		geojson = JSON()
+		if geojson is None: return
 		properties = list(geojson['features'][0]['properties'].keys())
 		Filter(properties, ColumnType.NameGeoJSON, id="KeyProperty")
 
@@ -293,10 +292,10 @@ def server(input, output, session):
 			Error("Could not render the GeoJSON table!")
 
 
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]))
 
 
 	@render.download(filename="table.csv")
@@ -328,7 +327,7 @@ app_ui = ui.page_fluid(
 			ui.input_radio_buttons(id="JSONFile", label="Specify a GeoJSON File", choices=["Provided", "Upload"], selected="Provided", inline=True),
 			ui.panel_conditional(
 				"input.JSONFile === 'Upload'",
-				ui.input_file("JSONUpload", "Choose a File", accept=[".geojson"], multiple=False),
+				ui.input_file("JSONUpload", None, accept=[".geojson"], multiple=False),
 			),
 			ui.panel_conditional(
 				"input.JSONFile === 'Provided'",
@@ -351,11 +350,11 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Heatmap</b>"),
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal"),
 				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
-				config.Opacity.UI(ui.input_slider, height="7vh", id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 
 				ui.HTML("<b>Colors</b>"),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Bins.UI(ui.input_slider, height="7vh", id="Bins", label="Number", min=3, max=8, step=1),
+				config.Bins.UI(ui.input_slider, id="Bins", label="Number", min=3, max=8, step=1),
 
 				ui.HTML("<b>Range of Interest</b>"),
 				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
@@ -367,8 +366,9 @@ app_ui = ui.page_fluid(
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),

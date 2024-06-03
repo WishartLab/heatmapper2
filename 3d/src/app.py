@@ -347,10 +347,10 @@ def server(input, output, session):
 	def HeatmapReactive(): return ui.HTML(GenerateHeatmap())
 
 
-	@output
-	@render.text
-	@reactive.event(input.SourceFile, input.Example)
-	def ExampleInfo(): return Info[input.Example()]["Description"]
+	@reactive.effect
+	@reactive.event(input.ExampleInfo)
+	def ExampleInfo():
+		Msg(ui.HTML(Info[input.Example()]["Description"]))
 
 
 	@render.download(filename="table.csv")
@@ -378,21 +378,21 @@ def server(input, output, session):
 		if type(data) == str or input.SourceFile() == "ID":
 			elements += [
 				ui.HTML("<b>Heatmap</b>"),
-				config.ColorScheme.UI(ui.input_select, height="2vh", id="ColorScheme", label="Scheme", choices=Schemes),
-				config.Opacity.UI(ui.input_slider, height="2vh", id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 				ui.HTML("<b>Surface</b>"),
-				config.SurfaceScheme.UI(ui.input_select, height="2vh", id="SurfaceScheme", label="Scheme", choices=Schemes),
-				config.SurfaceOpacity.UI(ui.input_slider, height="2vh", id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes),
+				config.SurfaceOpacity.UI(ui.input_slider, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 				ui.HTML("<b>Customization</b>"),
-				config.PStyle.UI(ui.input_select, height="2vh", id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
-				config.SurfaceType.UI(ui.input_select, height="2vh", id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"]),
-				config.Thickness.UI(ui.input_numeric, height="2vh", id="Thickness", label="Thickness", min=0, max=10, step=0.1),
-				config.Width.UI(ui.input_numeric, height="2vh", id="Width", label="Width", min=0, max=10, step=1),
-				config.Radius.UI(ui.input_numeric, height="2vh", id="Radius", label="Radius", min=0, max=5, step=0.05),
-				config.Scale.UI(ui.input_numeric, height="2vh", id="Scale", label="Scale", min=0, max=10, step=1),
-				config.Size.UI(ui.input_slider, height="2vh", id="Size", label="Size", min=1, max=100, step=1),
+				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
+				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"]),
+				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Thickness", min=0, max=10, step=0.1),
+				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=1),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05),
+				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1),
+				config.Size.UI(ui.input_slider, id="Size", label="Size", min=1, max=100, step=1),
 				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, height="2vh",make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"]),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"]),
 			]
 
 		else:
@@ -400,13 +400,13 @@ def server(input, output, session):
 			if type(data) == DataFrame:
 				elements += [
 					ui.HTML("<b>Heatmap</b>"),
-					config.Opacity.UI(ui.input_slider, height="2vh", id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
-					config.Style.UI(ui.input_select, height="2vh", id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
+					config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
 					ui.HTML("<b>Colors</b>"),
-					config.Colors.UI(ui.input_slider, height="2vh", id="Colors", label="Number", value=256, min=1, max=256, step=1),
-					config.ColorMap.UI(ui.input_select, height="2vh", id="ColorMap", label="Map", choices=ColorMaps),
+					config.Colors.UI(ui.input_slider, id="Colors", label="Number", value=256, min=1, max=256, step=1),
+					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
 					ui.HTML("<b>Features</b>"),
-					config.Features.UI(ui.input_checkbox_group, make_inline=False, height="2vh", id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),
+					config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),
 			]
 
 		return elements
@@ -439,8 +439,9 @@ app_ui = ui.page_fluid(
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
-			padding="1rem",
-			width="255px",
+			padding="10px",
+			gap="20px",
+			width="250px",
 		),
 
 		# Add the main interface tabs.

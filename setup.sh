@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VERSION=$(python -c 'import sys; print(sys.version_info.minor)')
-if [[ "$VERSION" == "12" ]]; then 
+if [[ "$VERSION" == "12" ]]; then
 	echo "Python 3.12 is unsupported!"
 	exit 1
 fi
