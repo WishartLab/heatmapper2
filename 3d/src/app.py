@@ -12,9 +12,13 @@
 # WebGL is required for this application.
 #
 
+from numpy.core.multiarray import MAXDIMS
 from shiny import App, reactive, render, ui
 from pandas import DataFrame
-from os.path import basename
+from Bio.PDB import PDBParser, PDBIO
+from io import StringIO
+from numpy import mean
+from numpy.linalg import norm
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error, Msg
@@ -47,7 +51,7 @@ def server(input, output, session):
 		}
 	}
 
-	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
+	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
 
 
 	def HandleData(path):
@@ -152,11 +156,16 @@ def server(input, output, session):
 			config.SurfaceOpacity(),
 			config.SurfaceType(),
 			config.SurfaceScheme(),
+			config.Model(),
 		]
 
 		if not DataCache.In(global_inputs):
 
-			def GenerateScheme(initial_scheme, function_declared=False):
+			parser = PDBParser()
+			structure = parser.get_structure("protein", StringIO(source))
+			model = config.Model()
+
+			def GenerateScheme(source, initial_scheme, function_declared=False, model=0):
 				"""
 				@brief Py3DMol has a color, colorscheme, and colorfunc attribute. This function puts the right one in
 				without cluttering the interface with three different options.
@@ -214,12 +223,70 @@ def server(input, output, session):
 								else return "darkred"
 							}}\n"""
 					prop = "colorfunc"
+				elif scheme == "RMSF":
+
+					if len(structure) == 1:
+						Error("RMSF requires a PDB with more than one model to compute difference!")
+						return source, prop, scheme
+
+				
+					# List of atom names of interest
+					atom_names_of_interest = ["C", "CA", "N"]
+
+					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(), model]
+					print(entry)
+					if not DataCache.In(entry):
+						main_model = structure[model]
+						for chain in main_model:
+							for residue in chain:
+								for atom in residue:
+									if atom.get_id() in atom_names_of_interest:
+										distances = []
+										for model in structure:
+											if model != main_model:
+												try:
+													corresponding_atom = model[chain.id][residue.id][atom.get_id()]
+													distance = norm(atom.coord - corresponding_atom.coord)
+													distances.append(distance)
+												except KeyError: continue
+										# Calculate mean distance
+										if distances: atom.set_bfactor(mean(distances))
+										output = StringIO()
+
+						output = StringIO()
+						io = PDBIO()
+						io.set_structure(main_model)
+						io.save(output)
+						DataCache.Store(output.getvalue(), entry)
+						output.close()
+
+					scheme = "RMSD"
+					source = DataCache.Get(entry)
+
+					darkblue, blue, lightblue, white, orange, red = 0.5, 1.0, 1.5, 2, 3, 4
+					if not function_declared:
+						viewer.startjs += f"""\n
+							let {scheme} = function(atom) {{
+								if (atom.b == 0) return "grey"
+								else if (atom.b < {darkblue}) return "darkblue"
+								else if (atom.b < {blue}) return "blue"
+								else if (atom.b < {lightblue}) return "lightblue"
+								else if (atom.b < {white}) return "white"
+								else if (atom.b < {orange}) return "orange"
+								else if (atom.b < {red}) return "red"
+								else return "darkred"
+							}}\n"""
+					prop = "colorfunc"
+
 				elif scheme != "spectrum": prop = "colorscheme"
-				return prop, scheme
+				return source, prop, scheme
 
-			viewer = view(data=source, width=f"{input.Size()}vw", height=f"{input.Size()}vh")
+			viewer = view(width=f"{input.Size()}vw", height=f"{input.Size()}vh")
+			source, heatmap_property, heatname_name = GenerateScheme(source, config.ColorScheme(), model=model)
+			source, surface_property, surface_name = GenerateScheme(source, config.SurfaceScheme(), function_declared=config.SurfaceScheme() == config.ColorScheme(), model=model)
 
-			heatmap_property, heatname_name = GenerateScheme(config.ColorScheme())
+			viewer.addModelsAsFrames(source)
+			viewer.zoomTo()
 
 			p.inc(message="Styling...")
 			viewer.setStyle({config.PStyle().lower(): {
@@ -236,8 +303,6 @@ def server(input, output, session):
 				"radius": config.Radius(),
 				"scale": config.Scale(),
 			}})
-
-			surface_property, surface_name = GenerateScheme(config.SurfaceScheme(), function_declared=config.SurfaceScheme() == config.ColorScheme())
 			viewer.addSurface(config.SurfaceType(), {"opacity": config.SurfaceOpacity(), surface_property: surface_name})
 
 			if heatmap_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{heatname_name}"', f'{heatname_name}')
@@ -384,10 +449,11 @@ def server(input, output, session):
 				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes),
 				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 				ui.HTML("<b>Customization</b>"),
+				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0),
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
 				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"]),
 				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Thickness", min=0, max=10, step=0.1),
-				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=1),
+				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=0.1),
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05),
 				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, max=100, step=1),

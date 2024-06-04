@@ -2,3 +2,4 @@
 .Rproj.user
 .vscode/*
 pyrightconfig.json
+venv

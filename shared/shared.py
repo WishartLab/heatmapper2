@@ -52,7 +52,7 @@ InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic",
 ClusteringMethods = ["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"]
 ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma"]
 
-class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11;
+class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11; FOV = 12; Count = 13
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle", "iso_code", "continent", "country", "location"},
@@ -62,14 +62,16 @@ Columns = {
 	ColumnType.X: {"x"},
 	ColumnType.Y: {"y"},
 	ColumnType.Z: {"z"},
-	ColumnType.Cluster: {"cell type", "celltype_mapped_refined", "cluster", "cell_class", "cell_subclass", "cell_cluster"},
+	ColumnType.Cluster: {"cluster"},
 	ColumnType.Free: {None},
 	ColumnType.Spatial: {"spatial"},
-	ColumnType.NameGeoJSON: {"name", "admin", "iso_a3", "iso_a2", "iso"}
+	ColumnType.NameGeoJSON: {"name", "admin", "iso_a3", "iso_a2", "iso"},
+	ColumnType.FOV: {"fov"},
+	ColumnType.Count: {'n_genes_by_counts', 'log1p_n_genes_by_counts', 'total_counts', 'log1p_total_counts', 'pct_counts_in_top_50_genes', 'pct_counts_in_top_100_genes', 'pct_counts_in_top_200_genes', 'pct_counts_in_top_500_genes', 'total_counts_mt', 'log1p_total_counts_mt', 'pct_counts_mt', 'n_counts'}
 	}
 
 
-def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False):
+def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False, remove_unknown=False):
 	"""
 	@brief Filters available column names based on what input we want
 	@param columns: The columns of the DataFrame (Usually just df.columns)
@@ -95,7 +97,13 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False):
 
 	# Fold cases
 	folded = [column.lower() for column in columns]
-	options = set(folded) & Columns[ctype]
+	options = set(folded)
+	if ctype != ColumnType.Free: options &= Columns[ctype]
+
+	if remove_unknown:
+		for type in Columns:
+			if type != ctype: options -= Columns[type]
+
 	indices = [folded.index(value) for value in options]; indices.sort()
 	reassembled = [columns[index] for index in indices] + good
 

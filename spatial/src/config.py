@@ -9,9 +9,6 @@ from shared import Config, ConfigHandler
 
 config = ConfigHandler({
 
-	# "Visium", "VizGen", "NanoString"
-	"UploadType": Config(selected="Visium"),
-
 	# "obs", "var"
 	"TableType": Config(selected="obs"),
 
@@ -20,6 +17,7 @@ config = ConfigHandler({
 
 	# See expression's config for description of dynamic inputs
 	"Keys": Config(),
+	"Count": Config(),
 
 	# See shared.py for ColorMaps
 	"ColorMap": Config(selected="Viridis"),
@@ -61,7 +59,7 @@ config = ConfigHandler({
 	"OccurrenceGraph": Config(selected="Scatter"),
 
 	# See expression's configuration for dynamic inputs
-	"Cluster": Config(),
+	"CoCluster": Config(),
 
 	# Any value from 1-50
 	"Interval": Config(value=50),

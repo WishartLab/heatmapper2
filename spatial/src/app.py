@@ -12,15 +12,17 @@
 # WebGL is required for this application.
 #
 
+from pandas.core.arrays.arrow.array import pa
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import get_cmap
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from anndata import read_h5ad
 from squidpy import gr, pl, read
 from scanpy import pp, tl
+from pathlib import Path
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error
 
 try:
 	from user import config
@@ -64,24 +66,97 @@ def server(input, output, session):
 	Data = reactive.value(None)
 
 
+	def ColumnNames(adata, p):
+		p.inc(message="Generating Annotation Keys...")
+		Filter(adata.obs["cluster"].cat.categories.to_list(), ColumnType.Free, id="CoCluster")
+		Filter(adata.obs.columns.to_list(), ColumnType.Count, id="Count")
+
+		choices = []
+		if input.UploadType() == "Visium" or input.SourceFile() == "Example":
+			choices = adata.var.gene_ids.index.drop_duplicates().to_list()
+		elif input.UploadType() == "NanoString":
+			choices = adata.obs["fov"].drop_duplicates().to_list()
+			ui.update_select(id="Count", choices=adata.obs.columns.to_list())
+		if choices: ui.update_select(id="Keys", choices=choices, selected=choices[0])
+
+
+	async def VisiumReader(temp, p):
+		Path(f"{temp.name}/spatial").mkdir()
+		counts = None
+		for file in input.File():
+			n = file["datapath"]
+			base = file["name"]
+
+			# These files are located in the spatial subdir
+			suffix = Path(base).suffix
+
+			# These files are considered spatial.
+			if suffix in [".png", ".json", ".csv"]: base = f"spatial/{base}"
+			elif suffix == ".h5": counts = base
+
+			# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
+			elif suffix == ".h5ad":
+				adata = await DataCache.Load(input, default=None, p=p)
+				ColumnNames(adata, p)
+				p.close()
+				return adata
+
+			path = f"{temp.name}/{base}"
+			open(path, "wb").write(open(n, "rb").read())
+
+		# Make SquidPy generate an object from the folder.
+		p.inc(message="Consolidating Data...")
+		return read.visium(temp.name, counts_file=counts)
+
+
+
+	async def NanoStringReader(temp, p):
+		counts = None
+		meta = None
+		fov = None
+
+		Path(temp.name, "CellComposite").mkdir()
+		Path(temp.name, "CellLabels").mkdir()
+
+		for file in input.File():
+			n = file["datapath"]
+			base = file["name"]
+
+			# These files are located in the spatial subdir
+			suffix = Path(base).suffix
+
+			# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
+			if suffix == ".h5ad":
+				adata = await DataCache.Load(input, default=None, p=p)
+				ColumnNames(adata, p)
+				p.close()
+				return adata
+			elif suffix == ".csv":
+				if base.endswith("_exprMat_file.csv"): count = base
+				if base.endswith("_metadata_file.csv"): meta = base
+				if "fov" in base: fov = base
+			elif suffix == ".tif": base = f"CellLabels/{base}"
+			elif suffix in (".png", ".jpg"): base = f"CellComposite/{base}"
+
+			open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
+
+		# Make SquidPy generate an object from the folder.
+		p.inc(message="Consolidating Data...")
+		return read.nanostring(
+			temp.name,
+			counts_file=count,
+			meta_file=meta,
+			fov_file=fov
+		)
+
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.UploadType)
 	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
 		@info SquidPy's Visium Reader expect a directory, so Spatial will accept multiple files
 			and then parse them into the correct structure.
 		"""
-
-		def ColumnNames(adata):
-			p.inc(message="Generating Annotation Keys...")
-			key = Filter(adata.obs.columns, ColumnType.Cluster)
-			if key is not None:
-				Filter(adata.obs[key].cat.categories.tolist(), ColumnType.Free, id="Cluster")
-
-			choices = adata.var.gene_ids.index.drop_duplicates().to_list()
-			ui.update_select(id="Keys", choices=choices, selected=choices[0])
-
 
 		with ui.Progress() as p:
 			p.inc(message="Loading Data...")
@@ -91,39 +166,18 @@ def server(input, output, session):
 				if input.File() is None: return
 				name = [f["datapath"] for f in input.File()]
 
-
 				# If the name hasn't been cached, we need to construct the object.
 				if not DataCache.In(name):
 
 					p.inc(message="Organizing Data...")
-					# For each file uploaded, dump it into a temporary directory
 					temp = TemporaryDirectory()
-					Path(f"{temp.name}/spatial").mkdir()
-					counts = None
-					for file in input.File():
-						n = file["datapath"]
-						base = file["name"]
-
-						# These files are located in the spatial subdir
-						suffix = Path(base).suffix
-
-						# These files are considered spatial.
-						if suffix in [".png", ".json", ".csv"]: base = f"spatial/{base}"
-						elif suffix == ".h5": counts = base
-
-						# If the user uploaded a .h5ad, we already have that information Cached, so just return it.
-						elif suffix == ".h5ad":
-							adata = await DataCache.Load(input, default=None, p=p)
-							ColumnNames(adata)
-							p.close()
-							return adata
-
-
-						open(f"{temp.name}/{base}", "wb").write(open(n, "rb").read())
-
-					# Make SquidPy generate an object from the folder.
-					p.inc(message="Consolidating Data...")
-					adata = read.visium(temp.name, counts_file=counts)
+					try:
+						if input.UploadType() == "Visium": adata = await VisiumReader(temp, p)
+						if input.UploadType() == "NanoString": adata = await NanoStringReader(temp, p)
+						else: return None
+					except Exception:
+						Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
+						return None
 
 					# Post-processing so all the needed statistics are present.
 					p.inc(message="Generating metrics...")
@@ -134,7 +188,7 @@ def server(input, output, session):
 					tl.leiden(adata, key_added="cluster", neighbors_key="spatial_neighbors")
 					pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
 
-					ColumnNames(adata)
+					ColumnNames(adata ,p)
 					p.close()
 
 					# Throw it into the Cache.
@@ -146,7 +200,8 @@ def server(input, output, session):
 			# With an example, just return it.
 			else:
 				Data.set(await DataCache.Load(input, default=None))
-				ColumnNames(Data())
+				ColumnNames(Data(), p)
+				p.close()
 
 
 	@output
@@ -157,6 +212,98 @@ def server(input, output, session):
 		if df is None: return
 		if state == "obs": return render.DataGrid(df.obs)
 		elif state == "var": return render.DataGrid(df.var)
+
+
+	def GenerateNanoString(adata, file, p):
+		id = config.Keys()
+		count = config.Count()
+		if adata is None or id is None or count is None: return
+
+		shape = config.Shape().lower()
+		features = config.Features()
+		img_alpha = config.ImgOpacity()
+		cmap = config.ColorMap().lower()
+		alpha = config.Opacity()
+		columns = config.Columns()
+		spacing = config.Spacing()
+		dpi = config.DPI()
+
+		p.inc(message="Plotting...")
+		pl.spatial_segment(
+			adata,
+			color=count,
+			library_key="fov",
+			seg_cell_id="cell_ID",
+			library_id=id,
+			shape=shape,
+			img="Image" in features,
+			img_alpha=img_alpha,
+			cmap=get_cmap(cmap),
+			alpha=alpha,
+			colorbar="Legend" in features,
+			frameon="Frame" in features,
+			ncols=columns,
+			wspace=spacing,
+			hspace=spacing,
+			save=file.name,
+			dpi=dpi
+		)
+		img: types.ImgData = {"src": file.name, "height": f"{config.Size()}vh"}
+		return img
+
+	def GenerateVisium(adata, file, p):
+		colors = config.Keys()
+		if adata is None or colors is None: return
+		try:
+			genes = adata[:, adata.var.highly_variable].var_names.values[:100]
+		except AttributeError:
+			genes=None
+
+		p.inc(message="Computing statistic...")
+		stat = config.Statistic()
+		if stat == "sepal" and "sepal_score" not in adata.uns:
+			gr.sepal(
+				adata,
+				genes=genes,
+				max_neighs=6,
+				n_jobs=Jobs,
+				show_progress_bar=False,
+			)
+		elif (stat == "moran" and "moranI" not in adata.uns) or (stat == "geary" and "gearyC" not in adata.uns):
+			gr.spatial_autocorr(
+				adata,
+				genes=genes,
+				mode=stat,
+			)
+
+		p.inc(message="Plotting...")
+		shape = config.Shape().lower()
+		features = config.Features()
+		img_alpha = config.ImgOpacity()
+		cmap = config.ColorMap().lower()
+		alpha = config.Opacity()
+		columns = config.Columns()
+		spacing = config.Spacing()
+		dpi = config.DPI()
+
+		pl.spatial_scatter(
+			adata,
+			color=colors,
+			shape=shape,
+			img="Image" in features,
+			img_alpha=img_alpha,
+			cmap=get_cmap(cmap),
+			alpha=alpha,
+			colorbar=len(colors) > 1 and "Legend" in features,
+			frameon="Frame" in features,
+			ncols=columns,
+			wspace=spacing,
+			hspace=spacing,
+			save=file.name,
+			dpi=dpi
+		)
+		img: types.ImgData = {"src": file.name, "height": f"{config.Size()}vh"}
+		return img
 
 
 	def GenerateHeatmap(file=None):
@@ -174,68 +321,12 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			colors = config.Keys()
-
-			if adata is None or colors is None: return
-
-			try:
-				genes = adata[:, adata.var.highly_variable].var_names.values[:100]
-			except AttributeError:
-				genes=None
-
-
-			p.inc(message="Computing statistic...")
-			stat = config.Statistic()
-			if stat == "sepal" and "sepal_score" not in adata.uns:
-				gr.sepal(
-					adata,
-					genes=genes,
-					max_neighs=6,
-					n_jobs=Jobs,
-					show_progress_bar=False,
-
-				)
-			elif (stat == "moran" and "moranI" not in adata.uns) or (stat == "geary" and "gearyC" not in adata.uns):
-				gr.spatial_autocorr(
-					adata,
-					genes=genes,
-					mode=stat,
-				)
-
-			p.inc(message="Plotting...")
-
-			# Shiny does not seem to properly setup dependencies to reactive values if
-			# They are used directly in function invocations. Therefore, we need
-			# To create variables using these reactives, that way changes properly
-			# Recall this function.
-			shape = config.Shape().lower()
-			features = config.Features()
-			img_alpha = config.ImgOpacity()
-			cmap = config.ColorMap().lower()
-			alpha = config.Opacity()
-			columns = config.Columns()
-			spacing = config.Spacing()
-			dpi = config.DPI()
-
 			if file is None: file = NamedTemporaryFile(delete=False, suffix=".png")
-			pl.spatial_scatter(
-				adata,
-				color=colors,
-				shape=shape,
-				img="Image" in features,
-				img_alpha=img_alpha,
-				cmap=get_cmap(cmap),
-				alpha=alpha,
-				colorbar=len(colors) > 1 and "Legend" in features,
-				frameon="Frame" in features,
-				ncols=columns,
-				wspace=spacing,
-				hspace=spacing,
-				save=file.name,
-				dpi=dpi
-			)
-			img: types.ImgData = {"src": file.name, "height": f"{config.Size()}vh"}
-			return img
+
+			if input.SourceFile() == "Example" or input.UploadType() == "Visium":
+				return GenerateVisium(adata, file, p)
+			elif input.UploadType() == "NanoString":
+				return GenerateNanoString(adata, file, p)
 
 
 	@output
@@ -259,7 +350,7 @@ def server(input, output, session):
 
 			if adata is None: return
 
-			key = Filter(adata.obs.columns, ColumnType.Cluster)
+			key = "cluster"
 			location = f"{key}_centrality_scores"
 
 			p.inc(message="Computing score...")
@@ -295,7 +386,7 @@ def server(input, output, session):
 			hash_list = [config.Function(), input.SourceFile(), input.Example(), input.File()]
 			old_metric = DataCache.Get(hash_list)
 
-			key = Filter(adata.obs.columns, ColumnType.Cluster)
+			key = "cluster"
 
 			p.inc(message="Generating function...")
 			if f"{key}_ripley_{function}" not in adata.uns or metric != old_metric:
@@ -320,7 +411,7 @@ def server(input, output, session):
 			adata = Data()
 			if adata is None: return
 
-			key = Filter(adata.obs.columns, ColumnType.Cluster)
+			key = "cluster"
 
 			p.inc(message="Calculating...")
 
@@ -338,8 +429,8 @@ def server(input, output, session):
 				)
 
 			p.inc(message="Plotting...")
-			if config.OccurrenceGraph() == "Line" and config.Cluster() is not None:
-				pl.co_occurrence(adata, cluster_key=key, clusters=config.Cluster())
+			if config.OccurrenceGraph() == "Line" and config.CoCluster() is not None:
+				pl.co_occurrence(adata, cluster_key=key, clusters=config.CoCluster())
 			else:
 				pl.spatial_scatter(adata, color=key, size=10, shape=None)
 
@@ -380,7 +471,7 @@ app_ui = ui.page_fluid(
 					"seqfish.h5ad": "Example 2",
 					"imc.h5ad": "Example 3",
 				},
-				types=[".h5", ".png", ".csv", ".json", ".h5ad"],
+				types=[".h5", ".png", ".csv", ".json", ".h5ad", ".jpg", ".tif"],
 				multiple=True,
 				default="Upload",
 				project="Spatial"
@@ -388,7 +479,7 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.SourceFile === 'Upload'",
-				config.UploadType.UI(ui.input_select, make_inline=False, id="UploadType", label=None, choices=["Visium", "VizGen", "NanoString"])
+				ui.input_select(id="UploadType", label=None, choices=["Visium", "VizGen", "NanoString"])
 			),
 
 			ui.panel_conditional(
@@ -396,13 +487,16 @@ app_ui = ui.page_fluid(
 				config.TableType.UI(ui.input_select, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
 			),
 
-			ui.panel_conditional("input.MainTab != 'TableTab'", Update()),
+			ui.panel_conditional("input.MainTab != 'TableTab'",
+				Update(),
+
+				ui.HTML("<b>Keys</b>"),
+				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True),
+				config.Count.UI(ui.input_select, id="Count", label="Count", choices=[]),
+			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
-				ui.HTML("<b>Annotation Keys</b>"),
-				config.Keys.UI(ui.input_select, make_inline=False, id="Keys", label=None, choices=[], selectize=True, multiple=True),
-
 				ui.HTML("<b>Heatmap</b>"),
 				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
@@ -426,6 +520,7 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'Centrality'",
+				ui.HTML("<b>Centrality</b>"),
 				config.Score.UI(ui.input_select,
 					id="Score",
 					label="Score",
@@ -439,6 +534,7 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'Ripley'",
+				ui.HTML("<b>Ripley</b>"),
 				config.Function.UI(ui.input_select, id="Function", label="Function", choices=["L", "F", "G"]),
 				config.Distance.UI(ui.input_select, id="Distance", label="Distance", choices=DistanceMethods),
 			),
@@ -446,11 +542,9 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'Occurrence'",
-
+				ui.HTML("<b>Co-Occurrence</b>"),
+				config.CoCluster.UI(ui.input_select, id="CoCluster", label="Group", choices=[]),
 				config.OccurrenceGraph.UI(ui.input_select, id="OccurrenceGraph", label="Graph", choices=["Scatter", "Line"]),
-
-				config.Cluster.UI(ui.input_select, id="Cluster", label="Cluster", choices=[], selected=None),
-
 				config.Interval.UI(ui.input_slider, id="Interval", label="Interval", min=1, max=100, step=1),
 				config.Splits.UI(ui.input_slider, id="Splits", label="Splits", min=0, max=10, step=0),
 			),

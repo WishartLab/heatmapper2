@@ -1,8 +1,8 @@
 #
-# Heatmapper 
+# Heatmapper
 # 3D Configuration
 #
-# This file contains configuration for 3D. 
+# This file contains configuration for 3D.
 
 
 from shared import Config, ConfigHandler
@@ -30,6 +30,9 @@ config = ConfigHandler({
 	# "Cartoon", "Stick", "Sphere", "Line"
 	"PStyle": Config(selected="Cartoon"),
 
+	# Any numerical value > 0
+	"Model": Config(value=0),
+
 	# See 3D's ConditionalElements function for details
 	"ColorScheme": Config(selected="spectrum"),
 	"SurfaceScheme": Config(selected="spectrum"),
@@ -41,7 +44,7 @@ config = ConfigHandler({
 	"Thickness": Config(value=0.4),
 
 	# Any value from 0-10
-	"Width": Config(value=3),
+	"Width": Config(value=1),
 
 	# Any value from 0-10
 	"Radius": Config(value=0.25),
