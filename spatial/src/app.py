@@ -22,7 +22,7 @@ from scanpy import pp, tl
 from pathlib import Path
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify
 
 try:
 	from user import config
@@ -38,9 +38,6 @@ def server(input, output, session):
 		"seqfish.h5ad": "Pre-processed example files provided by SquidPy",
 		"imc.h5ad": "Pre-processed example files provided by SquidPy",
 	}
-
-	# Concurrent jobs to run for calculations.
-	Jobs = 8
 
 	InitializeConfig(config, input)
 
@@ -109,7 +106,6 @@ def server(input, output, session):
 		return read.visium(temp.name, counts_file=counts)
 
 
-
 	async def NanoStringReader(temp, p):
 		counts = None
 		meta = None
@@ -142,15 +138,16 @@ def server(input, output, session):
 
 		# Make SquidPy generate an object from the folder.
 		p.inc(message="Consolidating Data...")
-		return read.nanostring(
+		adata = read.nanostring(
 			temp.name,
 			counts_file=count,
 			meta_file=meta,
 			fov_file=fov
 		)
+		return adata
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.UploadType)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.UploadType, input.CellCount, input.GeneCount)
 	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
@@ -173,29 +170,76 @@ def server(input, output, session):
 					temp = TemporaryDirectory()
 					try:
 						if input.UploadType() == "Visium": adata = await VisiumReader(temp, p)
-						if input.UploadType() == "NanoString": adata = await NanoStringReader(temp, p)
+						elif input.UploadType() == "NanoString": adata = await NanoStringReader(temp, p)
 						else: return None
 					except Exception:
 						Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
 						return None
 
-					# Post-processing so all the needed statistics are present.
-					p.inc(message="Generating metrics...")
-					adata.var_names_make_unique()
-					pp.filter_genes(adata, inplace=True, min_counts=100)
-					gr.spatial_neighbors(adata)
-					pp.calculate_qc_metrics(adata, inplace=True)
-					tl.leiden(adata, key_added="cluster", neighbors_key="spatial_neighbors")
-					pp.highly_variable_genes(adata, inplace=True, n_top_genes=100, flavor="seurat_v3")
-
-					ColumnNames(adata ,p)
-					p.close()
+					if adata is None: return
 
 					# Throw it into the Cache.
 					DataCache.Store(adata, name)
 
-				# Return the cached information.
-				Data.set(DataCache.Get(name))
+					# Now that it's cached, remove the origin
+					for file in name:
+							Path(file).unlink()
+
+				adata = DataCache.Get(name)
+				cell, gene = input.CellCount(), input.GeneCount()
+				if cell is None or gene is None: return
+
+				filtered = name + [cell, gene]
+				if not DataCache.In(filtered):
+
+					bdata = adata.copy()
+					pp.filter_cells(bdata, min_counts=cell)
+					pp.filter_genes(bdata , min_cells=gene)
+
+					if input.UploadType() == "Visium":
+						adata.var_names_make_unique()
+						p.inc(message="Normalizing...")
+						pp.normalize_total(bdata, inplace=True)
+						pp.log1p(bdata)
+
+						p.inc(message="Calculating Neighbors...")
+						pp.neighbors(bdata)
+						tl.umap(bdata)
+						gr.spatial_neighbors(bdata)
+
+						p.inc(message="Calculating QC Metrics...")
+						pp.calculate_qc_metrics(bdata, inplace=True)
+
+						p.inc(message="Clustering...")
+						tl.leiden(bdata, key_added="cluster", neighbors_key="spatial_neighbors", resolution=input.Resolution())
+
+						p.inc(message="Finding Highly Variable Genes...")
+						pp.highly_variable_genes(bdata, inplace=True, n_top_genes=100, flavor="seurat_v3")
+
+
+					elif input.UploadType() == "NanoString":
+						p.inc(message="Obtaining Control Probes...")
+						bdata.var["NegPrb"] = bdata.var_names.str.startswith("NegPrb")
+						pp.calculate_qc_metrics(bdata, qc_vars=["NegPrb"], inplace=True)
+
+						p.inc(message="Normalizing...")
+						bdata.layers["counts"] = bdata.X.copy()
+						pp.normalize_total(bdata, inplace=True)
+						pp.log1p(bdata)
+
+						p.inc(message="Calculating Neighbors...")
+						pp.pca(bdata)
+						pp.neighbors(bdata)
+						tl.umap(bdata)
+						gr.spatial_neighbors(bdata, coord_type="generic", delaunay=True)
+
+						p.inc(message="Clustering...")
+						tl.leiden(bdata, key_added="cluster")
+
+					ColumnNames(bdata ,p)
+					DataCache.Store(bdata, filtered)
+				Data.set(DataCache.Get(filtered))
+				p.close()
 
 			# With an example, just return it.
 			else:
@@ -266,7 +310,6 @@ def server(input, output, session):
 				adata,
 				genes=genes,
 				max_neighs=6,
-				n_jobs=Jobs,
 				show_progress_bar=False,
 			)
 		elif (stat == "moran" and "moranI" not in adata.uns) or (stat == "geary" and "gearyC" not in adata.uns):
@@ -358,7 +401,6 @@ def server(input, output, session):
 				gr.centrality_scores(
 					adata,
 					cluster_key=key,
-					n_jobs=Jobs,
 					show_progress_bar=False,
 					score=score,
 				)
@@ -411,8 +453,10 @@ def server(input, output, session):
 			adata = Data()
 			if adata is None: return
 
-			key = "cluster"
+			if input.UploadType() == "NanoString":
+				adata = adata[adata.obs.fov.isin(input.Keys())].copy()
 
+			key = "cluster"
 			p.inc(message="Calculating...")
 
 			interval = config.Interval()
@@ -425,7 +469,6 @@ def server(input, output, session):
 					interval=interval,
 					n_splits=splits,
 					show_progress_bar=False,
-					n_jobs=Jobs,
 				)
 
 			p.inc(message="Plotting...")
@@ -489,6 +532,10 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional("input.MainTab != 'TableTab'",
 				Update(),
+
+				ui.HTML("<b>Minium Count Filtering</b>"),
+				Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
+				Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
 
 				ui.HTML("<b>Keys</b>"),
 				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True),
