@@ -185,6 +185,12 @@ def server(input, output, session):
 							Path(file).unlink()
 
 				adata = DataCache.Get(name)
+
+				if input.File()[0]["name"].endswith(".h5ad"):
+					print("Returning")
+					Data.set(adata)
+					return
+
 				cell, gene = input.CellCount(), input.GeneCount()
 				if cell is None or gene is None: return
 
@@ -518,7 +524,7 @@ app_ui = ui.page_fluid(
 				project="Spatial"
 			),
 
-			ui.input_select(id="UploadType", label=None, choices=["Visium", "VizGen", "NanoString"]),
+			ui.input_select(id="UploadType", label=None, choices=["Visium", "NanoString"]),
 
 			ui.panel_conditional(
 				"input.MainTab === 'TableTab'",
