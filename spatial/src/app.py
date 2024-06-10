@@ -147,7 +147,7 @@ def server(input, output, session):
 		return adata
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.UploadType, input.CellCount, input.GeneCount)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.CellCount, input.GeneCount, input.UploadType)
 	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
@@ -165,7 +165,6 @@ def server(input, output, session):
 
 				# If the name hasn't been cached, we need to construct the object.
 				if not DataCache.In(name):
-
 					p.inc(message="Organizing Data...")
 					temp = TemporaryDirectory()
 					try:
@@ -365,7 +364,6 @@ def server(input, output, session):
 			p.inc(message="Loading input...")
 			adata = Data()
 			if file is None: file = NamedTemporaryFile(delete=False, suffix=".png")
-
 			if input.SourceFile() == "Example" or input.UploadType() == "Visium":
 				return GenerateVisium(adata, file, p)
 			elif input.UploadType() == "NanoString":
@@ -520,10 +518,7 @@ app_ui = ui.page_fluid(
 				project="Spatial"
 			),
 
-			ui.panel_conditional(
-				"input.SourceFile === 'Upload'",
-				ui.input_select(id="UploadType", label=None, choices=["Visium", "VizGen", "NanoString"])
-			),
+			ui.input_select(id="UploadType", label=None, choices=["Visium", "VizGen", "NanoString"]),
 
 			ui.panel_conditional(
 				"input.MainTab === 'TableTab'",
