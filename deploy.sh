@@ -1,5 +1,7 @@
  #!/bin/bash
 
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+
 ./update.sh &
 
 # Rather than modify the system, we can just install pip things user-side, and modify the path
@@ -28,3 +30,5 @@ for folder in "${subfolders[@]}"; do
 	port=$((port+1))
 	cd ../..
 done
+
+sleep infinity

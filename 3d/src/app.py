@@ -12,6 +12,7 @@
 # WebGL is required for this application.
 #
 
+
 from numpy.core.multiarray import MAXDIMS
 from shiny import App, reactive, render, ui
 from pandas import DataFrame
