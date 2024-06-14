@@ -14,7 +14,7 @@
 #
 
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import subplots, colorbar
+from matplotlib.pyplot import subplots, colorbar, style
 from matplotlib.tri import Triangulation
 from PIL import Image
 from tempfile import NamedTemporaryFile
@@ -95,11 +95,10 @@ def server(input, output, session):
 			config.Features(),
 			config.TextSize(),
 			config.DPI(),
+			input.mode()
 		]
-
 		if not DataCache.In(inputs):
-			with ui.Progress() as p:
-
+				print("Updating")
 				p.inc(message="Loading input...")
 				df = GetData()
 
@@ -120,42 +119,45 @@ def server(input, output, session):
 					df = df.pivot(index=x_col, columns=y_col, values=v_col).reset_index(drop=True)
 
 				p.inc(message="Plotting...")
-				fig, ax = subplots()
+				color = input.mode()
+				with  style.context('dark_background' if color == "dark" else "default"):
 
-				# Add the image as an overlay, if we have one.
-				if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
+					fig, ax = subplots()
 
-				cmap = config.ColorMap().lower()
-				alpha = config.Opacity()
-				algorithm = config.Algorithm().lower()
-				levels = config.Levels()
+					# Add the image as an overlay, if we have one.
+					if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
 
-				im = ax.contourf(
-					df,
-					cmap=cmap,
-					extent=[0, 1, 0, 1],
-					zorder=1,
-					alpha=alpha,
-					algorithm=algorithm,
-					levels=levels,
-				)
+					cmap = config.ColorMap().lower()
+					alpha = config.Opacity()
+					algorithm = config.Algorithm().lower()
+					levels = config.Levels()
 
-				# Visibility of features
-				if "legend" in config.Features():
-					cbar = colorbar(im, ax=ax, label="Value")
-					cbar.ax.tick_params(labelsize=config.TextSize())
+					im = ax.contourf(
+						df,
+						cmap=cmap,
+						extent=[0, 1, 0, 1],
+						zorder=1,
+						alpha=alpha,
+						algorithm=algorithm,
+						levels=levels,
+					)
 
-				if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
-				else: ax.set_yticklabels([])
+					# Visibility of features
+					if "legend" in config.Features():
+						cbar = colorbar(im, ax=ax, label="Value")
+						cbar.ax.tick_params(labelsize=config.TextSize())
 
-				if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
-				else: ax.set_xticklabels([])
+					if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
+					else: ax.set_yticklabels([])
 
-				b = BytesIO()
-				fig.savefig(b, format="png", dpi=config.DPI())
-				b.seek(0)
-				DataCache.Store(b.read(), inputs)
+					if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
+					else: ax.set_xticklabels([])
 
+					b = BytesIO()
+					fig.savefig(b, format="png", dpi=config.DPI())
+					b.seek(0)
+					DataCache.Store(b.read(), inputs)
+					
 		b = DataCache.Get(inputs)
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)

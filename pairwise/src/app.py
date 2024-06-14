@@ -15,7 +15,7 @@
 
 
 from shiny import App, reactive, render, ui, types
-from matplotlib.pyplot import subplots, colorbar
+from matplotlib.pyplot import subplots, colorbar, style
 from scipy.spatial.distance import pdist, squareform
 from matplotlib.colors import LinearSegmentedColormap
 from Bio.PDB import PDBParser
@@ -186,6 +186,7 @@ def server(input, output, session):
 			config.TextSize(),
 			config.Features(),
 			config.DPI(),
+			input.mode(),
 		]
 
 		if not DataCache.In(inputs):
@@ -209,48 +210,50 @@ def server(input, output, session):
 					return
 
 				p.inc(message="Plotting...")
-				fig, ax = subplots()
+				color = input.mode()
+				with style.context('dark_background' if color == "dark" else "default"):
+					fig, ax = subplots()
 
-				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
-				interpolation = config.Interpolation().lower()
-				im = ax.imshow(
-					df,
-					cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()),
-					interpolation=interpolation,
-					aspect="equal",
-				)
+					colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
+					interpolation = config.Interpolation().lower()
+					im = ax.imshow(
+						df,
+						cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()),
+						interpolation=interpolation,
+						aspect="equal",
+					)
 
-				text_size = config.TextSize()
+					text_size = config.TextSize()
 
-				# Visibility of features
-				if "legend" in config.Features():
-					cbar = colorbar(im, ax=ax, label="Distance")
-					cbar.ax.tick_params(labelsize=text_size)
+					# Visibility of features
+					if "legend" in config.Features():
+						cbar = colorbar(im, ax=ax, label="Distance")
+						cbar.ax.tick_params(labelsize=text_size)
 
-				if "y" in config.Features():
-					ax.tick_params(axis="y", labelsize=text_size)
-					ax.set_yticks(range(len(df.columns)))
-					ax.set_yticklabels(df.columns)
-				else:
-					ax.set_yticklabels([])
+					if "y" in config.Features():
+						ax.tick_params(axis="y", labelsize=text_size)
+						ax.set_yticks(range(len(df.columns)))
+						ax.set_yticklabels(df.columns)
+					else:
+						ax.set_yticklabels([])
 
-				if "x" in config.Features():
-					ax.tick_params(axis="x", labelsize=text_size)
-					ax.set_xticks(range(len(df.columns)))
-					ax.set_xticklabels(df.columns, rotation=90)
-				else:
-					ax.set_xticklabels([])
+					if "x" in config.Features():
+						ax.tick_params(axis="x", labelsize=text_size)
+						ax.set_xticks(range(len(df.columns)))
+						ax.set_xticklabels(df.columns, rotation=90)
+					else:
+						ax.set_xticklabels([])
 
-				# Annotate each cell with its value
-				if "label" in config.Features():
-					for i in range(df.shape[0]):
-							for j in range(df.shape[1]):
-									ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
+					# Annotate each cell with its value
+					if "label" in config.Features():
+						for i in range(df.shape[0]):
+								for j in range(df.shape[1]):
+										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 
-				b = BytesIO()
-				fig.savefig(b, format="png", dpi=config.DPI())
-				b.seek(0)
-				DataCache.Store(b.read(), inputs)
+					b = BytesIO()
+					fig.savefig(b, format="png", dpi=config.DPI())
+					b.seek(0)
+					DataCache.Store(b.read(), inputs)
 
 		b = DataCache.Get(inputs)
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
