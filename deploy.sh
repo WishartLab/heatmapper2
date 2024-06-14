@@ -1,5 +1,7 @@
  #!/bin/bash
 
+./update.sh &
+
 # Rather than modify the system, we can just install pip things user-side, and modify the path
 PATH="$PATH:$HOME/.local/bin"
 

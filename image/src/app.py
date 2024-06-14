@@ -16,7 +16,6 @@
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import subplots, colorbar
 from matplotlib.tri import Triangulation
-from matplotlib.cm import get_cmap
 from PIL import Image
 from tempfile import NamedTemporaryFile
 from io import BytesIO
@@ -130,11 +129,6 @@ def server(input, output, session):
 				alpha = config.Opacity()
 				algorithm = config.Algorithm().lower()
 				levels = config.Levels()
-
-				# Make 0 values transparent.
-				df = df.replace(0, -1)
-				cmap = get_cmap(cmap)
-				cmap.set_under(alpha=0)
 
 				im = ax.contourf(
 					df,
