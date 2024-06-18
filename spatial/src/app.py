@@ -259,8 +259,17 @@ def server(input, output, session):
 		state = config.TableType()
 		df = Data()
 		if df is None: return
-		if state == "obs": return render.DataGrid(df.obs)
-		elif state == "var": return render.DataGrid(df.var)
+		if state == "obs": return render.DataGrid(df.obs, editable=True)
+		elif state == "var": return render.DataGrid(df.var, editable=True)
+
+
+	@Table.set_patch_fn
+	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		if config.Type() == "Integer": value = int(patch["value"])
+		elif config.Type() == "Float": value = float(patch["value"])
+		else: value = patch["value"]
+		print(value, patch)
+		return value
 
 
 	def GenerateNanoString(adata, file, p):

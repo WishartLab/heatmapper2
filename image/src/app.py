@@ -98,7 +98,7 @@ def server(input, output, session):
 			input.mode()
 		]
 		if not DataCache.In(inputs):
-				print("Updating")
+			with ui.Progress() as p:
 				p.inc(message="Loading input...")
 				df = GetData()
 
@@ -157,7 +157,7 @@ def server(input, output, session):
 					fig.savefig(b, format="png", dpi=config.DPI())
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
-					
+
 		b = DataCache.Get(inputs)
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)
