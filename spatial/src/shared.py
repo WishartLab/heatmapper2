@@ -23,7 +23,7 @@ Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
 # Define the Server and Port of the Shiny instances (Port is incremented)
 # Change these if Heatmapper is running on a server.
-Server = "http://35.208.86.138"
+Server = "http://heatmapper2.ca"
 Port = 8000
 
 # Detect the running environment
@@ -344,7 +344,7 @@ def NavBar():
 		"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}:{Port + 2}",
 		"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}:{Port + 3}",
 		"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
-		"3d": f"{Server}:{Port + 5}",
+		"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
 		"spatial": f"{Server}:{Port + 6}",
 	}
 
