@@ -22,7 +22,7 @@ from scanpy import pp, tl
 from pathlib import Path
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify, TableOptions
 
 try:
 	from user import config
@@ -268,7 +268,15 @@ def server(input, output, session):
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
-		print(value, patch)
+
+		row = patch["row_index"]
+		col = patch["column_index"]
+
+		df = Data()
+		table = df.obs if config.TableType() == "obs" else df.var
+		table.iloc[row, col] = value
+		Data.set(df)
+
 		return value
 
 
@@ -537,7 +545,8 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'TableTab'",
-				config.TableType.UI(ui.input_select, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"})
+				config.TableType.UI(ui.input_select, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"}),
+				TableOptions(config),
 			),
 
 			ui.panel_conditional("input.MainTab != 'TableTab'",
@@ -604,14 +613,6 @@ app_ui = ui.page_fluid(
 				config.OccurrenceGraph.UI(ui.input_select, id="OccurrenceGraph", label="Graph", choices=["Scatter", "Line"]),
 				config.Interval.UI(ui.input_slider, id="Interval", label="Interval", min=1, max=100, step=1),
 				config.Splits.UI(ui.input_slider, id="Splits", label="Splits", min=0, max=10, step=0),
-			),
-
-
-			ui.panel_conditional(
-				"input.MainTab === 'TableTab'",
-
-				# Add the download buttons.
-				ui.download_button("DownloadTable", "Download Table"),
 			),
 			padding="10px",
 			gap="20px",

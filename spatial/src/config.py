@@ -69,4 +69,7 @@ config = ConfigHandler({
 
 	# No value, just toggle visibility.
 	"DownloadTable": Config(),
+
+	# "Integer" "Float" "String"
+	"Type": Config(selected="Integer"),
 })
