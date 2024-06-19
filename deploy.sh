@@ -32,6 +32,6 @@ for folder in "${subfolders[@]}"; do
 done
 
 # You'll need root for this, or grant Python the CAP_NET_BIND_SERVICE capability
-python3 -m http.server --directory . --bind localhost 80
+python3 -m http.server --directory . --bind 0.0.0.0 80
 
 sleep infinity
