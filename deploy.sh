@@ -32,6 +32,6 @@ for folder in "${subfolders[@]}"; do
 done
 
 sudo fuser -k 80/tcp
-sudo python3 -m http.server --directory . --bind 0.0.0.0 80
+sudo python3 -m http.server --directory . --bind 0.0.0.0 80 &
 
 sleep infinity
