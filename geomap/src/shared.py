@@ -203,7 +203,7 @@ class Cache:
 
 		"""
 		if n not in self._primary:
-			raw = await (fetch(n) if n.startswith("https://") or n.startswith("http://") else self._download(n))
+			raw = await (fetch(n) if n.startswith("https://") else self._download(n))
 			if raw is None: return None
 			temp = NamedTemporaryFile(suffix=Path(n).suffix);
 			temp.write(raw);
@@ -282,7 +282,7 @@ class Cache:
 
 			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running
 			# in server-mode).
-			if example_file.startswith("https://") or example_file.startswith("http://"):
+			if example_file.startswith("https://"):
 				n = example_file if Pyodide else str(source + example_file.split("/")[-1])
 			else:
 				n = str(source + example_file)

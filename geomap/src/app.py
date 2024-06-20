@@ -319,7 +319,7 @@ app_ui = ui.page_fluid(
 				"example2.txt": "Example 2",
 				"example3.txt": "Example 3",
 				"example6.csv": "Example 4",
-				"http://heatmapper2.ca/geomap/example_input/owid-covid-data.csv": "Example 5"},
+				"https://heatmapper2.ca/geomap/example_input/owid-covid-data.csv": "Example 5"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Geomap"
 			),
