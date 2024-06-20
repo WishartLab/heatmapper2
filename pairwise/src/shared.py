@@ -18,7 +18,7 @@ from os.path import exists
 from copy import deepcopy
 
 # Used for fetching web resources in a variety of fashions.
-URL = "https://wishartlab.github.io/heatmapper2"
+URL = "https://heatmapper2.ca"
 Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
 # Define the Server and Port of the Shiny instances (Port is incremented)
