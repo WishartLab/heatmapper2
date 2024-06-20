@@ -31,8 +31,4 @@ for folder in "${subfolders[@]}"; do
 	cd ../..
 done
 
-# Make your own deployment script
-sudo fuser -k 443/tcp
-nohup sudo python3 deploy.py &
-
 sleep infinity
