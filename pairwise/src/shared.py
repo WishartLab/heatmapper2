@@ -203,7 +203,7 @@ class Cache:
 
 		"""
 		if n not in self._primary:
-			raw = await (fetch(n) if n.startswith("https://") else self._download(n))
+			raw = await (fetch(n) if n.startswith("https://") or n.startswith("http://") else self._download(n))
 			if raw is None: return None
 			temp = NamedTemporaryFile(suffix=Path(n).suffix);
 			temp.write(raw);
