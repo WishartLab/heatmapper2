@@ -282,7 +282,7 @@ class Cache:
 
 			# If we explicitly provide a URL, use it, but only in Pyodide (We still assume the file exists on disk when running
 			# in server-mode).
-			if example_file.startswith("https://"):
+			if example_file.startswith("https://") or example_file.startswith("http://"):
 				n = example_file if Pyodide else str(source + example_file.split("/")[-1])
 			else:
 				n = str(source + example_file)
