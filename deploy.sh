@@ -17,7 +17,7 @@ port=8000
 for folder in "${subfolders[@]}"; do
 
 	# Kill any process that is using the port
-	fuser -k $port/tcp
+	sudo fuser -k $port/tcp
 
 	cd $folder/src
 	echo $(pwd)
