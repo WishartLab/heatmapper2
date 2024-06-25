@@ -18,7 +18,7 @@ from os.path import exists
 from copy import deepcopy
 
 # Used for fetching web resources in a variety of fashions.
-URL = "https://heatmapper2.ca"
+URL = "https://wishartlab.github.io/heatmapper2"
 Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
 
 # Define the Server and Port of the Shiny instances (Port is incremented)
@@ -453,6 +453,8 @@ class Config:
 	@brief A configuration entry.
 	"""
 
+	configs = {}
+
 	def __init__(self, visible=True, **kwargs):
 		"""
 		@brief Create a configuration entry.
@@ -495,6 +497,10 @@ class Config:
 
 		for key in kwargs.keys():
 			combined[key] = kwargs[key]
+
+		id = combined["id"]
+		if id not in Config.configs:
+			Config.configs[id] = self
 
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()

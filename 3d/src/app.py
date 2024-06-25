@@ -229,12 +229,11 @@ def server(input, output, session):
 						Error("RMSF requires a PDB with more than one model to compute difference!")
 						return source, prop, scheme
 
-				
+
 					# List of atom names of interest
 					atom_names_of_interest = ["C", "CA", "N"]
 
 					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(), model]
-					print(entry)
 					if not DataCache.In(entry):
 						main_model = structure[model]
 						for chain in main_model:

@@ -1,8 +1,8 @@
 #
-# Heatmapper 
+# Heatmapper
 # Geocoordinate Configuration
 #
-# This file contains configuration for Geocoordinate. 
+# This file contains configuration for Geocoordinate.
 
 
 from shared import Config, ConfigHandler
@@ -13,7 +13,7 @@ config = ConfigHandler({
 	"TimeColumn": Config(),
 	"ValueColumn": Config(),
 
-	"RenderMode": Config(selected="Raster"),
+	"RenderMode": Config(selected="Scaled Raster"),
 
 	# "CartoDB Positron", "OpenStreetMap"
 	"MapType": Config(selected="CartoDB Positron"),
@@ -40,7 +40,7 @@ config = ConfigHandler({
 	"Max": Config(value=0),
 
 	# "Temporal", "Uniform", "Scaled"
-	"Features": Config(selected=["Scaled", "KDE"]),
+	"Features": Config(selected=["KDE"]),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),

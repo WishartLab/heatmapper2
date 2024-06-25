@@ -78,8 +78,9 @@ def server(input, output, session):
 		opacity = config.Opacity()
 		radius = config.Radius()
 		blur = config.Blur()
+		render = config.RenderMode()
 
-		if "Scaled" in config.Features():
+		if render == "Scaled Raster":
 			HeatMap(list(zip(df[lat_col], df[lon_col], df[v_col])),
 			min_opacity=opacity,
 			radius=radius,
@@ -97,8 +98,7 @@ def server(input, output, session):
 				density = kde(stack)
 				df[v_col] = values + density * 0.1
 
-			if config.RenderMode() == "Vector":
-				print("Vector")
+			if render == "Vector":
 				# Define a linear colormap
 				colormap = LinearColormap(
 					colors=['#8000ff', '#00bfff', '#00ff80', '#ffff00', '#ff8000', '#ff0000'],
@@ -112,7 +112,7 @@ def server(input, output, session):
 					color = colormap(value)
 					Circle(
 						location=[row[lat_col], row[lon_col]],
-						radius=radius * 100,
+						radius=radius,
 						color=color,
 						fill=True,
 						opacity=opacity,
@@ -121,7 +121,6 @@ def server(input, output, session):
 					).add_to(map)
 
 			else:
-				print("Raster")
 				# Generate the contour
 				fig, ax = subplots()
 				contour = ax.scatter(
@@ -246,7 +245,6 @@ def server(input, output, session):
 					return
 
 			if "Smoothing" in config.Features():
-				print("Smoothing")
 				p.inc(message="Smoothing...")
 				df = df.sort_values(by=[lat_col, lon_col])
 				df[v_col] = convolve(df[v_col], ones(5) / 5 , mode='same')
@@ -333,7 +331,7 @@ app_ui = ui.page_fluid(
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Rendering", choices=["Raster", "Vector"]),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Scaled Raster", "Non-Scaled Raster", "Vector"]),
 				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
 
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
@@ -353,7 +351,7 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
-					choices=["Scaled", "Smoothing", "KDE"],
+					choices=["Smoothing", "KDE"],
 				),
 
 				# Add the download buttons.
