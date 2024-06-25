@@ -51,7 +51,7 @@ def server(input, output, session):
 		}
 	}
 
-	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
+	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "rainbow", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
 
 
 	def HandleData(path):
@@ -277,6 +277,10 @@ def server(input, output, session):
 							}}\n"""
 					prop = "colorfunc"
 
+				elif scheme == "rainbow":
+					max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
+					prop = "colorscheme"
+					scheme = {"prop": "index", "gradient": "ROYGB", "min": 0, "max": max}
 				elif scheme != "spectrum": prop = "colorscheme"
 				return source, prop, scheme
 
@@ -286,6 +290,7 @@ def server(input, output, session):
 
 			viewer.addModelsAsFrames(source)
 			viewer.zoomTo()
+
 
 			p.inc(message="Styling...")
 			viewer.setStyle({config.PStyle().lower(): {
