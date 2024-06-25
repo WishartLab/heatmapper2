@@ -453,8 +453,6 @@ class Config:
 	@brief A configuration entry.
 	"""
 
-	configs = {}
-
 	def __init__(self, visible=True, **kwargs):
 		"""
 		@brief Create a configuration entry.
@@ -497,10 +495,6 @@ class Config:
 
 		for key in kwargs.keys():
 			combined[key] = kwargs[key]
-
-		id = combined["id"]
-		if id not in Config.configs:
-			Config.configs[id] = self
 
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()
