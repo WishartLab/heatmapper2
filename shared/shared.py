@@ -482,7 +482,7 @@ class Config:
 		self.resolve = input
 
 
-	def UI(self, ui_element, make_inline=True, widths=[4,8], gap="20px", *args, **kwargs):
+	def UI(self, ui_element, make_inline=True, widths=[4,8], gap="20px", conditional=None, *args, **kwargs):
 		"""
 		@brief Displays the configured UI.
 		@param ui The Shiny interface element to use.
@@ -501,8 +501,13 @@ class Config:
 
 		if self.visible:
 			if make_inline and "label" in combined:
-				return Inlineify(ui_element, widths, gap, **combined)
-			else: return ui_element(*args, **combined)
+				element = Inlineify(ui_element, widths, gap, **combined)
+			else: element = ui_element(*args, **combined)
+
+			# There doesn't seem any good way to remove the conditional panel spacing.
+			# Rather than having conditional configurations stick out due to inconsistent spacing
+			# Just give all the panels the same spacing by putting them in true conditions.
+			return ui.panel_conditional("1 === 1" if conditional is None else conditional, element, _add_ws=False)
 
 
 class ConfigHandler(dict):

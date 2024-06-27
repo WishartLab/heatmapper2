@@ -17,12 +17,15 @@
 from shiny import App, reactive, render, ui, types
 from matplotlib.pyplot import subplots, colorbar, style
 from scipy.spatial.distance import pdist, squareform
-from matplotlib.colors import LinearSegmentedColormap
+from scipy.interpolate import griddata
+from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.cm import ScalarMappable
 from Bio.PDB import PDBParser
 from Bio import SeqIO
 from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
+from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg
 
@@ -175,6 +178,21 @@ def server(input, output, session):
 		return value
 
 
+	def GenerateMatrix(data, value):
+		try:
+			# Calculate matrix
+			if value == "Distance":
+				metric = config.DistanceMethod().lower()
+				distances = pdist(data, metric=metric)
+				return DataFrame(squareform(distances), columns=data.index, index=data.index)
+			else:
+				method = config.CorrelationMethod().lower()
+				return data.T.corr(method=method)
+		except Exception:
+			Error("Could not compute matrix. Ensure your input data is correct!")
+			return None
+
+
 	def GenerateHeatmap():
 
 		inputs = [
@@ -186,8 +204,11 @@ def server(input, output, session):
 			config.TextSize(),
 			config.Features(),
 			config.DPI(),
+			config.Rotation(),
 			input.mode(),
 		]
+
+		if config.Rotation != 90: inputs.extend([config.Elevation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels()])
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
@@ -196,39 +217,88 @@ def server(input, output, session):
 				if data is None or len(data.index) == 0: return
 
 				p.inc(message="Calculating...")
-				try:
-					# Calculate matrix
-					if config.MatrixType() == "Distance":
-						metric = config.DistanceMethod().lower()
-						distances = pdist(data, metric=metric)
-						df = DataFrame(squareform(distances), columns=data.index, index=data.index)
-					else:
-						method = config.CorrelationMethod().lower()
-						df = data.T.corr(method=method)
-				except Exception:
-					Error("Could not compute matrix. Ensure your input data is correct!")
-					return
+				df = GenerateMatrix(data, config.MatrixType())
+				if df is None: return
 
 				p.inc(message="Plotting...")
 				color = input.mode()
-				with style.context('dark_background' if color == "dark" else "default"):
-					fig, ax = subplots()
+				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
+				cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
 
-					colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
-					interpolation = config.Interpolation().lower()
-					im = ax.imshow(
-						df,
-						cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins()),
-						interpolation=interpolation,
-						aspect="equal",
-					)
+				with style.context('dark_background' if color == "dark" else "default"):
+					rotation = config.Rotation()
+					elevation = config.Elevation()
+
+					if elevation != 90:
+						fig, ax = subplots(subplot_kw={"projection": "3d"})
+
+						cached = [
+							input.File() if input.SourceFile() == "Upload" else input.Example(),
+							config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
+							input.CustomColors() if config.Custom() else config.ColorMap().split(),
+							config.Bins(),
+							config.HeightMatrix(),
+							config.InterpolationLevels()
+						]
+
+						if not DataCache.In(cached):
+							if config.HeightMatrix()  != config.MatrixType():
+								df_height = GenerateMatrix(data, config.HeightMatrix())
+							else: df_height = df
+
+							z = df_height.values.flatten()
+
+							color_array = df.values.flatten()
+							norm = Normalize(vmin=color_array.min(), vmax=color_array.max())
+							c = norm(color_array)
+
+							length = df_height.shape[0]
+							x, y = meshgrid(arange(length), arange(length))
+							x = x.ravel()
+							y = y.ravel()
+							width = depth = 1
+
+							if config.InterpolationLevels() != 1:
+								level = config.InterpolationLevels()
+								length_new = df_height.shape[0] * level
+								space = linspace(0, length-1, length_new)
+								x_grid, y_grid = meshgrid(space, space)
+								x_new = x_grid.ravel()
+								y_new = y_grid.ravel()
+
+								points = column_stack((x, y))
+								points_new = column_stack((x_new, y_new))
+
+								z = griddata(points, z, points_new, method='cubic')
+								c = griddata(points, c, points_new, method='cubic')
+
+								x, y = x_new, y_new
+								width /= level
+								depth /= level
+							DataCache.Store((x, y, width, depth, z, c, norm), cached)
+						x, y, width, depth, z, c, norm = DataCache.Get(cached)
+
+						ax.view_init(elev=elevation, azim=rotation)
+						ax.set_box_aspect(None, zoom=config.Zoom())
+						im = ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c))
+
+					else:
+						fig, ax = subplots()
+						interpolation = config.Interpolation().lower()
+						im = ax.imshow(df, cmap=cmap, interpolation=interpolation, aspect="equal")
 
 					text_size = config.TextSize()
 
 					# Visibility of features
 					if "legend" in config.Features():
-						cbar = colorbar(im, ax=ax, label="Distance")
+						if elevation == 90:
+							cbar = colorbar(im, ax=ax, label="Distance")
+						else:
+							mappable = ScalarMappable(cmap=cmap, norm=norm)
+							mappable.set_array(z)
+							cbar = colorbar(mappable, ax=ax, label='Value', orientation='vertical')
 						cbar.ax.tick_params(labelsize=text_size)
+
 
 					if "y" in config.Features():
 						ax.tick_params(axis="y", labelsize=text_size)
@@ -244,14 +314,24 @@ def server(input, output, session):
 					else:
 						ax.set_xticklabels([])
 
+					if elevation != 90:
+						if "z" in config.Features():
+							ax.tick_params(axis="z", labelsize=text_size)
+						else:
+							ax.set_zticklabels([])
+
 					# Annotate each cell with its value
 					if "label" in config.Features():
 						for i in range(df.shape[0]):
 								for j in range(df.shape[1]):
+									if elevation == 90:
 										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
+									else:
+										ax.text(j, i, height[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
+
 
 					b = BytesIO()
-					fig.savefig(b, format="png", dpi=config.DPI())
+					fig.savefig(b, format="png", dpi=config.DPI(), bbox_inches="tight")
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
 
@@ -351,12 +431,21 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.MatrixType.UI(ui.input_select, id="MatrixType",  label="Matrix",  choices=["Distance", "Correlation"]),
+				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix",	choices=["Distance", "Correlation"]),
+
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1),
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90"),
 				config.Chain.UI(ui.input_text, id="Chain", label="Chain"),
 				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1),
 				ui.output_ui("Method"),
+
+				ui.HTML("<b>3D</b>"),
+				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation"], conditional="input.Elevation != 90"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
+				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
+
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),
@@ -373,7 +462,7 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group,
 					make_inline=False, id="Features", label=None,
-					choices={"x": "X Labels", "y": "Y Labels", "label": "Data Labels", "legend": "Legend"},
+					choices={"x": "X Labels", "y": "Y Labels", "z": "Z-Labels", "label": "Data Labels", "legend": "Legend"},
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),

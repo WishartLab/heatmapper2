@@ -1,8 +1,8 @@
 #
-# Heatmapper 
+# Heatmapper
 # Pairwise Configuration
 #
-# This file contains configuration for Pairwise. 
+# This file contains configuration for Pairwise.
 
 
 from shared import Config, ConfigHandler
@@ -12,6 +12,13 @@ config = ConfigHandler({
 
 	# "Distance", "Correlation"
 	"MatrixType": Config(selected="Distance"),
+	"HeightMatrix": Config(selected="Distance"),
+
+
+	"Elevation": Config(value=90),
+	"Rotation": Config(value=0),
+	"Zoom": Config(value=1),
+	"InterpolationLevels": Config(value=1),
 
 	# Number between 1-50
 	"TextSize": Config(value=8),
@@ -36,8 +43,8 @@ config = ConfigHandler({
 
 	# True or False to Use custom color maps or pre-defined ones.
 	"Custom": Config(value=False),
-	
-	# See shared.py ColorMap for options. 
+
+	# See shared.py ColorMap for options.
 	"ColorMap": Config(selected="Blue White Yellow"),
 
 	# Any number between 3-100 to define amount of bins for color mapping
@@ -47,7 +54,7 @@ config = ConfigHandler({
 	"Size": Config(value=600),
 
 	# Any value greater than 1.
-	"DPI": Config(value=100),
+	"DPI": Config(value=150),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
