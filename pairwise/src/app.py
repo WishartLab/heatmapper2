@@ -208,7 +208,7 @@ def server(input, output, session):
 			input.mode(),
 		]
 
-		if config.Rotation != 90: inputs.extend([config.Elevation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels()])
+		if config.Elevation() != 90: inputs.extend([config.Elevation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels()])
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
