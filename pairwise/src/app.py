@@ -194,7 +194,6 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
-
 		inputs = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
@@ -204,11 +203,11 @@ def server(input, output, session):
 			config.TextSize(),
 			config.Features(),
 			config.DPI(),
-			config.Rotation(),
+			config.Elevation(),
 			input.mode(),
 		]
 
-		if config.Elevation() != 90: inputs.extend([config.Elevation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels()])
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels()])
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
@@ -220,7 +219,6 @@ def server(input, output, session):
 				df = GenerateMatrix(data, config.MatrixType())
 				if df is None: return
 
-				p.inc(message="Plotting...")
 				color = input.mode()
 				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 				cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
@@ -242,12 +240,12 @@ def server(input, output, session):
 						]
 
 						if not DataCache.In(cached):
+							p.inc(message="Generating...")
 							if config.HeightMatrix()  != config.MatrixType():
 								df_height = GenerateMatrix(data, config.HeightMatrix())
 							else: df_height = df
 
 							z = df_height.values.flatten()
-
 							color_array = df.values.flatten()
 							norm = Normalize(vmin=color_array.min(), vmax=color_array.max())
 							c = norm(color_array)
@@ -259,6 +257,7 @@ def server(input, output, session):
 							width = depth = 1
 
 							if config.InterpolationLevels() != 1:
+								p.inc(message="Interpolating...")
 								level = config.InterpolationLevels()
 								length_new = df_height.shape[0] * level
 								space = linspace(0, length-1, length_new)
@@ -283,10 +282,12 @@ def server(input, output, session):
 						im = ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c))
 
 					else:
+						p.inc(message="Generating...")
 						fig, ax = subplots()
 						interpolation = config.Interpolation().lower()
 						im = ax.imshow(df, cmap=cmap, interpolation=interpolation, aspect="equal")
 
+					p.inc(message="Plotting...")
 					text_size = config.TextSize()
 
 					# Visibility of features

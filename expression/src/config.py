@@ -22,6 +22,11 @@ config = ConfigHandler({
 
 	# See shared.py for DistanceMethods
 	"DistanceMethod": Config(selected="Euclidean"),
+	
+	"Elevation": Config(value=90),
+	"Rotation": Config(value=0),
+	"Zoom": Config(value=1),
+	"InterpolationLevels": Config(value=1),
 
 	# Any numerical value from 1-50
 	"TextSize": Config(value=8),

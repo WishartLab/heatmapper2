@@ -14,7 +14,6 @@ config = ConfigHandler({
 	"MatrixType": Config(selected="Distance"),
 	"HeightMatrix": Config(selected="Distance"),
 
-
 	"Elevation": Config(value=90),
 	"Rotation": Config(value=0),
 	"Zoom": Config(value=1),
