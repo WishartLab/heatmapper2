@@ -25,9 +25,11 @@ config = ConfigHandler({
 
 	"Elevation": Config(value=90),
 	"Rotation": Config(value=0),
-	"Zoom": Config(value=1),
+	"Zoom": Config(value=1.3),
 	"InterpolationLevels": Config(value=1),
 	"MinScale": Config(value=True),
+	"Opacity": Config(value=1.0),
+
 
 	# Any numerical value from 1-50
 	"TextSize": Config(value=8),

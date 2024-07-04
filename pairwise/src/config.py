@@ -19,6 +19,7 @@ config = ConfigHandler({
 	"Zoom": Config(value=1),
 	"InterpolationLevels": Config(value=1),
 	"MinScale": Config(value=False),
+	"Opacity": Config(value=1.0),
 
 	# Number between 1-50
 	"TextSize": Config(value=8),

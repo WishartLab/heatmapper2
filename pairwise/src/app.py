@@ -283,7 +283,7 @@ def server(input, output, session):
 
 						ax.view_init(elev=elevation, azim=rotation)
 						ax.set_box_aspect(None, zoom=config.Zoom())
-						im = ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c))
+						im = ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c), alpha=config.Opacity())
 
 					else:
 						p.inc(message="Generating...")
@@ -451,6 +451,7 @@ app_ui = ui.page_fluid(
 				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
 				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
 				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),

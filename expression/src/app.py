@@ -145,42 +145,12 @@ def server(input, output, session):
 		return value
 
 
-	def Heatmap2D(data, index_labels, p):
-		fig = figure(figsize=(12, 10))
-		gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
-
-		# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
-		# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
-		# To data, so the order changes when turning the toggle.
-		if "row" in config.Features():
-			ax_row = fig.add_subplot(gs[1, 0])
-			row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
-			ax_row.axis("off")
-			leaves = row_dendrogram["leaves"]
-			leaves.reverse()
-
-			index_labels = [index_labels[i] for i in leaves]
-			df = data.iloc[leaves]
-		else:
-			df = data
-
-		# If we render the column dendrogram.
-		if "col" in config.Features():
-			ax_col = fig.add_subplot(gs[0, 1])
-			col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
-			ax_col.axis("off")
-
-		# Handle scaling
-		if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
-
-		# Render the heatmap.
-		ax_heatmap = fig.add_subplot(gs[1, 1])
-
+	def Heatmap2D(df, ax_heatmap, p):
 		colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 		interpolation = config.Interpolation().lower()
 		bins = config.Bins()
 
-		return fig, gs, ax_heatmap, ax_heatmap.imshow(
+		return ax_heatmap.imshow(
 			df,
 			cmap=LinearSegmentedColormap.from_list("ColorMap", colors, N=bins),
 			interpolation=interpolation,
@@ -188,14 +158,12 @@ def server(input, output, session):
 		)
 
 
-	def Heatmap3D(df, p):
-		fig, ax = subplots(subplot_kw={"projection": "3d"})
+	def Heatmap3D(df, ax_heatmap, p):
 
 		cached = [
 			input.File() if input.SourceFile() == "Upload" else input.Example(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Bins(),
-			input.ScaleType(),
 			config.InterpolationLevels(),
 			config.Features(),
 			config.MinScale(),
@@ -204,13 +172,9 @@ def server(input, output, session):
 		if not DataCache.In(cached):
 			p.inc(message="Generating...")
 
-			# Handle scaling
-			if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
 			z = df.T.values.flatten()
 			if config.MinScale():
 				z += abs(n_min(z))
-
-
 
 			color = input.mode()
 			colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
@@ -249,9 +213,9 @@ def server(input, output, session):
 
 		x, y, width, depth, z, c, cmap, mappable = DataCache.Get(cached)
 
-		ax.view_init(elev=config.Elevation(), azim=config.Rotation())
-		ax.set_box_aspect(None, zoom=config.Zoom())
-		return fig, ax, ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c)), mappable
+		ax_heatmap.view_init(elev=config.Elevation(), azim=config.Rotation())
+		ax_heatmap.set_box_aspect(None, zoom=config.Zoom())
+		return ax_heatmap.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c), alpha=config.Opacity()), mappable
 
 
 	def GenerateHeatmap():
@@ -276,7 +240,7 @@ def server(input, output, session):
 			config.Elevation(),
 			input.mode(),
 		]
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
@@ -289,24 +253,52 @@ def server(input, output, session):
 				p.inc(message="Plotting...")
 				color = input.mode()
 				with  style.context('dark_background' if color == "dark" else "default"):
-					if config.Elevation() == 90:
-						fig, gs, ax_heatmap, heatmap = Heatmap2D(data, index_labels, p)
-					else:
-						fig, ax_heatmap, heatmap, mappable = Heatmap3D(data, p)
+					fig = figure(figsize=(12, 10))
+					gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
 
+					# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
+					# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
+					# To data, so the order changes when turning the toggle.
+					if "row" in config.Features():
+						ax_row = fig.add_subplot(gs[1, 0])
+						row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
+						ax_row.axis("off")
+						leaves = row_dendrogram["leaves"]
+						leaves.reverse()
+
+						index_labels = [index_labels[i] for i in leaves]
+						df = data.iloc[leaves]
+					else:
+						df = data
+
+					# If we render the column dendrogram.
+					if "col" in config.Features():
+						ax_col = fig.add_subplot(gs[0, 1])
+						col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
+						ax_col.axis("off")
+
+					# Handle scaling
+					if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
+
+					if config.Elevation() == 90:
+						ax_heatmap = fig.add_subplot(gs[1, 1])
+						heatmap = Heatmap2D(df, ax_heatmap, p)
+					else:
+						ax_heatmap = fig.add_subplot(gs[1, 1], projection="3d")
+						heatmap, mappable = Heatmap3D(df, ax_heatmap, p)
 					text_size = config.TextSize()
 
 					# If we render the Y axis.
-					if "y" in config.Features() and config.Elevation() == 90:
-						ax_heatmap.set_yticks(range(len(index_labels)))
+					if "y" in config.Features():
+						if config.Elevation() == 90: ax_heatmap.set_yticks(range(len(index_labels)))
 						ax_heatmap.set_yticklabels(index_labels, fontsize=text_size)
-						ax_heatmap.yaxis.tick_right()
+						if config.Elevation() == 90: ax_heatmap.yaxis.tick_right()
 					else:
 						ax_heatmap.set_yticklabels([])
 
 					# If we render the X axis.
-					if "x" in config.Features() and config.Elevation() == 90:
-						ax_heatmap.set_xticks(range(len(x_labels)))
+					if "x" in config.Features():
+						if config.Elevation() == 90: ax_heatmap.set_xticks(range(len(x_labels)))
 						ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=text_size)
 					else:
 						ax_heatmap.set_xticklabels([])
@@ -319,12 +311,10 @@ def server(input, output, session):
 
 					# If we render the legend.
 					if "legend" in config.Features():
-						if input.Elevation() == 90:
-							ax_cbar = fig.add_subplot(gs[3, 1])
-							cbar = fig.colorbar(heatmap, cax=ax_cbar, orientation="horizontal")
-							cbar.ax.tick_params(labelsize=text_size)
-						else:
-							cbar = fig.colorbar(mappable, ax=ax_heatmap, label='Value', orientation='vertical')
+						ax_cbar = fig.add_subplot(gs[3, 1])
+						cbar = fig.colorbar(heatmap if input.Elevation() == 90 else mappable, cax=ax_cbar, orientation="horizontal")
+						cbar.ax.tick_params(labelsize=text_size)
+
 
 					b = BytesIO()
 					fig.savefig(b, format="png", dpi=config.DPI())
@@ -454,6 +444,7 @@ app_ui = ui.page_fluid(
 					config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
 					config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
 					config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
+					config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),
