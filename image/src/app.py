@@ -19,6 +19,8 @@ from matplotlib.tri import Triangulation
 from PIL import Image
 from tempfile import NamedTemporaryFile
 from io import BytesIO
+from numpy import meshgrid, arange, zeros_like, array, zeros, linspace, column_stack
+from scipy.interpolate import griddata
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg
 
@@ -45,7 +47,8 @@ def server(input, output, session):
 		@returns A data object from the cache.
 		@info This Data Handler supports png and jpg images as PIL.Image objects
 		"""
-		if path.suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]: return Image.open(path.resolve())
+		if path.suffix in [".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"]:
+			return Image.open(path.resolve())
 		else: return DataCache.DefaultHandler(path)
 	DataCache = Cache("image", DataHandler=HandleData)
 	Data = reactive.value(None)
@@ -95,19 +98,26 @@ def server(input, output, session):
 			config.Features(),
 			config.TextSize(),
 			config.DPI(),
+			config.Quality(),
 			input.mode()
 		]
+
+		if config.Elevation() != 90: inputs += [config.Elevation(), config.Rotation(), config.Zoom(), config.Slices()]
+
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
 				df = GetData()
 
-				# We need to reflect the DataFrame so that the first row is plotted at the top
-				df = df.iloc[::-1]
-
 				p.inc(message="Loading image...")
 				img = IMG()
 				if img is None or df.empty: return None
+
+				if img is not None:
+					try:
+						w, h = img.size
+						img = img.resize((round(w * config.Quality()), round(h * config.Quality())))
+					except TypeError: img = None
 
 				# Wrangle into an acceptable format.
 				p.inc(message="Formatting...")
@@ -122,28 +132,53 @@ def server(input, output, session):
 				color = input.mode()
 				with  style.context('dark_background' if color == "dark" else "default"):
 
-					fig, ax = subplots()
-
-					# Add the image as an overlay, if we have one.
-					if img is not None: ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
-
 					cmap = config.ColorMap().lower()
 					alpha = config.Opacity()
 					algorithm = config.Algorithm().lower()
 					levels = config.Levels()
 
-					im = ax.contourf(
-						df,
-						cmap=cmap,
-						extent=[0, 1, 0, 1],
-						zorder=1,
-						alpha=alpha,
-						algorithm=algorithm,
-						levels=levels,
-					)
+					if config.Elevation() == 90:
+						fig, ax = subplots()
+						# Add the image as an overlay, if we have one.
+						if img is not None:
+							img = img.transpose(method=Image.FLIP_TOP_BOTTOM)
+							ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
+						im = ax.contourf(df, cmap=cmap, extent=[0, 1, 0, 1], zorder=1, alpha=alpha, algorithm=algorithm, levels=levels)
+						ax.invert_yaxis()
+
+					else:
+						fig, ax = subplots(subplot_kw={"projection": "3d"})
+
+						z = df.values
+						ax.set_zlim([0, z.max()])
+
+						x, y = arange(df.shape[0]), arange(df.shape[1])
+						x, y = meshgrid(x, y)
+
+						if img is not None:
+							arr = array(img) / 255.0
+							ix, iy, _ = arr.shape
+
+							x_new, y_new = meshgrid(linspace(0, df.shape[0]-1, ix), linspace(0, df.shape[1]-1, iy))
+
+							points = column_stack((x.ravel(), y.ravel()))
+							points_new = column_stack((x_new.ravel(), y_new.ravel()))
+							z = griddata(points, z.flatten(), points_new, method='cubic').reshape(ix, iy)
+							x, y = meshgrid(arange(ix), arange(iy))
+
+							ax.plot_surface(x, y, zeros_like(x), rstride=1, cstride=1, facecolors=arr)
+
+						ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+						ax.set_box_aspect(None, zoom=config.Zoom())
+						im = ax.plot_surface(y, x, z, alpha=alpha, cmap=cmap)
+						if config.Slices():
+							ax.contour(y, x, z, zdir='z', offset=-z.min(), cmap=cmap)
+							ax.contour(y, x, z, zdir='x', offset=x.min(), cmap=cmap)
+							ax.contour(y, x, z, zdir='y', offset=y.min(), cmap=cmap)
+
 
 					# Visibility of features
-					if "legend" in config.Features():
+					if "legend" in input.Features():
 						cbar = colorbar(im, ax=ax, label="Value")
 						cbar.ax.tick_params(labelsize=config.TextSize())
 
@@ -152,6 +187,10 @@ def server(input, output, session):
 
 					if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
 					else: ax.set_xticklabels([])
+
+					if config.Elevation() != 90:
+						if "z" in config.Features(): ax.tick_params(axis="z", labelsize=config.TextSize())
+						else: ax.set_zticklabels([])
 
 					b = BytesIO()
 					fig.savefig(b, format="png", dpi=config.DPI())
@@ -228,14 +267,22 @@ app_ui = ui.page_fluid(
 				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1),
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 
+				ui.HTML("<b>3D</b>"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
+				config.Slices.UI(ui.input_switch, id="Slices",	label="Slices", conditional="input.Elevation != 90"),
+
+
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", value=800, min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", value=100, min=1),
+				config.Quality.UI(ui.input_numeric, id="Quality", label="Quality", min=0.1, max=1.0, step=0.1),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
 
 				# Customize what aspects of the heatmap are visible
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None,
-						choices={"x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+						choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),

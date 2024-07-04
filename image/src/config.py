@@ -1,8 +1,8 @@
 #
-# Heatmapper 
+# Heatmapper
 # Image Configuration
 #
-# This file contains configuration for Image. 
+# This file contains configuration for Image.
 
 
 from shared import Config, ConfigHandler
@@ -23,6 +23,13 @@ config = ConfigHandler({
 
 	# Any value between 1-100
 	"Levels": Config(value=20),
+
+	"Quality": Config(value=0.3),
+
+	"Elevation": Config(value=90),
+	"Rotation": Config(value=0),
+	"Zoom": Config(value=1),
+	"Slices": Config(value=True),
 
 	# Any combination of "x", "y", "legend"
 	"Features": Config(selected=["legend"]),
