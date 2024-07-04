@@ -1,8 +1,8 @@
 #
-# Heatmapper 
+# Heatmapper
 # Expression Configuration
 #
-# This file contains configuration for Expression. 
+# This file contains configuration for Expression.
 
 
 from shared import Config, ConfigHandler
@@ -22,11 +22,12 @@ config = ConfigHandler({
 
 	# See shared.py for DistanceMethods
 	"DistanceMethod": Config(selected="Euclidean"),
-	
+
 	"Elevation": Config(value=90),
 	"Rotation": Config(value=0),
 	"Zoom": Config(value=1),
 	"InterpolationLevels": Config(value=1),
+	"MinScale": Config(value=True),
 
 	# Any numerical value from 1-50
 	"TextSize": Config(value=8),
@@ -42,8 +43,8 @@ config = ConfigHandler({
 
 	# True or False to Use custom color maps or pre-defined ones.
 	"Custom": Config(value=False),
-	
-	# See shared.py ColorMap for options. 
+
+	# See shared.py ColorMap for options.
 	"ColorMap": Config(selected="Blue White Yellow"),
 
 	# Any number between 3-100 to define amount of bins for color mapping

@@ -23,7 +23,7 @@ from scipy.stats import zscore
 from scipy.interpolate import griddata
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace
+from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg
 
@@ -198,6 +198,7 @@ def server(input, output, session):
 			input.ScaleType(),
 			config.InterpolationLevels(),
 			config.Features(),
+			config.MinScale(),
 		]
 
 		if not DataCache.In(cached):
@@ -206,6 +207,9 @@ def server(input, output, session):
 			# Handle scaling
 			if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
 			z = df.T.values.flatten()
+			if config.MinScale():
+				z += abs(n_min(z))
+
 
 
 			color = input.mode()
@@ -272,7 +276,7 @@ def server(input, output, session):
 			config.Elevation(),
 			input.mode(),
 		]
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels()])
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
 
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
@@ -449,6 +453,7 @@ app_ui = ui.page_fluid(
 					config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
 					config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
 					config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
+					config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),

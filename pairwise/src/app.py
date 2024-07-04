@@ -25,7 +25,7 @@ from Bio import SeqIO
 from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace
+from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg
 
@@ -207,7 +207,7 @@ def server(input, output, session):
 			input.mode(),
 		]
 
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels()])
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
@@ -236,7 +236,8 @@ def server(input, output, session):
 							input.CustomColors() if config.Custom() else config.ColorMap().split(),
 							config.Bins(),
 							config.HeightMatrix(),
-							config.InterpolationLevels()
+							config.InterpolationLevels(),
+							config.MinScale()
 						]
 
 						if not DataCache.In(cached):
@@ -246,6 +247,9 @@ def server(input, output, session):
 							else: df_height = df
 
 							z = df_height.values.flatten()
+							if config.MinScale():
+								z += abs(n_min(z))
+
 							color_array = df.values.flatten()
 							norm = Normalize(vmin=color_array.min(), vmax=color_array.max())
 							c = norm(color_array)
@@ -446,7 +450,7 @@ app_ui = ui.page_fluid(
 				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
 				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
 				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
-
+				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),

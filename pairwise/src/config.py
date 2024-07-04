@@ -18,6 +18,7 @@ config = ConfigHandler({
 	"Rotation": Config(value=0),
 	"Zoom": Config(value=1),
 	"InterpolationLevels": Config(value=1),
+	"MinScale": Config(value=False),
 
 	# Number between 1-50
 	"TextSize": Config(value=8),
