@@ -460,7 +460,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None,
-					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "legend": "Legend"}
+					choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
