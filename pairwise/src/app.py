@@ -25,9 +25,9 @@ from Bio import SeqIO
 from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min
+from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min, concatenate
 
-from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg
+from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg, File
 
 try:
 	from user import config
@@ -63,7 +63,10 @@ def server(input, output, session):
 	# We add Matrix and Method as they are calculated in the Matrix handlers.
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): Data.set((await DataCache.Load(input, p=ui.Progress()))); Valid.set(False)
+	async def UpdateData(): 
+		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+		Valid.set(False)
+		DataCache.Invalidate(File(input))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -130,18 +133,22 @@ def server(input, output, session):
 		@returns A DataFrame containing the provided data as a pairwise matrix
 		"""
 
+		point_names = None
+
 		# If "Name" is found, its assumed to be the label for the points.
 		name_col = Filter(df.columns, ColumnType.Name)
 		if name_col: point_names = df[name_col]
 
 		# If explicit coordinates are provided, use them, with the final column used as labels.
+
 		x_col = Filter(df.columns, ColumnType.X)
 		y_col = Filter(df.columns, ColumnType.Y)
 		z_col = Filter(df.columns, ColumnType.Z)
 
 		if x_col != y_col and y_col != z_col:
-			coordinates = df[[x_col, y_col, z_col]].values
-			point_names = df[list(set(df.columns) - set([x_col, y_col, z_col]))[0]].values
+			if name_col is not None:
+				return df[[name_col, x_col, y_col, z_col]]
+			return df[[x_col, y_col, z_col]]
 
 		else:
 
@@ -175,16 +182,28 @@ def server(input, output, session):
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
+
+		# If changes are made, invalidate all the cached objects relying on it.
+		DataCache.Invalidate(File(input))
+		
 		return value
 
 
+
 	def GenerateMatrix(data, value):
+		name_col = Filter(data.columns, ColumnType.Name)
+		if name_col is not None:
+			names = data[name_col]
+			data = data.drop(name_col, inplace=False, axis=1)
+		else:
+			names = data.index
+			
 		try:
 			# Calculate matrix
 			if value == "Distance":
 				metric = config.DistanceMethod().lower()
 				distances = pdist(data, metric=metric)
-				return DataFrame(squareform(distances), columns=data.index, index=data.index)
+				return DataFrame(squareform(distances), columns=names, index=names)
 			else:
 				method = config.CorrelationMethod().lower()
 				return data.T.corr(method=method)
@@ -193,9 +212,132 @@ def server(input, output, session):
 			return None
 
 
+	def HeatmapCube(df, cmap, p):
+		fig, ax = subplots(subplot_kw={"projection": "3d"})
+
+		x, y, z = Filter(df.columns, ColumnType.X), Filter(df.columns, ColumnType.Y), Filter(df.columns, ColumnType.Z)
+		if not x or not y or not z:
+			Error("An X, Y, and Z column are needed to compute a Cube Visualization!")
+
+		name_col = Filter(df.columns, ColumnType.Name)
+		if name_col is not None:
+			dxy = GenerateMatrix(df[[name_col, x, y]], config.MatrixType())
+			dxz = GenerateMatrix(df[[name_col, x, z]], config.MatrixType())
+			dyz = GenerateMatrix(df[[name_col, y, z]], config.MatrixType())
+		else:
+			dxy = GenerateMatrix(df[[x, y]], config.MatrixType())
+			dxz = GenerateMatrix(df[[x, z]], config.MatrixType())
+			dyz = GenerateMatrix(df[[y, z]], config.MatrixType())
+
+		d = concatenate([dxy.values.flatten(), dxz.values.flatten(), dyz.values.flatten()])
+		norm = Normalize(vmin=d.min(), vmax=d.max())
+
+		# Create mesh grids
+		ix, iy = dxy.shape
+		x, y = meshgrid(arange(ix), arange(iy))
+
+		ix, iz = dxz.shape
+		xz, zz = meshgrid(arange(ix), arange(iz))
+
+		iy, iz = dyz.shape
+		yz, zz2 = meshgrid(arange(iy), arange(iz))
+
+		# Plot surfaces on the respective planes
+		ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+		ax.set_box_aspect(None, zoom=config.Zoom())
+
+		im = ax.plot_surface(x, y, zeros_like(x), facecolors=cmap(norm(dxy.values)), shade=False)
+		ax.plot_surface(xz, zeros_like(xz), zz, facecolors=cmap(norm(dxz.values)), shade=False)
+		ax.plot_surface(zeros_like(yz), yz, zz2, facecolors=cmap(norm(dyz.values)), shade=False)
+
+		return fig, ax, im, norm, d, dxy
+
+
+	def Heatmap2D(df, cmap, p):
+		"""
+		@brief Generate a 2D heatmap
+		@param df: The dataframe to render
+		@param cmap: The LinearSegmentedColorMap to use
+		@param p: The progress indicator.
+		"""
+		p.inc(message="Generating...")
+		fig, ax = subplots()
+		interpolation = config.Interpolation().lower()
+		im = ax.imshow(df, cmap=cmap, interpolation=interpolation, aspect="equal")
+		return fig, ax, im
+
+
+	def Heatmap3D(df, data, cmap, p):
+		"""
+		@brief Generate a 3D heatmap
+		@param df: The dataframe to render
+		@param cmap: The LinearSegmentedColorMap to use
+		@param p: The progress indicator.
+		"""
+		fig, ax = subplots(subplot_kw={"projection": "3d"})
+
+		cached = [
+			File(input),
+			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Bins(),
+			config.HeightMatrix(),
+			config.InterpolationLevels(),
+			config.MinScale()
+		]
+
+		if not DataCache.In(cached):
+			p.inc(message="Generating...")
+			if config.HeightMatrix()  != config.MatrixType():
+				df_height = GenerateMatrix(data, config.HeightMatrix())
+			else: df_height = df
+
+			z = df_height.values.flatten()
+			if config.MinScale():
+				z += abs(n_min(z))
+
+			color_array = df.values.flatten()
+			norm = Normalize(vmin=color_array.min(), vmax=color_array.max())
+			c = norm(color_array)
+
+			length = df_height.shape[0]
+			x, y = meshgrid(arange(length), arange(length))
+			x = x.ravel()
+			y = y.ravel()
+			width = depth = 1
+
+			if config.InterpolationLevels() != 1:
+				p.inc(message="Interpolating...")
+				level = config.InterpolationLevels()
+				length_new = df_height.shape[0] * level
+				space = linspace(0, length-1, length_new)
+				x_grid, y_grid = meshgrid(space, space)
+				x_new = x_grid.ravel()
+				y_new = y_grid.ravel()
+
+				points = column_stack((x, y))
+				points_new = column_stack((x_new, y_new))
+
+				z = griddata(points, z, points_new, method='cubic')
+				c = griddata(points, c, points_new, method='cubic')
+
+				x, y = x_new, y_new
+				width /= level
+				depth /= level
+			DataCache.Store((x, y, width, depth, z, c, norm), cached)
+		x, y, width, depth, z, c, norm = DataCache.Get(cached)
+
+		ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+		ax.set_box_aspect(None, zoom=config.Zoom())
+		im = ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c), alpha=config.Opacity())
+
+		return fig, ax, im, norm, z
+
+
+
 	def GenerateHeatmap():
 		inputs = [
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
@@ -208,7 +350,7 @@ def server(input, output, session):
 		]
 
 		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
-
+		
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
@@ -216,7 +358,10 @@ def server(input, output, session):
 				if data is None or len(data.index) == 0: return
 
 				p.inc(message="Calculating...")
-				df = GenerateMatrix(data, config.MatrixType())
+				if config.HeightMatrix() == "Cube":
+					df = data
+				else:
+					df = GenerateMatrix(data, config.MatrixType())
 				if df is None: return
 
 				color = input.mode()
@@ -227,76 +372,23 @@ def server(input, output, session):
 					rotation = config.Rotation()
 					elevation = config.Elevation()
 
-					if elevation != 90:
-						fig, ax = subplots(subplot_kw={"projection": "3d"})
-
-						cached = [
-							input.File() if input.SourceFile() == "Upload" else input.Example(),
-							config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
-							input.CustomColors() if config.Custom() else config.ColorMap().split(),
-							config.Bins(),
-							config.HeightMatrix(),
-							config.InterpolationLevels(),
-							config.MinScale()
-						]
-
-						if not DataCache.In(cached):
-							p.inc(message="Generating...")
-							if config.HeightMatrix()  != config.MatrixType():
-								df_height = GenerateMatrix(data, config.HeightMatrix())
-							else: df_height = df
-
-							z = df_height.values.flatten()
-							if config.MinScale():
-								z += abs(n_min(z))
-
-							color_array = df.values.flatten()
-							norm = Normalize(vmin=color_array.min(), vmax=color_array.max())
-							c = norm(color_array)
-
-							length = df_height.shape[0]
-							x, y = meshgrid(arange(length), arange(length))
-							x = x.ravel()
-							y = y.ravel()
-							width = depth = 1
-
-							if config.InterpolationLevels() != 1:
-								p.inc(message="Interpolating...")
-								level = config.InterpolationLevels()
-								length_new = df_height.shape[0] * level
-								space = linspace(0, length-1, length_new)
-								x_grid, y_grid = meshgrid(space, space)
-								x_new = x_grid.ravel()
-								y_new = y_grid.ravel()
-
-								points = column_stack((x, y))
-								points_new = column_stack((x_new, y_new))
-
-								z = griddata(points, z, points_new, method='cubic')
-								c = griddata(points, c, points_new, method='cubic')
-
-								x, y = x_new, y_new
-								width /= level
-								depth /= level
-							DataCache.Store((x, y, width, depth, z, c, norm), cached)
-						x, y, width, depth, z, c, norm = DataCache.Get(cached)
-
-						ax.view_init(elev=elevation, azim=rotation)
-						ax.set_box_aspect(None, zoom=config.Zoom())
-						im = ax.bar3d(x, y, zeros_like(x), width, depth, z, color=cmap(c), alpha=config.Opacity())
-
+					if config.HeightMatrix() == "Cube":
+						fig, ax, im, norm, z, df = HeatmapCube(df, cmap, p)
+						d3 = True
+					elif elevation != 90:
+						fig, ax, im, norm, z = Heatmap3D(df, data, cmap, p)
+						d3 = True
 					else:
-						p.inc(message="Generating...")
-						fig, ax = subplots()
-						interpolation = config.Interpolation().lower()
-						im = ax.imshow(df, cmap=cmap, interpolation=interpolation, aspect="equal")
+						fig, ax, im = Heatmap2D(df, cmap, p)
+						d3 = False
+						
 
 					p.inc(message="Plotting...")
 					text_size = config.TextSize()
 
 					# Visibility of features
 					if "legend" in config.Features():
-						if elevation == 90:
+						if not d3:
 							cbar = colorbar(im, ax=ax, label="Distance")
 						else:
 							mappable = ScalarMappable(cmap=cmap, norm=norm)
@@ -319,9 +411,11 @@ def server(input, output, session):
 					else:
 						ax.set_xticklabels([])
 
-					if elevation != 90:
+					if d3:
 						if "z" in config.Features():
 							ax.tick_params(axis="z", labelsize=text_size)
+							ax.set_zticks(range(len(df.columns)))
+							ax.set_zticklabels(df.columns)
 						else:
 							ax.set_zticklabels([])
 
@@ -329,7 +423,7 @@ def server(input, output, session):
 					if "label" in config.Features():
 						for i in range(df.shape[0]):
 								for j in range(df.shape[1]):
-									if elevation == 90:
+									if d3:
 										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 									else:
 										ax.text(j, i, height[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
@@ -356,7 +450,8 @@ def server(input, output, session):
 	@output
 	@render.image(delete_file=True)
 	@reactive.event(input.Update)
-	def HeatmapReactive(): return GenerateHeatmap()
+	def HeatmapReactive(): 
+		return GenerateHeatmap()
 
 
 	@reactive.effect
@@ -372,7 +467,7 @@ def server(input, output, session):
 	@render.download(filename="heatmap.png")
 	def DownloadHeatmap():
 		yield DataCache.Get([
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
@@ -445,10 +540,10 @@ app_ui = ui.page_fluid(
 				ui.output_ui("Method"),
 
 				ui.HTML("<b>3D</b>"),
-				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation"], conditional="input.Elevation != 90"),
+				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation", "Cube"], conditional="input.Elevation != 90"),
 				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", step=1, min=1),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1),
 				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
 				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
 				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1),

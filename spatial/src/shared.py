@@ -332,6 +332,14 @@ class Cache:
 		return h in self._objects
 
 
+	def Invalidate(self, input):
+		invalid = []
+		for key, value in self._objects.items():
+			if input in key:
+				invalid.append(key)
+		for i in invalid: del self._objects[i]
+
+
 def NavBar():
 	"""
 	@brief Returns a Navigation Bar for each project, with the current project selected.
@@ -557,3 +565,9 @@ def Update(): return ui.input_action_button(
 			height="1px", 	# Make it as small as possible
 		)
 	)
+
+
+def File(input):
+	if input.SourceFile() == "Upload":
+		return "None" if input.File() is None else input.File()[0]["name"]
+	return input.Example()

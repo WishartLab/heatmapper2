@@ -22,7 +22,7 @@ from scanpy import pp, tl
 from pathlib import Path
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify, TableOptions
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify, TableOptions, File
 
 try:
 	from user import config
@@ -276,6 +276,8 @@ def server(input, output, session):
 		table = df.obs if config.TableType() == "obs" else df.var
 		table.iloc[row, col] = value
 		Data.set(df)
+
+		DataCache.Invalidate(File(input))
 
 		return value
 

@@ -22,7 +22,7 @@ from io import BytesIO
 from numpy import meshgrid, arange, zeros_like, array, zeros, linspace, column_stack
 from scipy.interpolate import griddata
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
 
 try:
 	from user import config
@@ -60,7 +60,10 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): Data.set((await DataCache.Load(input, p=ui.Progress()))); Valid.set(False)
+	async def UpdateData(): 
+		Data.set((await DataCache.Load(input, p=ui.Progress())))
+		Valid.set(False)
+		DataCache.Invalidate(File(input))
 
 
 	@reactive.effect
@@ -84,12 +87,13 @@ def server(input, output, session):
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
+		DataCache.Invalidate(File(input))
 		return value
 
 
 	def GenerateHeatmap():
 		inputs = [
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			input.Image(),
 			config.ColorMap(),
 			config.Opacity(),
@@ -228,7 +232,7 @@ def server(input, output, session):
 	@render.download(filename="heatmap.png")
 	def DownloadHeatmap():
 		yield DataCache.Get([
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			input.Image(),
 			config.ColorMap(),
 			config.Opacity(),

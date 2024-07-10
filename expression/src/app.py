@@ -25,7 +25,7 @@ from tempfile import NamedTemporaryFile
 from io import BytesIO
 from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg, File
 
 try:
 	from user import config
@@ -50,9 +50,10 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())));
+		Data.set((await DataCache.Load(input, p=ui.Progress())))
 		Valid.set(False)
 		Filter(Data().columns, ColumnType.Name, id="NameColumn")
+		DataCache.Invalidate(File(input))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -142,6 +143,7 @@ def server(input, output, session):
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
+		DataCache.Invalidate(File(input))
 		return value
 
 
@@ -161,14 +163,14 @@ def server(input, output, session):
 	def Heatmap3D(df, ax_heatmap, p):
 
 		cached = [
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Bins(),
 			config.InterpolationLevels(),
 			config.Features(),
 			config.MinScale(),
 		]
-
+	
 		if not DataCache.In(cached):
 			p.inc(message="Generating...")
 
@@ -226,7 +228,7 @@ def server(input, output, session):
 
 		# A list of all the inputs for caching.
 		inputs = [
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			config.NameColumn(),
 			config.Features(),
 			config.ScaleType(),
@@ -242,8 +244,10 @@ def server(input, output, session):
 		]
 		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 
+		print("HERE")
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
+			print(File(input), "NO")
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				index_labels, x_labels, data = ProcessData(GetData())
@@ -369,7 +373,7 @@ def server(input, output, session):
 	@render.download(filename="heatmap.png")
 	def DownloadHeatmap():
 		yield DataCache.Get([
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			config.Features(),
 			config.ScaleType(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),

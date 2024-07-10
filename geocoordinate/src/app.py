@@ -24,7 +24,7 @@ from scipy.stats import gaussian_kde
 from numpy import vstack, convolve, ones
 from branca.colormap import LinearColormap
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg, File
 
 try:
 	from user import config
@@ -63,6 +63,8 @@ def server(input, output, session):
 		value = Filter(columns, ColumnType.Value, good=["Uniform"], id="ValueColumn")
 		if time == value:
 			ui.update_select(id="ValueColumn", selected=columns[1] if len(columns) > 1 else None)
+		DataCache.Invalidate(File(input))
+
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -205,6 +207,7 @@ def server(input, output, session):
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
+		DataCache.Invalidate(File(input))
 		return value
 
 

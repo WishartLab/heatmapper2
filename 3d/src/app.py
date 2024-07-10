@@ -130,6 +130,7 @@ def server(input, output, session):
 		if input.Type() == "Integer": value = int(patch["value"])
 		elif input.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
+		DataCache.Invalidate(File(input))
 		return value
 
 
@@ -333,7 +334,7 @@ def server(input, output, session):
 
 		# For Caching.
 		inputs = [
-			input.File() if input.SourceFile() == "Upload" else input.Example(),
+			File(input),
 			config.Style(),
 			config.Opacity(),
 			config.Features(),

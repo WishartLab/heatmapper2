@@ -23,7 +23,7 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update, Msg
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update, Msg, File
 from geojson import Mappings
 
 try:
@@ -76,6 +76,7 @@ def server(input, output, session):
 			choice = 0
 			while choice < len(val) and val[choice] == key: choice += 1
 			ui.update_select(id="ValueColumn", selected=val[choice])
+		DataCache.Invalidate(File(input))
 
 
 	@reactive.effect
@@ -217,6 +218,7 @@ def server(input, output, session):
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
+		DataCache.Invalidate(File(input))
 		return value
 
 
