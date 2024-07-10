@@ -554,7 +554,7 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional("input.MainTab != 'TableTab'",
 				Update(),
 
-				ui.HTML("<b>Minium Count Filtering</b>"),
+				ui.HTML("<b>Minimum Count Filtering</b>"),
 				Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
 				Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
 

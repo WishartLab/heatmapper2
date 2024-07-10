@@ -21,7 +21,7 @@ from numpy import mean
 from numpy.linalg import norm
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error, Msg
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error, Msg, File
 
 if not Pyodide: from pyvista import Plotter, plotting, read_texture, read as VistaRead
 
@@ -89,6 +89,7 @@ def server(input, output, session):
 		else:
 			Data.set((await DataCache.Load(input, default=None, p=ui.Progress(), wasm_blacklist=(".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"))))
 		Valid.set(False)
+		DataCache.Invalidate(File(input))
 
 
 	@reactive.effect

@@ -96,7 +96,12 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False, remo
 	"""
 
 	# Fold cases
-	folded = [column.lower() for column in columns]
+	folded = []
+	for column in columns:
+		try:
+			folded.append(column.lower())
+		except Exception:
+			folded.append(column)
 	options = set(folded)
 	if ctype != ColumnType.Free: options &= Columns[ctype]
 
