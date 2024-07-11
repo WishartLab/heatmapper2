@@ -1,5 +1,6 @@
 .DS_Store
 .Rproj.user
 .vscode/*
+.zed/*
 pyrightconfig.json
 venv

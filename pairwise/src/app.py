@@ -63,8 +63,8 @@ def server(input, output, session):
 	# We add Matrix and Method as they are calculated in the Matrix handlers.
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): 
-		Data.set((await DataCache.Load(input, p=ui.Progress()))); 
+	async def UpdateData():
+		Data.set((await DataCache.Load(input, p=ui.Progress())));
 		Valid.set(False)
 		DataCache.Invalidate(File(input))
 
@@ -137,32 +137,35 @@ def server(input, output, session):
 
 		# If "Name" is found, its assumed to be the label for the points.
 		name_col = Filter(df.columns, ColumnType.Name)
-		if name_col: point_names = df[name_col]
+		if name_col:
+			point_names = df[name_col]
+			df = df.drop(name_col, inplace=False, axis=1)
 
-		# If explicit coordinates are provided, use them, with the final column used as labels.
+		#x_col = Filter(df.columns, ColumnType.X)
+		#y_col = Filter(df.columns, ColumnType.Y)
+		#z_col = Filter(df.columns, ColumnType.Z)
 
-		x_col = Filter(df.columns, ColumnType.X)
-		y_col = Filter(df.columns, ColumnType.Y)
-		z_col = Filter(df.columns, ColumnType.Z)
+		#if x_col != y_col and y_col != z_col:
+		#	if name_col is not None:
+		#		return df[[name_col, x_col, y_col, z_col]]
+		#	return df[[x_col, y_col, z_col]]
 
-		if x_col != y_col and y_col != z_col:
-			if name_col is not None:
-				return df[[name_col, x_col, y_col, z_col]]
-			return df[[x_col, y_col, z_col]]
+		# If the first value is an integer, this is a distance matrix.
+		try:
+			float(df.iloc[0,0])
+			coordinates = df.values
+			if point_names is None: point_names = df.columns
+			columns = df.columns
 
-		else:
-
-			# If the first value is an integer, this is a distance matrix.
-			try:
-				float(df.iloc[0,0])
-				coordinates = df.values
-				point_names = df.columns
-
-			# Otherwise, we assume the first row/column define the axis names.
-			except ValueError:
-				coordinates = df.iloc[:, 1:].values
-				point_names = df.columns[1:]
-		return DataFrame(coordinates, columns=point_names, index=point_names).T
+		# Otherwise, we assume the first row/column define the axis names.
+		except ValueError:
+			coordinates = df.iloc[:, 1:].values
+			if point_names is None: point_names = df.columns[1:]
+			columns = df.columns[1:]
+		try:
+			return DataFrame(coordinates, index=point_names, columns=columns)
+		except Exception:
+			return DataFrame(coordinates)
 
 
 	@output
@@ -185,7 +188,7 @@ def server(input, output, session):
 
 		# If changes are made, invalidate all the cached objects relying on it.
 		DataCache.Invalidate(File(input))
-		
+
 		return value
 
 
@@ -197,7 +200,7 @@ def server(input, output, session):
 			data = data.drop(name_col, inplace=False, axis=1)
 		else:
 			names = data.index
-			
+
 		try:
 			# Calculate matrix
 			if value == "Distance":
@@ -350,7 +353,7 @@ def server(input, output, session):
 		]
 
 		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
-		
+
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
@@ -381,7 +384,7 @@ def server(input, output, session):
 					else:
 						fig, ax, im = Heatmap2D(df, cmap, p)
 						d3 = False
-						
+
 
 					p.inc(message="Plotting...")
 					text_size = config.TextSize()
@@ -450,7 +453,7 @@ def server(input, output, session):
 	@output
 	@render.image(delete_file=True)
 	@reactive.event(input.Update)
-	def HeatmapReactive(): 
+	def HeatmapReactive():
 		return GenerateHeatmap()
 
 
@@ -541,6 +544,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>3D</b>"),
 				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation", "Cube"], conditional="input.Elevation != 90"),
+
 				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
 				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", step=1, min=1),
 				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1),
