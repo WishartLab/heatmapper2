@@ -21,8 +21,11 @@ from folium.raster_layers import ImageOverlay
 from tempfile import NamedTemporaryFile
 from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
-from numpy import vstack, convolve, ones
+from scipy.io import netcdf_file
+from numpy import vstack, convolve, ones, float32
 from branca.colormap import LinearColormap
+from pandas import DataFrame
+from io import StringIO
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg, File
 
@@ -44,27 +47,117 @@ def server(input, output, session):
 		"example1.csv": "Random data",
 		"example21.csv": "A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022, available at https://www.nhc.noaa.gov/data/",
 		"example3.csv": "Recorded mean temperature (F) in the USA in 2023 as measured by the EPA, available at https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
-
+		"test.txt": "NASA Temperature Anaomolies from 1980-2024: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
 	}
 
-	DataCache = Cache("geocoordinate")
+
+	def NCDataFrame(nc_path, p=None):
+		"""
+		@brief Takes a netcdf_file path and returns an appropriate DataFrame
+		@param nc: The netcdf_file path
+		@returns	A dataframe with Latitude, Longitude, and optional Time alongwith
+							all variables bounded by those values.
+		"""
+
+		nc = netcdf_file(nc_path, mmap=False)
+		if p: p.inc(message="Extracting keys...")
+		dimensions = list(nc.dimensions.keys())
+		latitude, longitude, time = Filter(dimensions, ColumnType.Latitude), Filter(dimensions, ColumnType.Longitude), Filter(dimensions, ColumnType.Time)
+
+		if not latitude or not longitude:
+			Error("NC file requires a latitude and longitude!")
+			return None
+
+		df = {
+			latitude: [],
+			longitude: [],
+		}
+
+		latitudes = nc.variables[latitude][:]
+		longitudes = nc.variables[longitude][:]
+		if time:
+			df[time] = []
+			times = nc.variables[time][:]
+			time_index = config.TimeColumn()
+			if not time_index: return None
+
+			# You'll definitely regret this ;)
+			if time_index == "All":
+				time_indicies = range(len(times))
+			else:
+				time_indicies = [int(time_index)]
+			expected_shape = (len(times), len(latitudes), len(longitudes))
+		else:
+			expected_shape = (len(latitudes), len(longitudes))
+		variables = []
+		for variable in list(nc.variables.keys()):
+			if nc.variables[variable].shape == expected_shape:
+				variables.append(variable)
+				df[variable] = []
+
+		for lat_index in range(len(latitudes)):
+			if p: p.inc(message=f"Extracting Values at Latitude: {lat_index}...")
+			for lon_index in range(len(longitudes)):
+				for variable in variables:
+					if time:
+						for time_index in time_indicies:
+							df[latitude].append(latitudes[lat_index])
+							df[longitude].append(longitudes[lon_index])
+							df[time].append(times[time_index])
+							df[variable].append(nc.variables[variable][time_index, lat_index, lon_index])
+					else:
+						df[latitude].append(latitudes[lat_index])
+						df[longitude].append(longitudes[lon_index])
+						df[variable].append(nc.variables[variable][lat_index, lon_index])
+
+		if p: p.inc(message="Converting into DataFrame...")
+		nc.close()
+		return DataFrame(df)
+
+
+	def HandleData(path, p=None):
+		"""
+		@brief A custom Data Handler for the Cache.
+		@param path: Path to the file
+		@returns A data object from the cache.
+		@info This Data Handler supports .nc files
+		"""
+		if path.suffix == ".nc":
+			print(path)
+			return path.resolve()
+		else: return DataCache.DefaultHandler(path, p)
+	DataCache = Cache("geocoordinate", DataHandler=HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
 
 	InitializeConfig(config, input)
 
+
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, ignore_init=True)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())));
-		Valid.set(False)
-		columns = Data().columns
-		time = Filter(columns, ColumnType.Time, good=["None"], id="TimeColumn")
-		value = Filter(columns, ColumnType.Value, good=["Uniform"], id="ValueColumn")
-		if time == value:
-			ui.update_select(id="ValueColumn", selected=columns[1] if len(columns) > 1 else None)
-		DataCache.Invalidate(File(input))
+		try:
+			with ui.Progress() as p:
+				Data.set((await DataCache.Load(input, p=p)));
+				Valid.set(False)
 
+				if File(input).endswith(".nc"):
+					nc = netcdf_file(Data(), mmap=False)
+					dimensions = list(nc.variables.keys())
+					time = Filter(dimensions, ColumnType.Time)
+					if time is not None:
+						ui.update_select(id="TimeColumn", choices=list(range(0, len(nc.variables[time][:]))) + ["All"], selected=0)
+					ui.update_select(id="ValueColumn", choices=dimensions + ["Uniform"])
+
+				else:
+					columns = Data().columns
+					time = Filter(columns, ColumnType.Time, good=["None"], id="TimeColumn")
+					value = Filter(columns, ColumnType.Value, good=["Uniform"], id="ValueColumn")
+					if time == value:
+						ui.update_select(id="ValueColumn", selected=columns[1] if len(columns) > 1 else None)
+				DataCache.Invalidate(File(input))
+		except Exception as e:
+			Error(f"Failed to load file", e)
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -82,25 +175,25 @@ def server(input, output, session):
 		blur = config.Blur()
 		render = config.RenderMode()
 
-		if render == "Scaled Raster":
+		latitude = df[lat_col]
+		longitude = df[lon_col]
+		values = df[v_col]
+
+		# Calculate kernel density estimation
+		if "KDE" in config.Features():
+			stack = vstack([longitude, latitude])
+			kde = gaussian_kde(stack)
+			density = kde(stack)
+			df[v_col] = values + density * 0.1
+
+		if render == "Raster":
 			HeatMap(list(zip(df[lat_col], df[lon_col], df[v_col])),
 			min_opacity=opacity,
+			max_zoom=0,
 			radius=radius,
 			blur=blur).add_to(map)
 
-		else:
-			latitude = df[lat_col]
-			longitude = df[lon_col]
-			values = df[v_col]
-
-			# Calculate kernel density estimation
-			if "KDE" in config.Features():
-				stack = vstack([longitude, latitude])
-				kde = gaussian_kde(stack)
-				density = kde(stack)
-				df[v_col] = values + density * 0.1
-
-			if render == "Vector":
+		elif render == "Vector":
 				# Define a linear colormap
 				colormap = LinearColormap(
 					colors=['#8000ff', '#00bfff', '#00ff80', '#ffff00', '#ff8000', '#ff0000'],
@@ -121,36 +214,6 @@ def server(input, output, session):
 						fill_opacity=opacity,
 						stroke=False
 					).add_to(map)
-
-			else:
-				# Generate the contour
-				fig, ax = subplots()
-				contour = ax.scatter(
-					longitude,
-					latitude,
-					c=df[v_col] * 100,
-					s=[radius] * len(values),
-					cmap="jet",
-					alpha=opacity,
-					linewidths=0,
-				)
-
-				ax.axis('off')  # Turn off axes
-				ax.get_xaxis().set_visible(False)  # Hide x-axis
-				ax.get_yaxis().set_visible(False)  # Hide y-axis
-
-				# Save the contour as an image, add to the map
-				temp = NamedTemporaryFile(suffix='.png')
-				fig.savefig(temp, format='png', bbox_inches='tight', pad_inches=0, transparent=True, dpi=500)
-
-				scale = config.Scale()
-				image_overlay = ImageOverlay(
-					image=temp.name,
-					bounds=[[min(latitude) - scale, min(longitude) - scale], [max(latitude) + scale, max(longitude) + scale]],
-					opacity=opacity,
-					pixelated=False,
-				)
-				image_overlay.add_to(map)
 		map.fit_bounds(map.get_bounds())
 
 
@@ -199,7 +262,15 @@ def server(input, output, session):
 
 	@output
 	@render.data_frame
-	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	def Table():
+		df = Data()
+		if File(input).endswith(".nc"):
+			df = NCDataFrame(df)
+
+		try:
+			Valid.set(True); return render.DataGrid(df, editable=True)
+		except Exception as e:
+			Error(f"Failed to render table", e)
 
 
 	@Table.set_patch_fn
@@ -217,7 +288,13 @@ def server(input, output, session):
 			df = GetData()
 			if df is None: return
 
-			df = df.copy(deep=True)
+			if File(input).endswith(".nc") and not Valid():
+				df = NCDataFrame(GetData())
+				if df is None: return None
+				nc = True
+			else:
+				df = df.copy(deep=True)
+				nc = False
 
 			p.inc(message="Formatting...")
 
@@ -272,20 +349,29 @@ def server(input, output, session):
 
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
-			if t_col != "None": GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
+			if t_col != "None" and not nc: GenerateTemporalMap(df, map, t_col, v_col, lon_col, lat_col)
 			else: GenerateMap(df, map, v_col, lon_col, lat_col)
 			return map
 
 
 	@output
 	@render.ui
-	def Heatmap(): return GenerateHeatmap()
+	def Heatmap():
+		try:
+			return GenerateHeatmap()
+		except Exception as e:
+			Error(f"Failed to generate heatmap", e)
 
 
 	@output
 	@render.ui
 	@reactive.event(input.Update)
-	def HeatmapReactive(): return GenerateHeatmap()
+	def HeatmapReactive():
+		try:
+			return GenerateHeatmap()
+		except Exception as e:
+			Error(f"Failed to generate heatmap", e)
+			raise e
 
 
 	@reactive.effect
@@ -316,9 +402,10 @@ app_ui = ui.page_fluid(
 					"example3.txt": "Example 3",
 					"example1.csv": "Example 4",
 					"example21.csv": "Example 5",
-					"example3.csv": "Example 6"
+					"example3.csv": "Example 6",
+					"test.txt": "Example 7",
 				},
-				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".nc"],
 				project="Geocoordinate"
 			),
 
@@ -334,14 +421,14 @@ app_ui = ui.page_fluid(
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Scaled Raster", "Non-Scaled Raster", "Vector"]),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"]),
 				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
 
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
 
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01),
 				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1),
-				config.Scale.UI(ui.input_numeric, id="Scale", label="Scaling", min=-1, max=1, step=0.1),
+
 
 				ui.HTML("<b>Range of Interest</b>"),
 				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),

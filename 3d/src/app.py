@@ -54,7 +54,7 @@ def server(input, output, session):
 	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "rainbow", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
 
 
-	def HandleData(path):
+	def HandleData(path, p=None):
 		"""
 		@brief A custom Data Handler for the Cache.
 		@param n: The Path object to the file.

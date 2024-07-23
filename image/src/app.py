@@ -40,7 +40,7 @@ def server(input, output, session):
 		}
 	}
 
-	def HandleData(path):
+	def HandleData(path, p=None):
 		"""
 		@brief A custom Data Handler for the Cache.
 		@param path: The path to the file
@@ -60,7 +60,7 @@ def server(input, output, session):
 
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
-	async def UpdateData(): 
+	async def UpdateData():
 		Data.set((await DataCache.Load(input, p=ui.Progress())))
 		Valid.set(False)
 		DataCache.Invalidate(File(input))

@@ -46,7 +46,7 @@ def server(input, output, session):
 		"ala_phe_ala.pdb": "An example PDB file.",
 	}
 
-	def HandleData(path):
+	def HandleData(path, p=None):
 		suffix = path.suffix
 		if suffix == ".pdb": return PDBMatrix(path.resolve())
 		elif suffix == ".fasta": return FASTAMatrix(path.resolve())
@@ -426,10 +426,10 @@ def server(input, output, session):
 					if "label" in config.Features():
 						for i in range(df.shape[0]):
 								for j in range(df.shape[1]):
-									if d3:
+									if not d3:
 										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
 									else:
-										ax.text(j, i, height[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
+										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
 
 
 					b = BytesIO()

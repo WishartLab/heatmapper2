@@ -46,7 +46,7 @@ def server(input, output, session):
 		"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "Global COVID 19 Statistics from Our World in Data."
 	}
 
-	def HandleData(path):
+	def HandleData(path, p=None):
 		"""
 		@brief A custom Data Handler for the Cache.
 		@param path: Path to the file

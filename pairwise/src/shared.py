@@ -57,7 +57,7 @@ Columns = {
 	ColumnType.Time: {"time", "date", "year"},
 	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle", "iso_code", "continent", "country", "location"},
 	ColumnType.Value: {"value", "weight", "intensity", "in_tissue"},
-	ColumnType.Longitude: {"longitude", "long"},
+	ColumnType.Longitude: {"longitude", "long", "lon"},
 	ColumnType.Latitude: {"latitude", "lat"},
 	ColumnType.X: {"x"},
 	ColumnType.Y: {"y"},
@@ -130,7 +130,7 @@ class Cache:
 	"""
 
 	@staticmethod
-	def HandleDataFrame(path, function):
+	def HandleDataFrame(path, function, p=None):
 		"""
 		@brief Handle DataFrame's
 		@param i: The binary of the file
@@ -139,19 +139,21 @@ class Cache:
 		"""
 
 		# Read the table once.
+		if p: p.inc(message="Reading Table...")
 		df = function(path.resolve()).fillna(0)
 
 		# If the first column value is a float, we assume it's data, and not column names.
 		# Re-read the DataFrame with generic column names instead
 		try:
 			float(df.columns[0])
+			if p: p.inc(message="Generating incidices...")
 			df = function(path.resolve(), header=None, names=[f"Column {i}" for i in range(df.shape[1])])
 		except ValueError: pass
 		return df
 
 
 	@staticmethod
-	def DefaultHandler(path):
+	def DefaultHandler(path, p=None):
 		"""
 		@brief The default handler. It can handle CSVs, Excel files, Tables, and all other files will simply
 		be stored as strings of the file content
@@ -161,9 +163,9 @@ class Cache:
 		"""
 
 		suffix = path.suffix
-		if suffix == ".csv": return Cache.HandleDataFrame(path, read_csv)
-		elif suffix in {".xlsx", ".xls", ".odf"}: return Cache.HandleDataFrame(path, read_excel)
-		elif suffix in {".txt", ".dat", ".tsv", ".tab"}: return Cache.HandleDataFrame(path, read_table)
+		if suffix == ".csv": return Cache.HandleDataFrame(path, read_csv, p)
+		elif suffix in {".xlsx", ".xls", ".odf"}: return Cache.HandleDataFrame(path, read_excel, p)
+		elif suffix in {".txt", ".dat", ".tsv", ".tab"}: return Cache.HandleDataFrame(path, read_table, p)
 		else: return open(path.resolve(), "r").read()
 
 
@@ -200,7 +202,7 @@ class Cache:
 			self._source = "../example_input/"
 
 
-	async def Download(self, n):
+	async def Download(self, n, p=None):
 		"""
 		@brief Downloads any arbitrary URL and stores it in the cache
 		@param n: The URL name
@@ -210,10 +212,15 @@ class Cache:
 		if n not in self._primary:
 			raw = await (fetch(n) if n.startswith("https://") else self._download(n))
 			if raw is None: return None
-			temp = NamedTemporaryFile(suffix=Path(n).suffix);
-			temp.write(raw);
-			temp.seek(0)
-			self._primary[n] = self._handler(Path(temp.name))
+
+			path = Path(n)
+			if path.is_file():
+				self._primary[n] = self._handler(path, p)
+			else:
+				temp = NamedTemporaryFile(suffix=Path(n).suffix);
+				temp.write(raw);
+				temp.seek(0)
+				self._primary[n] = self._handler(Path(temp.name), p)
 		try: return deepcopy(self._primary[n])
 		except AttributeError: return self._primary[n]
 
@@ -279,7 +286,7 @@ class Cache:
 			if n.endswith(wasm_blacklist) and Pyodide:
 				if p: p.close()
 				return 0
-			if n not in self._primary: self._primary[n] = self._handler(Path(n))
+			if n not in self._primary: self._primary[n] = self._handler(Path(n), p)
 
 		# Example files, conversely, can be on disk or on a server depending on whether we're in a WASM environment.
 		elif input_switch == example:
@@ -554,7 +561,11 @@ def InitializeConfig(config, input):
 	for conf, var in config.items(): var.Resolve(input[conf])
 
 
-def Error(message): return ui.notification_show(ui=message, type="error", duration=3)
+def Error(message, exception=None):
+	if exception:
+		message = f"{message} due to {type(exception).__name__}: {exception}"
+
+	return ui.notification_show(ui=message, type="error", duration=3)
 
 def Msg(message): return ui.notification_show(ui=message, type="default", duration=3)
 

@@ -42,7 +42,7 @@ def server(input, output, session):
 	InitializeConfig(config, input)
 
 
-	def HandleData(path):
+	def HandleData(path, p=None):
 		"""
 		@brief A custom Data Handler for the Cache.
 		@param path: the Path to the file
