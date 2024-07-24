@@ -27,6 +27,8 @@ config = ConfigHandler({
 
 	# Any numerical value from 1-30
 	"Blur": Config(value=15),
+	
+	"Interpolation": Config(value=1),
 
 	# Allow toggling Range of Interest
 	"ROI": Config(value=False),

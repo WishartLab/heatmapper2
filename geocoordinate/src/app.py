@@ -21,11 +21,13 @@ from folium.raster_layers import ImageOverlay
 from tempfile import NamedTemporaryFile
 from matplotlib.pyplot import subplots
 from scipy.stats import gaussian_kde
+from scipy.interpolate import griddata
 from scipy.io import netcdf_file
-from numpy import vstack, convolve, ones, float32
+from numpy import vstack, convolve, ones, float32, linspace, meshgrid, isnan
 from branca.colormap import LinearColormap
 from pandas import DataFrame
 from io import StringIO
+from math import sqrt
 
 from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg, File
 
@@ -337,28 +339,43 @@ def server(input, output, session):
 					Error("No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!")
 					return
 
-			if "Smoothing" in config.Features():
-				p.inc(message="Smoothing...")
-				df = df.sort_values(by=[lat_col, lon_col])
-				df[v_col] = convolve(df[v_col], ones(5) / 5 , mode='same')
+			if config.Interpolation() != 1:
+				p.inc(message="Interpolating...")
+				resolution = config.Interpolation()
 
-				"""
-				# Reduce the amount of data
-				df[lon_col] = df[lon_col].round(3)
-				df[lat_col] = df[lat_col].round(3)
+				points = df[[lat_col, lon_col]].values
+				values = df[v_col].values
 
-				df = df.sort_values(by=[lon_col, lat_col])
-				grid = df.pivot(index=lat_col, columns=lon_col, values=v_col)
+				# Create a grid based on the resolution
+				lon_min, lon_max = df[lon_col].min(), df[lon_col].max()
+				lat_min, lat_max = df[lat_col].min(), df[lat_col].max()
 
-				conv_kernel = ones((3, 3)) / 9
-				smoothed_grid = convolve2d(grid, conv_kernel, mode='same', boundary='fill', fillvalue=0)
+				lon_new = linspace(lon_min, lon_max, num=int(sqrt(len(values) * resolution)) + 1)
+				lat_new = linspace(lat_min, lat_max, num=int(sqrt(len(values) * resolution)) + 1)
 
-				smoothed_df = DataFrame(smoothed_grid, index=grid.index, columns=grid.columns)
-				smoothed_df = smoothed_df.reset_index()
-				smoothed_df = melt(smoothed_df, id_vars=lat_col, var_name=lon_col, value_name=v_col)
-				smoothed_df = smoothed_df.sort_values(by=[lon_col, lat_col])
-				df = smoothed_df.reset_index(drop=True)
-				"""
+				lon_grid, lat_grid = meshgrid(lon_new, lat_new)
+
+				# Interpolate the values
+				grid_z = griddata(points, values, (lat_grid, lon_grid), method='cubic')
+
+				# Flatten the grid for the new DataFrame
+				lon_flat = lon_grid.flatten()
+				lat_flat = lat_grid.flatten()
+				value_flat = grid_z.flatten()
+
+				# Remove NaN values that could be introduced by interpolation
+				#valid_mask = ~isnan(value_flat)
+				#lon_flat = lon_flat[valid_mask]
+				#lat_flat = lat_flat[valid_mask]
+				#value_flat = value_flat[valid_mask]
+
+				# Create a new DataFrame with interpolated values
+				df = DataFrame({
+						lon_col: lon_flat,
+						lat_col: lat_flat,
+						v_col: value_flat
+				})
+				print(df)
 
 			# Generate the right heatmap.
 			p.inc(message="Plotting...")
@@ -435,7 +452,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"]),
-				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Vector Shape", choices=["Circle", "Rectangle"]),
+				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"]),
 				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
 
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
@@ -443,6 +460,7 @@ app_ui = ui.page_fluid(
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01),
 				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1),
 
+				config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1),
 
 				ui.HTML("<b>Range of Interest</b>"),
 				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
@@ -455,7 +473,7 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
-					choices=["Smoothing", "KDE"],
+					choices=["KDE"],
 				),
 
 				# Add the download buttons.
