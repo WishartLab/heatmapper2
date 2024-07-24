@@ -15,7 +15,7 @@
 
 
 from shiny import App, reactive, render, ui
-from folium import Map as FoliumMap, Circle
+from folium import Map as FoliumMap, Circle, Rectangle
 from folium.plugins import HeatMap, HeatMapWithTime
 from folium.raster_layers import ImageOverlay
 from tempfile import NamedTemporaryFile
@@ -201,19 +201,32 @@ def server(input, output, session):
 					vmax=df[v_col].max()
 				)
 
+
 				# Add CircleMarkers to the map for each data point, applying colors based on values
 				for index, row in df.iterrows():
 					value = row[v_col]
 					color = colormap(value)
-					Circle(
-						location=[row[lat_col], row[lon_col]],
-						radius=radius,
-						color=color,
-						fill=True,
-						opacity=opacity,
-						fill_opacity=opacity,
-						stroke=False
-					).add_to(map)
+
+					if config.RenderShape() == "Circle":
+						Circle(
+							location=[row[lat_col], row[lon_col]],
+							radius=radius,
+							color=color,
+							fill=True,
+							opacity=opacity,
+							fill_opacity=opacity,
+							stroke=False
+						).add_to(map)
+					else:
+						lat, lon = row[lat_col], row[lon_col]
+						Rectangle(
+							bounds=[(lat - radius, lon - radius), (lat + radius, lon + radius)],
+							color=color,
+							fill=True,
+							opacity=opacity,
+							fill_opacity=opacity,
+							stroke=False
+						).add_to(map)
 		map.fit_bounds(map.get_bounds())
 
 
@@ -422,6 +435,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"]),
+				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Vector Shape", choices=["Circle", "Rectangle"]),
 				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
 
 				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),

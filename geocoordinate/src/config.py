@@ -14,6 +14,7 @@ config = ConfigHandler({
 	"ValueColumn": Config(),
 
 	"RenderMode": Config(selected="Raster"),
+	"RenderShape": Config(selected="Circle"),
 
 	# "CartoDB Positron", "OpenStreetMap"
 	"MapType": Config(selected="CartoDB Positron"),
