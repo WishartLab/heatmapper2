@@ -221,8 +221,10 @@ class Cache:
 				temp.write(raw);
 				temp.seek(0)
 				self._primary[n] = self._handler(Path(temp.name), p)
-		try: return deepcopy(self._primary[n])
-		except AttributeError: return self._primary[n]
+		try:
+			return deepcopy(self._primary[n])
+		except Exception:
+			return self._primary[n]
 
 
 	async def Load(self,
@@ -315,7 +317,7 @@ class Cache:
 		# If the object cannot be copied, then we can just return it directly
 		try:
 			return deepcopy(self._primary[n])
-		except AttributeError:
+		except Exception:
 			return self._primary[n]
 
 
