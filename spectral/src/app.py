@@ -25,6 +25,7 @@ from tempfile import NamedTemporaryFile
 from io import BytesIO
 from pymzml.run import Reader
 from pandas import DataFrame
+from scipy.spatial.distance import squareform
 from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
@@ -147,7 +148,11 @@ def server(input, output, session):
 			mz_values = []
 			intensities = []
 
+
+			# This is the "Pythonic" way of doing things, because
+			# Heaven forbid we just index the values we want.
 			for i, spectrum in enumerate(reader):
+				print(spectrum.scan_time)
 				if i == spectra:
 					for mz, intensity in spectrum.peaks(peaks):
 						mz_values.append(mz)
@@ -200,6 +205,77 @@ def server(input, output, session):
 			return fig, ax, plot
 
 
+	def GenerateSimilarity():
+		inputs = [
+			File(input),
+			config.ColorMap(),
+			config.Opacity(),
+			config.Features(),
+			config.TextSize(),
+			config.Index(),
+			config.Peaks(),
+			config.DPI(),
+			config.Width(),
+			input.mode(),
+			input.MainTab()
+		]
+
+		if False or not DataCache.In(inputs):
+			with ui.Progress() as p:
+				p.inc(message="Loading input...")
+
+				reader = GetData()
+				distances = {}
+
+				indices = [int(i) for i in config.Index()]
+
+				for i, s in enumerate(reader):
+					if i in indices:
+						print(i)
+						distances[i] = [0.0] * len(indices)
+						for x, s2 in enumerate(reader):
+							if x in indices:
+								if x == i:
+									distances[i][x] = 1.0
+								elif x in distances:
+									distances[i][x] = distances[x][i]
+								else:
+									distances[i][x] = s.similarity_to(s2)
+
+				print(distances)
+				df = DataFrame(distances)
+
+				fig, ax = subplots()
+				#interpolation = config.Interpolation().lower()
+				plot = ax.imshow(df, cmap=config.ColorMap().lower(), aspect="equal")
+
+				# Visibility of features
+				try:
+					if "legend" in input.Features():
+						cbar = colorbar(plot, ax=ax, label="Value", pad=0.1)
+						cbar.ax.tick_params(labelsize=config.TextSize())
+				except Exception: pass
+
+				if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
+				else: ax.set_yticklabels([])
+
+				if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
+				else: ax.set_xticklabels([])
+
+
+				b = BytesIO()
+				fig.savefig(b, format="png", dpi=config.DPI())
+				b.seek(0)
+				DataCache.Store(b.read(), inputs)
+
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			return img
+
+
 	def GenerateHeatmap():
 		inputs = [
 			File(input),
@@ -211,7 +287,8 @@ def server(input, output, session):
 			config.Peaks(),
 			config.DPI(),
 			config.Width(),
-			input.mode()
+			input.mode(),
+			input.MainTab()
 		]
 
 		if not DataCache.In(inputs):
@@ -256,6 +333,11 @@ def server(input, output, session):
 
 	@output
 	@render.image(delete_file=True)
+	def Similarity(): return GenerateSimilarity()
+
+
+	@output
+	@render.image(delete_file=True)
 	@reactive.event(input.Update)
 	def HeatmapReactive(): return GenerateHeatmap()
 
@@ -294,7 +376,7 @@ app_ui = ui.page_fluid(
 			TableOptions(config),
 
 			ui.panel_conditional(
-				"input.MainTab === 'HeatmapTab'",
+				"input.MainTab != 'TableTab'",
 
 				Update(),
 
@@ -328,7 +410,9 @@ app_ui = ui.page_fluid(
 		),
 
 		# Add the main interface tabs.
-		MainTab(),
+		MainTab(
+			ui.nav_panel("Similarity", ui.output_plot("Similarity", height="90vh"), value="Similarity"),
+		),
 	)
 )
 
