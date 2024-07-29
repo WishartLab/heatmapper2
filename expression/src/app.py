@@ -374,13 +374,18 @@ def server(input, output, session):
 	def DownloadHeatmap():
 		yield DataCache.Get([
 			File(input),
+			config.NameColumn(),
 			config.Features(),
 			config.ScaleType(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
+			config.ClusterMethod(),
+			config.DistanceMethod(),
 			config.DPI(),
+			config.Elevation(),
+			input.mode(),
 		])
 
 

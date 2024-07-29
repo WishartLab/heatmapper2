@@ -478,6 +478,8 @@ def server(input, output, session):
 			config.TextSize(),
 			config.Features(),
 			config.DPI(),
+			config.Elevation(),
+			input.mode(),
 		])
 
 

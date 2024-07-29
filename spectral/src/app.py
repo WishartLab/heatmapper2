@@ -360,7 +360,12 @@ def server(input, output, session):
 			config.Opacity(),
 			config.Features(),
 			config.TextSize(),
+			config.Index(),
+			config.Peaks(),
 			config.DPI(),
+			config.Width(),
+			input.mode(),
+			input.MainTab()
 		])
 
 

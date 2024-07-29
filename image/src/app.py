@@ -241,6 +241,8 @@ def server(input, output, session):
 			config.Features(),
 			config.TextSize(),
 			config.DPI(),
+			config.Quality(),
+			input.mode()
 		])
 
 
