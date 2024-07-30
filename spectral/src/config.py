@@ -10,10 +10,15 @@ from shared import Config, ConfigHandler
 config = ConfigHandler({
 
 	# Dependent on input
-	"Index": Config(selected=[0]),
+	"ID": Config(selected=[]),
 	"Peaks": Config(selected="Raw"),
 	"Width": Config(value=1.0),
+	"Style": Config(selected="Line"),
 	"Interpolation": Config(selected="Nearest"),
+
+	"Elevation": Config(value=45),
+	"Rotation": Config(value=300),
+	"Zoom": Config(value=1),
 
 	# Any value in between 1-50
 	"TextSize": Config(value=8),

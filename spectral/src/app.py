@@ -26,9 +26,9 @@ from io import BytesIO
 from pymzml.run import Reader
 from pandas import DataFrame
 from scipy.spatial.distance import squareform
-from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like
+from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like, zeros_like
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File, InterpolationMethods
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File, InterpolationMethods, Error
 
 try:
 	from user import config
@@ -42,6 +42,39 @@ def server(input, output, session):
 	Info = {
 		"1min.mzml": "An Example mzML from https://github.com/HUPO-PSI/mzML"
 	}
+
+
+	def Hash():
+		tab = input.MainTab()
+		if tab == "HeatmapTab":
+			return [
+				File(input),
+				config.ColorMap(),
+				config.Opacity(),
+				config.Features(),
+				config.TextSize(),
+				config.ID(),
+				config.Peaks(),
+				config.DPI(),
+				config.Width(),
+				config.Style(),
+				config.Elevation(),
+				config.Zoom(),
+				config.Rotation(),
+				input.mode(),
+			]
+		elif tab == "SimilarityTab":
+			return [
+				File(input),
+				config.ColorMap(),
+				config.Features(),
+				config.TextSize(),
+				config.ID(),
+				config.DPI(),
+				config.Interpolation(),
+				input.mode(),
+			]
+
 
 	def HandleData(path, p=None):
 		"""
@@ -68,7 +101,13 @@ def server(input, output, session):
 
 		reader = Data()
 		if reader is None: return
-		ui.update_select(id="Index", selected=[0], choices=list(range(reader.get_spectrum_count())))
+
+		ids = set()
+		first = None
+		for spectra in reader:
+			ids.add(spectra.ID)
+			if first is None: first = spectra.ID
+		ui.update_select(id="ID", selected=[first], choices=list(ids))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -139,10 +178,10 @@ def server(input, output, session):
 	def SpectraHeatmap(reader, p):
 
 		peaks = config.Peaks().lower()
-		indicies = [int(i) for i in config.Index()]
+		indices = [int(i) for i in config.ID()]
 
-		if len(indicies) == 1:
-			spectra = indicies[0]
+		if len(indices) == 1:
+			spectra = indices[0]
 
 			# Collect spectrum attributes
 			mz_values = []
@@ -151,19 +190,27 @@ def server(input, output, session):
 
 			# This is the "Pythonic" way of doing things, because
 			# Heaven forbid we just index the values we want.
-			for i, spectrum in enumerate(reader):
-				print(spectrum.scan_time)
-				if i == spectra:
+			for spectrum in reader:
+				if spectrum.ID == spectra:
 					for mz, intensity in spectrum.peaks(peaks):
 						mz_values.append(mz)
 						intensities.append(intensity)
-					break
 
 			p.inc(message="Plotting...")
 			color = input.mode()
 			with style.context('dark_background' if color == "dark" else "default"):
 				fig, ax = subplots()
-				plot = ColoredLine(mz_values, intensities, intensities, ax)
+
+				if config.Style() == "Line":
+					plot = ColoredLine(mz_values, intensities, intensities, ax)
+				elif config.Style() == "Bar":
+					cmap = get_cmap(config.ColorMap().lower())
+					norm = Normalize(vmin=min(intensities), vmax=max(intensities))
+					plot = ax.bar(mz_values, intensities, color=cmap(norm(intensities)), width=config.Width())
+				else:
+					Error("Contour Style is only supported when more than one spectra ID is specified!")
+					return None, None, None
+
 				ax.set_xlim(min(mz_values), max(mz_values))
 				ax.set_ylim(min(intensities), max(intensities))
 
@@ -172,10 +219,10 @@ def server(input, output, session):
 		else:
 			fig, ax = subplots(subplot_kw={"projection": "3d"})
 
-			x_min, x_max, y_min, y_max, z_min, z_max = 0, 0, 0, len(indicies), 0, 0
+			x_min, x_max, y_min, y_max, z_min, z_max = 0, 0, 0, len(indices), 0, 0
 
-			for i, spectrum in enumerate(reader):
-				if i in indicies:
+			for spectrum in reader:
+				if spectrum.ID in indices:
 					mz_values = []
 					intensities = []
 					for mz, intensity in spectrum.peaks(peaks):
@@ -187,16 +234,25 @@ def server(input, output, session):
 					z_min = min(z_min, min(intensities))
 					z_max = max(z_max, max(intensities))
 
-					position = [float(indicies.index(i))] * len(mz_values)
-
+					position = [float(indices.index(spectrum.ID))] * len(mz_values)
 					cmap = get_cmap(config.ColorMap().lower())
 
 					# Plot the line for each spectrum
-					plot = ColoredLine(mz_values, position, intensities, ax, cmap=config.ColorMap().lower(), z=intensities)
+					if config.Style() == "Line":
+						plot = ColoredLine(mz_values, position, intensities, ax, cmap=config.ColorMap().lower(), z=intensities)
+					elif config.Style() == "Bar":
+						z = intensities
+						norm = Normalize(vmin=min(intensities), vmax=max(intensities))
+						c = norm(intensities)
+						width = depth = 1
+						plot = ax.bar3d(mz_values, position, zeros_like(mz_values), width, depth, z, color=cmap(c))
+
 
 			ax.set_xlim(x_min, x_max)
 			ax.set_ylim(y_min, y_max)
 			ax.set_zlim(z_min, z_max)
+			ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+			ax.set_box_aspect(None, zoom=config.Zoom())
 
 			if "z" in config.Features():
 				ax.tick_params(axis="z", labelsize=config.TextSize())
@@ -206,17 +262,9 @@ def server(input, output, session):
 
 
 	def GenerateSimilarity():
-		inputs = [
-			File(input),
-			config.ColorMap(),
-			config.Features(),
-			config.TextSize(),
-			config.Index(),
-			config.DPI(),
-			config.Interpolation(),
-			input.mode(),
-		]
+		if input.MainTab() != "SimilarityTab": return
 
+		inputs = Hash()
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
@@ -226,21 +274,22 @@ def server(input, output, session):
 
 				distances = {}
 
-				indices = [int(i) for i in config.Index()]
+				indices = [int(i) for i in config.ID()]
+				spectra = []
+				for s in reader:
+					if s.ID in indices: spectra.append(s)
 
-				for i, s in enumerate(reader):
-					if i in indices:
-						distances[i] = {}
-						for x, s2 in enumerate(reader):
-							if x in indices:
-								if x == i:
-									distances[i][x] = 1.0
-								elif x in distances:
-									distances[i][x] = distances[x][i]
-								else:
-									distances[i][x] = s.similarity_to(s2)
+				for s in spectra:
+					distances[s.ID] = {}
+					for s2 in spectra:
+						if s.ID == s2.ID:
+							distances[s.ID][s2.ID] = 1.0
+						elif s2.ID in distances:
+							distances[s.ID][s2.ID] = distances[s2.ID][s.ID]
+						else:
+							distances[s.ID][s2.ID] = s.similarity_to(s2)
 
-				df = DataFrame(distances)
+				df = DataFrame(distances, columns=indices, index=indices)
 
 				fig, ax = subplots()
 				interpolation = config.Interpolation().lower()
@@ -253,12 +302,17 @@ def server(input, output, session):
 						cbar.ax.tick_params(labelsize=config.TextSize())
 				except Exception: pass
 
-				if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
+				if "y" in config.Features():
+					ax.set_yticklabels(df.columns)
+					ax.set_yticks(range(len(df.columns)))
+					ax.tick_params(axis="y", labelsize=config.TextSize())
 				else: ax.set_yticklabels([])
 
-				if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
+				if "x" in config.Features():
+					ax.set_xticklabels(df.columns)
+					ax.set_xticks(range(len(df.columns)))
+					ax.tick_params(axis="x", labelsize=config.TextSize())
 				else: ax.set_xticklabels([])
-
 
 				b = BytesIO()
 				fig.savefig(b, format="png", dpi=config.DPI())
@@ -274,19 +328,9 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
-		inputs = [
-			File(input),
-			config.ColorMap(),
-			config.Opacity(),
-			config.Features(),
-			config.TextSize(),
-			config.Index(),
-			config.Peaks(),
-			config.DPI(),
-			config.Width(),
-			input.mode(),
-		]
+		if input.MainTab() != "HeatmapTab": return
 
+		inputs = Hash()
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
@@ -308,7 +352,6 @@ def server(input, output, session):
 
 				if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
 				else: ax.set_xticklabels([])
-
 
 				b = BytesIO()
 				fig.savefig(b, format="png", dpi=config.DPI())
@@ -350,20 +393,7 @@ def server(input, output, session):
 
 
 	@render.download(filename="heatmap.png")
-	def DownloadHeatmap():
-		yield DataCache.Get([
-			File(input),
-			config.ColorMap(),
-			config.Opacity(),
-			config.Features(),
-			config.TextSize(),
-			config.Index(),
-			config.Peaks(),
-			config.DPI(),
-			config.Width(),
-			input.mode(),
-			input.MainTab()
-		])
+	def DownloadHeatmap(): yield DataCache.Get(Hash())
 
 
 app_ui = ui.page_fluid(
@@ -385,7 +415,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 
-				config.Index.UI(ui.input_select, id="Index", label="Index", selectize=True, multiple=True, choices=[0]),
+				config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0]),
 
 
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
@@ -394,8 +424,14 @@ app_ui = ui.page_fluid(
 
 				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'"),
 				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0.1, max=10.0, step=0.1, conditional="input.MainTab === 'HeatmapTab'"),
+				config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Line", "Bar", "Contour"], conditional="input.MainTab === 'HeatmapTab'"),
 
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'"),
+
+				ui.HTML("<b>3D</b>"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", step=1, min=1),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", step=1, min=1),
 
 
 				ui.HTML("<b>Image Settings</b>"),
