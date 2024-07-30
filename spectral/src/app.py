@@ -28,7 +28,7 @@ from pandas import DataFrame
 from scipy.spatial.distance import squareform
 from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
+from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File, InterpolationMethods
 
 try:
 	from user import config
@@ -209,30 +209,28 @@ def server(input, output, session):
 		inputs = [
 			File(input),
 			config.ColorMap(),
-			config.Opacity(),
 			config.Features(),
 			config.TextSize(),
 			config.Index(),
-			config.Peaks(),
 			config.DPI(),
-			config.Width(),
+			config.Interpolation(),
 			input.mode(),
-			input.MainTab()
 		]
 
-		if False or not DataCache.In(inputs):
+		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
 
 				reader = GetData()
+				if reader is None: return
+
 				distances = {}
 
 				indices = [int(i) for i in config.Index()]
 
 				for i, s in enumerate(reader):
 					if i in indices:
-						print(i)
-						distances[i] = [0.0] * len(indices)
+						distances[i] = {}
 						for x, s2 in enumerate(reader):
 							if x in indices:
 								if x == i:
@@ -242,12 +240,11 @@ def server(input, output, session):
 								else:
 									distances[i][x] = s.similarity_to(s2)
 
-				print(distances)
 				df = DataFrame(distances)
 
 				fig, ax = subplots()
-				#interpolation = config.Interpolation().lower()
-				plot = ax.imshow(df, cmap=config.ColorMap().lower(), aspect="equal")
+				interpolation = config.Interpolation().lower()
+				plot = ax.imshow(df, cmap=config.ColorMap().lower(), interpolation=interpolation, aspect="equal")
 
 				# Visibility of features
 				try:
@@ -288,13 +285,13 @@ def server(input, output, session):
 			config.DPI(),
 			config.Width(),
 			input.mode(),
-			input.MainTab()
 		]
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
 				reader = GetData()
+				if reader is None: return
 
 				fig, ax, plot = SpectraHeatmap(reader, p)
 				if plot is None: return
@@ -389,12 +386,16 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Heatmap</b>"),
 
 				config.Index.UI(ui.input_select, id="Index", label="Index", selectize=True, multiple=True, choices=[0]),
-				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"]),
+
 
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
-				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0.1, max=10.0, step=0.1),
+
+				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'"),
+				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0.1, max=10.0, step=0.1, conditional="input.MainTab === 'HeatmapTab'"),
+
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'"),
 
 
 				ui.HTML("<b>Image Settings</b>"),
@@ -416,7 +417,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(
-			ui.nav_panel("Similarity", ui.output_plot("Similarity", height="90vh"), value="Similarity"),
+			ui.nav_panel("Similarity", ui.output_plot("Similarity", height="90vh"), value="SimilarityTab"),
 		),
 	)
 )

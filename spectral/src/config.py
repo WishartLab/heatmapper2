@@ -13,6 +13,7 @@ config = ConfigHandler({
 	"Index": Config(selected=[0]),
 	"Peaks": Config(selected="Raw"),
 	"Width": Config(value=1.0),
+	"Interpolation": Config(selected="Nearest"),
 
 	# Any value in between 1-50
 	"TextSize": Config(value=8),
