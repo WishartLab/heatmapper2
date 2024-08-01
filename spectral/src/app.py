@@ -26,7 +26,8 @@ from io import BytesIO
 from pymzml.run import Reader
 from pandas import DataFrame
 from scipy.spatial.distance import squareform
-from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like, zeros_like
+from scipy.interpolate import griddata
+from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like, zeros_like, meshgrid, full, where, linspace, log1p
 
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File, InterpolationMethods, Error
 
@@ -50,17 +51,15 @@ def server(input, output, session):
 			return [
 				File(input),
 				config.ColorMap(),
-				config.Opacity(),
 				config.Features(),
 				config.TextSize(),
 				config.ID(),
 				config.Peaks(),
 				config.DPI(),
-				config.Width(),
-				config.Style(),
 				config.Elevation(),
 				config.Zoom(),
 				config.Rotation(),
+				config.Dimension(),
 				input.mode(),
 			]
 		elif tab == "SimilarityTab":
@@ -127,140 +126,6 @@ def server(input, output, session):
 		return value
 
 
-	def ColoredLine(x, y, c, ax, z=None, **lc_kwargs):
-		"""
-		@brief Generate a MatPlotLib X/Y axis, colored with list c.
-		@param x The X values
-		@param y The Y values
-		@pararm c The color values.
-		@param ax The axis
-		@param lc_kwargs Keyword arguments to be passed to the LineCollection
-		@info Borrowed from https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
-		"""
-
-		# Default the capstyle to butt so that the line segments smoothly line up
-		default_kwargs = {"capstyle": "butt"}
-		default_kwargs.update(lc_kwargs)
-
-		cmap = get_cmap(config.ColorMap().lower())
-		norm = Normalize(min(c), max(c))
-		colors = cmap(norm(c))
-
-		# Compute the midpoints of the line segments. Include the first and last points
-		# twice so we don't need any special syntax later to handle them.
-		x, y = asarray(x), asarray(y)
-
-		x_midpts = hstack((x[0], 0.5 * (x[1:] + x[:-1]), x[-1]))
-		y_midpts = hstack((y[0], 0.5 * (y[1:] + y[:-1]), y[-1]))
-
-		if z is None:
-			coord_start = column_stack((x_midpts[:-1], y_midpts[:-1]))[:, newaxis, :]
-			coord_mid = column_stack((x, y))[:, newaxis, :]
-			coord_end = column_stack((x_midpts[1:], y_midpts[1:]))[:, newaxis, :]
-			segments = concatenate((coord_start, coord_mid, coord_end), axis=1)
-			lc = LineCollection(segments, linewidths=[config.Width()] * len(x), colors=colors, **default_kwargs)
-
-		else:
-			z = asarray(z)
-			z_midpts = hstack((z[0], 0.5 * (z[1:] + z[:-1]), z[-1]))
-			coord_start = column_stack((x_midpts[:-1], y_midpts[:-1], z_midpts[:-1]))[:, newaxis, :]
-			coord_mid = column_stack((x, y, z))[:, newaxis, :]
-			coord_end = column_stack((x_midpts[1:], y_midpts[1:], z_midpts[1:]))[:, newaxis, :]
-			segments = concatenate((coord_start, coord_mid, coord_end), axis=1)
-			lc = Line3DCollection(segments, linewidths=[config.Width()] * len(x), colors=colors, **default_kwargs)
-
-
-		lc.set_array(c)	# set the colors of each segment
-		ax.add_collection(lc)
-		return lc
-
-
-	def SpectraHeatmap(reader, p):
-
-		peaks = config.Peaks().lower()
-		indices = [int(i) for i in config.ID()]
-
-		if len(indices) == 1:
-			spectra = indices[0]
-
-			# Collect spectrum attributes
-			mz_values = []
-			intensities = []
-
-
-			# This is the "Pythonic" way of doing things, because
-			# Heaven forbid we just index the values we want.
-			for spectrum in reader:
-				if spectrum.ID == spectra:
-					for mz, intensity in spectrum.peaks(peaks):
-						mz_values.append(mz)
-						intensities.append(intensity)
-
-			p.inc(message="Plotting...")
-			color = input.mode()
-			with style.context('dark_background' if color == "dark" else "default"):
-				fig, ax = subplots()
-
-				if config.Style() == "Line":
-					plot = ColoredLine(mz_values, intensities, intensities, ax)
-				elif config.Style() == "Bar":
-					cmap = get_cmap(config.ColorMap().lower())
-					norm = Normalize(vmin=min(intensities), vmax=max(intensities))
-					plot = ax.bar(mz_values, intensities, color=cmap(norm(intensities)), width=config.Width())
-				else:
-					Error("Contour Style is only supported when more than one spectra ID is specified!")
-					return None, None, None
-
-				ax.set_xlim(min(mz_values), max(mz_values))
-				ax.set_ylim(min(intensities), max(intensities))
-
-				return fig, ax, plot
-
-		else:
-			fig, ax = subplots(subplot_kw={"projection": "3d"})
-
-			x_min, x_max, y_min, y_max, z_min, z_max = 0, 0, 0, len(indices), 0, 0
-
-			for spectrum in reader:
-				if spectrum.ID in indices:
-					mz_values = []
-					intensities = []
-					for mz, intensity in spectrum.peaks(peaks):
-						mz_values.append(mz)
-						intensities.append(intensity)
-
-					x_min = min(x_min, min(mz_values))
-					x_max = max(x_max, max(mz_values))
-					z_min = min(z_min, min(intensities))
-					z_max = max(z_max, max(intensities))
-
-					position = [float(indices.index(spectrum.ID))] * len(mz_values)
-					cmap = get_cmap(config.ColorMap().lower())
-
-					# Plot the line for each spectrum
-					if config.Style() == "Line":
-						plot = ColoredLine(mz_values, position, intensities, ax, cmap=config.ColorMap().lower(), z=intensities)
-					elif config.Style() == "Bar":
-						z = intensities
-						norm = Normalize(vmin=min(intensities), vmax=max(intensities))
-						c = norm(intensities)
-						width = depth = 1
-						plot = ax.bar3d(mz_values, position, zeros_like(mz_values), width, depth, z, color=cmap(c))
-
-
-			ax.set_xlim(x_min, x_max)
-			ax.set_ylim(y_min, y_max)
-			ax.set_zlim(z_min, z_max)
-			ax.view_init(elev=config.Elevation(), azim=config.Rotation())
-			ax.set_box_aspect(None, zoom=config.Zoom())
-
-			if "z" in config.Features():
-				ax.tick_params(axis="z", labelsize=config.TextSize())
-			else:
-				ax.set_zticklabels([])
-			return fig, ax, plot
-
-
 	def GenerateSimilarity():
 		if input.MainTab() != "SimilarityTab": return
 
@@ -273,7 +138,6 @@ def server(input, output, session):
 				if reader is None: return
 
 				distances = {}
-
 				indices = [int(i) for i in config.ID()]
 				spectra = []
 				for s in reader:
@@ -282,6 +146,7 @@ def server(input, output, session):
 				for s in spectra:
 					distances[s.ID] = {}
 					for s2 in spectra:
+						p.inc(message=f"Computing similarity of spectra {s.ID} and {s2.ID}")
 						if s.ID == s2.ID:
 							distances[s.ID][s2.ID] = 1.0
 						elif s2.ID in distances:
@@ -289,8 +154,8 @@ def server(input, output, session):
 						else:
 							distances[s.ID][s2.ID] = s.similarity_to(s2)
 
+				p.inc(message="Plotting")
 				df = DataFrame(distances, columns=indices, index=indices)
-
 				fig, ax = subplots()
 				interpolation = config.Interpolation().lower()
 				plot = ax.imshow(df, cmap=config.ColorMap().lower(), interpolation=interpolation, aspect="equal")
@@ -337,21 +202,82 @@ def server(input, output, session):
 				reader = GetData()
 				if reader is None: return
 
-				fig, ax, plot = SpectraHeatmap(reader, p)
+				fig, ax = subplots(subplot_kw={"projection": "3d"})
+				cmap = get_cmap(config.ColorMap().lower())
+
+				interpolation_cache = [File(input), config.Peaks(), config.Dimension(), "Interpolation"]
+				if not DataCache.In(interpolation_cache):
+
+					peaks = config.Peaks().lower()
+
+					x_min, x_max, y_min, y_max, z_min, z_max = 0, 0, 0, 0, 0, 0
+					values = []
+					intensities = []
+					rts = []
+
+					for spectrum in reader:
+						p.inc(message=f"Reading Spectra {spectrum.ID}")
+						rt = spectrum.scan_time[0]
+						for mz, intensity in spectrum.peaks(peaks):
+							values.append(mz)
+							intensities.append(intensity)
+							rts.append(rt)
+					if not values:
+						Error("No Spectra in File!")
+						return
+
+					vm, vM, rm, rM = min(values), max(values), min(rts), max(rts)
+
+					# Create a grid for mz and rt
+					p.inc(message="Interpolating")
+					dimension = config.Dimension()
+					mz_grid, rt_grid = meshgrid(
+						linspace(vm, vM, dimension),
+						linspace(rm, rM, dimension)
+					)
+
+					intensity_grid = griddata((values, rts), intensities, (mz_grid, rt_grid), method='cubic')
+					intensity_grid[intensity_grid < 0] = 0
+
+					DataCache.Store([mz_grid, rt_grid, intensity_grid, vm, vM, rm, rM], interpolation_cache)
+
+				else:
+					mz_grid, rt_grid, intensity_grid, vm, vM, rm, rM = DataCache.Get(interpolation_cache)
+
+				p.inc(message="Plotting")
+				plot = ax.plot_surface(mz_grid, rt_grid, intensity_grid, cmap=cmap)
+
+				ax.set_xlim(vm, vM)
+				ax.set_ylim(rm, rM)
+				#ax.set_zlim(0, iM)
+
+				ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+				ax.set_box_aspect(None, zoom=config.Zoom())
+
 				if plot is None: return
 
 				# Visibility of features
 				try:
 					if "legend" in input.Features():
-						cbar = colorbar(plot, ax=ax, label="Value", pad=0.1)
+						cbar = colorbar(plot, ax=ax, label="Value", pad=0.2)
 						cbar.ax.tick_params(labelsize=config.TextSize())
 				except Exception: pass
 
-				if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
+				if "y" in config.Features():
+					ax.tick_params(axis="y", labelsize=config.TextSize())
+					ax.set_ylabel("Retention Time")
 				else: ax.set_yticklabels([])
 
-				if "x" in config.Features(): ax.tick_params(axis="x", labelsize=config.TextSize())
+				if "x" in config.Features():
+					ax.tick_params(axis="x", labelsize=config.TextSize())
+					ax.set_xlabel("MZ")
 				else: ax.set_xticklabels([])
+
+				if "z" in config.Features():
+					ax.tick_params(axis="z", labelsize=config.TextSize())
+					ax.set_zlabel("Intensity")
+				else:
+					ax.set_zticklabels([])
 
 				b = BytesIO()
 				fig.savefig(b, format="png", dpi=config.DPI())
@@ -415,18 +341,17 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 
-				config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0]),
-
+				config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0], conditional="input.MainTab === 'SimilarityTab'"),
 
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
 
 				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'"),
-				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0.1, max=10.0, step=0.1, conditional="input.MainTab === 'HeatmapTab'"),
-				config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Line", "Bar", "Contour"], conditional="input.MainTab === 'HeatmapTab'"),
 
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'"),
+
+				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1),
+
 
 				ui.HTML("<b>3D</b>"),
 				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),

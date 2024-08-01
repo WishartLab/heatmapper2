@@ -12,19 +12,15 @@ config = ConfigHandler({
 	# Dependent on input
 	"ID": Config(selected=[]),
 	"Peaks": Config(selected="Raw"),
-	"Width": Config(value=1.0),
-	"Style": Config(selected="Line"),
 	"Interpolation": Config(selected="Nearest"),
+	"Dimension": Config(value=100),
 
 	"Elevation": Config(value=45),
-	"Rotation": Config(value=300),
+	"Rotation": Config(value=45),
 	"Zoom": Config(value=1),
 
 	# Any value in between 1-50
 	"TextSize": Config(value=8),
-
-	# Any value between 0.0-1.0
-	"Opacity": Config(value=0.5),
 
 	# See shared.py for ColorMaps
 	"ColorMap": Config(selected="Viridis"),
