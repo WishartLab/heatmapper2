@@ -1,2 +1,2 @@
 folium
-pyopenxl
+openpyxl

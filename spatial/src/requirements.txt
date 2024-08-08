@@ -1,4 +1,4 @@
 squidpy
 anndata
 scikit-misc
-pyopenxl
+openpyxl

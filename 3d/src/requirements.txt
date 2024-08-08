@@ -8,4 +8,4 @@
 # trame-vuetify
 # nest_asyncio
 py3Dmol
-pyopenxl
+openpyxl

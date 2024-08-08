@@ -1,2 +1,2 @@
 pymzml
-pyopenxl
+openpyxl
