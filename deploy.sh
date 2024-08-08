@@ -8,7 +8,7 @@ trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 PATH="$PATH:$HOME/.local/bin"
 
 # Applications that should be started
-subfolders=("expression" "pairwise" "image" "geomap" "geocoordinate" "3d" "spatial")
+subfolders=("expression" "pairwise" "image" "geomap" "geocoordinate" "3d" "spatial" "spectral")
 
 # The initial port. It's incremented for each application.
 port=8000
