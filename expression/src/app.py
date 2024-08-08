@@ -23,9 +23,9 @@ from scipy.stats import zscore
 from scipy.interpolate import griddata
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min
+from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min, concatenate
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg, File
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg, File, Error
 
 try:
 	from user import config
@@ -54,9 +54,62 @@ def server(input, output, session):
 		Valid.set(False)
 		Filter(Data().columns, ColumnType.Name, id="NameColumn")
 		DataCache.Invalidate(File(input))
+		ClusterColumns()
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
+
+
+	def ClusterColumns():
+		"""
+		@brief Generate column clusters
+		@info Clusters are determined by names that contain a unique number separated by _
+		"""
+		df = GetData()
+		clusters = set()
+		if df is None: return
+		for column in df.columns:
+			split = column.split("_")
+			if len(split) > 1:
+
+				# Try casting each piece into a number. If it succeeds, remove that part from the name.
+				for x in range(len(split)):
+					try:
+						int(split[x])
+						split.pop(x)
+						clusters.add("_".join(split))
+					except Exception:
+						pass
+
+		l_clusters = list(clusters)
+
+		# Only update the input if we have enough clusters.
+		if len(clusters) > 3:
+			ui.update_select(id="CubeOne", choices=l_clusters, selected=l_clusters[0])
+			ui.update_select(id="CubeTwo", choices=l_clusters, selected=l_clusters[1])
+			ui.update_select(id="CubeThree", choices=l_clusters, selected=l_clusters[2])
+
+
+	def GetCluster(df, cluster):
+		c_split = cluster.split("_")
+		names = config.NameColumn()
+
+		valid_columns = []
+		for column in df.columns:
+
+			# Ensure that every part of the cluster name is within the column, and that it matches the expected size
+			split = column.split("_")
+
+			# The column will be missing the numerical portion.
+			in_cluster = len(c_split) + 1 == len(split)
+			for part in c_split:
+				if not in_cluster: break
+				if part not in split:
+					in_cluster = False
+			if in_cluster:
+				valid_columns.append(column)
+		cluster = df[valid_columns].copy()
+		return cluster
 
 
 	def ProcessData(df):
@@ -147,6 +200,60 @@ def server(input, output, session):
 		return value
 
 
+	def HeatmapCube(df, ax, p):
+		dxy = GetCluster(df, config.CubeOne())
+		dxz = GetCluster(df, config.CubeTwo())
+		dyz = GetCluster(df, config.CubeThree())
+
+		m = min(len(dxy.columns), len(dxz.columns), len(dyz.columns))
+
+		print(dxy.shape, dxz.shape, dyz.shape, m)
+
+		# XY Must have the dimensions of (XZ,) (YZ,)
+		if len(dxy.columns) < dxz.shape[0]:
+			Error("The XY and XZ cluster are not aligned!")
+			return
+		while len(dxy.columns) != dxz.shape[0]:
+			dxy.drop(columns=dxy.columns[-1], inplace=True)
+
+		if len(dxy.columns) < dyz.shape[0]:
+			Error("The XY and YZ cluster are not aligned!")
+			return
+		while len(dxy.index) != dyz.shape[0]:
+			dxy.drop(index=dxy.columns[-1], axis=1, inplace=True)
+
+		while len(dxz.columns) != m:
+			dxz.drop(columns=dxz.columns[-1], inplace=True)
+		while len(dyz.columns) != m:
+			dyz.drop(columns=dyz.columns[-1], inplace=True)
+
+		print(dxy.shape, dxz.shape, dyz.shape, m)
+		d = concatenate([dxy.values.flatten(), dxz.values.flatten(), dyz.values.flatten()])
+
+		color = input.mode()
+		colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
+		cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
+		norm = Normalize(vmin=d.min(), vmax=d.max())
+
+		# Create mesh grids
+		ix, iy = dxy.shape
+		x, y = meshgrid(arange(iy), arange(ix))
+
+		ix, iz = dxz.shape
+		xz, zz = meshgrid(arange(iz), arange(ix))
+
+		iy, iz = dyz.shape
+		yz, zz2 = meshgrid(arange(iz), arange(iy))
+
+		# Plot surfaces on the respective planes
+		ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+		ax.set_box_aspect(None, zoom=config.Zoom())
+
+		ax.plot_surface(x, y, zeros_like(x), facecolors=cmap(norm(dxy.values)), shade=False)
+		ax.plot_surface(zz, zeros_like(xz), xz, facecolors=cmap(norm(dxz.values)), shade=False)
+		return ax.plot_surface(zeros_like(yz), zz2, yz, facecolors=cmap(norm(dyz.values)), shade=False)
+
+
 	def Heatmap2D(df, ax_heatmap, p):
 		colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 		interpolation = config.Interpolation().lower()
@@ -170,7 +277,7 @@ def server(input, output, session):
 			config.Features(),
 			config.MinScale(),
 		]
-	
+
 		if not DataCache.In(cached):
 			p.inc(message="Generating...")
 
@@ -240,14 +347,15 @@ def server(input, output, session):
 			config.DistanceMethod(),
 			config.DPI(),
 			config.Elevation(),
+			config.Cube(),
 			input.mode(),
 		]
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
+		if config.Elevation() != 90 or config.Cube(): inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 
-		print("HERE")
+		if config.Cube(): inputs.extend([config.CubeOne(), config.CubeTwo(), config.CubeThree()])
+
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
-			print(File(input), "NO")
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				index_labels, x_labels, data = ProcessData(GetData())
@@ -260,61 +368,68 @@ def server(input, output, session):
 					fig = figure(figsize=(12, 10))
 					gs = fig.add_gridspec(4, 2, height_ratios=[2, 8, 1, 1], width_ratios=[2, 8], hspace=0, wspace=0)
 
-					# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
-					# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
-					# To data, so the order changes when turning the toggle.
-					if "row" in config.Features():
-						ax_row = fig.add_subplot(gs[1, 0])
-						row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
-						ax_row.axis("off")
-						leaves = row_dendrogram["leaves"]
-						leaves.reverse()
-
-						index_labels = [index_labels[i] for i in leaves]
-						df = data.iloc[leaves]
-					else:
-						df = data
-
-					# If we render the column dendrogram.
-					if "col" in config.Features():
-						ax_col = fig.add_subplot(gs[0, 1])
-						col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
-						ax_col.axis("off")
-
-					# Handle scaling
-					if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
-
-					if config.Elevation() == 90:
-						ax_heatmap = fig.add_subplot(gs[1, 1])
-						heatmap = Heatmap2D(df, ax_heatmap, p)
-					else:
+					if config.Cube():
 						ax_heatmap = fig.add_subplot(gs[1, 1], projection="3d")
-						heatmap, mappable = Heatmap3D(df, ax_heatmap, p)
+						if HeatmapCube(data, ax_heatmap, p) is None:
+							return
+
+					else:
+						# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
+						# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
+						# To data, so the order changes when turning the toggle.
+						if "row" in config.Features():
+							ax_row = fig.add_subplot(gs[1, 0])
+							row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
+							ax_row.axis("off")
+							leaves = row_dendrogram["leaves"]
+							leaves.reverse()
+
+							index_labels = [index_labels[i] for i in leaves]
+							df = data.iloc[leaves]
+						else:
+							df = data
+
+						# If we render the column dendrogram.
+						if "col" in config.Features():
+							ax_col = fig.add_subplot(gs[0, 1])
+							col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
+							ax_col.axis("off")
+
+						# Handle scaling
+						if config.ScaleType() != "None": df = zscore(df, axis=1 if config.ScaleType() == "Row" else 0)
+
+						if config.Elevation() == 90:
+							ax_heatmap = fig.add_subplot(gs[1, 1])
+							heatmap = Heatmap2D(df, ax_heatmap, p)
+						else:
+							ax_heatmap = fig.add_subplot(gs[1, 1], projection="3d")
+							heatmap, mappable = Heatmap3D(df, ax_heatmap, p)
+
 					text_size = config.TextSize()
 
 					# If we render the Y axis.
 					if "y" in config.Features():
-						if config.Elevation() == 90: ax_heatmap.set_yticks(range(len(index_labels)))
+						ax_heatmap.set_yticks(range(len(index_labels)))
 						ax_heatmap.set_yticklabels(index_labels, fontsize=text_size)
-						if config.Elevation() == 90: ax_heatmap.yaxis.tick_right()
+						if config.Elevation() == 90 and not config.Cube(): ax_heatmap.yaxis.tick_right()
 					else:
 						ax_heatmap.set_yticklabels([])
 
 					# If we render the X axis.
 					if "x" in config.Features():
-						if config.Elevation() == 90: ax_heatmap.set_xticks(range(len(x_labels)))
+						ax_heatmap.set_xticks(range(len(x_labels)))
 						ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=text_size)
 					else:
 						ax_heatmap.set_xticklabels([])
 
-					if config.Elevation() != 90:
+					if config.Elevation() != 90 or config.Cube():
 						if "z" in config.Features():
 							ax_heatmap.tick_params(axis="z", labelsize=text_size)
 						else:
 							ax_heatmap.set_zticklabels([])
 
 					# If we render the legend.
-					if "legend" in config.Features():
+					if "legend" in config.Features() and not config.Cube():
 						ax_cbar = fig.add_subplot(gs[3, 1])
 						cbar = fig.colorbar(heatmap if input.Elevation() == 90 else mappable, cax=ax_cbar, orientation="horizontal")
 						cbar.ax.tick_params(labelsize=text_size)
@@ -448,6 +563,11 @@ app_ui = ui.page_fluid(
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation != 90"),
 
 					ui.HTML("<b>3D</b>"),
+					config.Cube.UI(ui.input_switch, id="Cube",	label="Cube"),
+					config.CubeOne.UI(ui.input_select, id="CubeOne",	label="Cluster XY", choices=[], conditional="input.Cube"),
+					config.CubeTwo.UI(ui.input_select, id="CubeTwo",	label="Cluster XZ", choices=[], conditional="input.Cube"),
+					config.CubeThree.UI(ui.input_select, id="CubeThree",	label="Cluster YZ", choices=[], conditional="input.Cube"),
+
 					config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
 					config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
 					config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),

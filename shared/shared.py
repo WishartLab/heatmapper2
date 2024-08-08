@@ -17,6 +17,9 @@ from enum import Enum
 from os.path import exists
 from copy import deepcopy
 
+# Pandas does not automatically import this unless an Excel File is uploaded
+import openpyxl
+
 # Used for fetching web resources in a variety of fashions.
 URL = "https://wishartlab.github.io/heatmapper2"
 Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
@@ -55,7 +58,7 @@ ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma"]
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11; FOV = 12; Count = 13
 Columns = {
 	ColumnType.Time: {"time", "date", "year"},
-	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle", "iso_code", "continent", "country", "location"},
+	ColumnType.Name: {"name", "orf", "uniqid", "face", "triangle", "iso_code", "continent", "country", "location", "sample"},
 	ColumnType.Value: {"value", "weight", "intensity", "in_tissue"},
 	ColumnType.Longitude: {"longitude", "long", "lon"},
 	ColumnType.Latitude: {"latitude", "lat"},

@@ -23,13 +23,18 @@ config = ConfigHandler({
 	# See shared.py for DistanceMethods
 	"DistanceMethod": Config(selected="Euclidean"),
 
+	"Cube": Config(value=False),
+	"CubeOne": Config(),
+	"CubeTwo": Config(),
+	"CubeThree": Config(),
+
+
 	"Elevation": Config(value=90),
 	"Rotation": Config(value=0),
-	"Zoom": Config(value=1.3),
+	"Zoom": Config(value=1.0),
 	"InterpolationLevels": Config(value=1),
 	"MinScale": Config(value=True),
 	"Opacity": Config(value=1.0),
-
 
 	# Any numerical value from 1-50
 	"TextSize": Config(value=8),
