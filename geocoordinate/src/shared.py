@@ -17,6 +17,8 @@ from enum import Enum
 from os.path import exists
 from copy import deepcopy
 
+import openpyxl
+
 # Used for fetching web resources in a variety of fashions.
 URL = "https://wishartlab.github.io/heatmapper2"
 Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
