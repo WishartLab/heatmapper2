@@ -59,6 +59,29 @@ def server(input, output, session):
 	def GetData(): return Table.data_view() if Valid() else Data()
 
 
+	def HashString():
+		"""
+		@brief Returns the hash string used for the data cache.
+		"""
+		inputs = [
+			File(input),
+			config.NameColumn(),
+			config.Features(),
+			config.ScaleType(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Interpolation(),
+			config.Bins(),
+			config.TextSize(),
+			config.ClusterMethod(),
+			config.DistanceMethod(),
+			config.DPI(),
+			config.Elevation(),
+			input.mode(),
+		]
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
+		return inputs
+
+
 	def ProcessData(df):
 		"""
 		@brief Extracts the labels for each axis, and returns it alongside a DataFrame containing only the relevant data.
@@ -170,7 +193,7 @@ def server(input, output, session):
 			config.Features(),
 			config.MinScale(),
 		]
-	
+
 		if not DataCache.In(cached):
 			p.inc(message="Generating...")
 
@@ -227,24 +250,8 @@ def server(input, output, session):
 		"""
 
 		# A list of all the inputs for caching.
-		inputs = [
-			File(input),
-			config.NameColumn(),
-			config.Features(),
-			config.ScaleType(),
-			input.CustomColors() if config.Custom() else config.ColorMap().split(),
-			config.Interpolation(),
-			config.Bins(),
-			config.TextSize(),
-			config.ClusterMethod(),
-			config.DistanceMethod(),
-			config.DPI(),
-			config.Elevation(),
-			input.mode(),
-		]
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
+		inputs = HashString()
 
-		print("HERE")
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
 			print(File(input), "NO")
@@ -371,22 +378,7 @@ def server(input, output, session):
 
 
 	@render.download(filename="heatmap.png")
-	def DownloadHeatmap():
-		yield DataCache.Get([
-			File(input),
-			config.NameColumn(),
-			config.Features(),
-			config.ScaleType(),
-			input.CustomColors() if config.Custom() else config.ColorMap().split(),
-			config.Interpolation(),
-			config.Bins(),
-			config.TextSize(),
-			config.ClusterMethod(),
-			config.DistanceMethod(),
-			config.DPI(),
-			config.Elevation(),
-			input.mode(),
-		])
+	def DownloadHeatmap(): yield DataCache.Get(HashString())
 
 
 	@render.ui

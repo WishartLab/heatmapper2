@@ -370,6 +370,7 @@ def NavBar():
 		"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
 		"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
 		"spatial": f"{Server}:{Port + 6}",
+		"spectral": f"{Server}:{Port + 7}",
 	}
 
 	return (
@@ -382,6 +383,7 @@ def NavBar():
 			ui.nav_control(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer">Geocoordinate</a>')),
 			ui.nav_control(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer">3D</a>')),
 			ui.nav_control(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer">Spatial</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["spectral"]}" target="_blank" rel="noopener noreferrer">Spectral</a>')),
 			ui.nav_control(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>')),
 			ui.nav_spacer(),
 			ui.nav_control(ui.input_dark_mode(id="mode")),

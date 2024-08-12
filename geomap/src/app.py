@@ -305,7 +305,7 @@ def server(input, output, session):
 
 
 	@render.download(filename="heatmap.html")
-	def DownloadHeatmap(): yield LoadMap().get_root().render()
+	def DownloadHeatmap(): yield GenerateHeatmap().get_root().render()
 
 
 app_ui = ui.page_fluid(

@@ -77,6 +77,24 @@ def server(input, output, session):
 	def GetData(): return Table.data_view() if Valid() else Data()
 
 
+	def HashString():
+		inputs = [
+			File(input),
+			input.Image(),
+			config.ColorMap(),
+			config.Opacity(),
+			config.Algorithm(),
+			config.Levels(),
+			config.Features(),
+			config.TextSize(),
+			config.DPI(),
+			config.Quality(),
+			input.mode()
+		]
+		if config.Elevation() != 90: inputs += [config.Elevation(), config.Rotation(), config.Zoom(), config.Slices()]
+		return inputs
+
+
 	@output
 	@render.data_frame
 	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
@@ -92,21 +110,7 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
-		inputs = [
-			File(input),
-			input.Image(),
-			config.ColorMap(),
-			config.Opacity(),
-			config.Algorithm(),
-			config.Levels(),
-			config.Features(),
-			config.TextSize(),
-			config.DPI(),
-			config.Quality(),
-			input.mode()
-		]
-
-		if config.Elevation() != 90: inputs += [config.Elevation(), config.Rotation(), config.Zoom(), config.Slices()]
+		inputs = HashString()
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
@@ -230,20 +234,7 @@ def server(input, output, session):
 	def DownloadTable(): yield GetData().to_string()
 
 	@render.download(filename="heatmap.png")
-	def DownloadHeatmap():
-		yield DataCache.Get([
-			File(input),
-			input.Image(),
-			config.ColorMap(),
-			config.Opacity(),
-			config.Algorithm(),
-			config.Levels(),
-			config.Features(),
-			config.TextSize(),
-			config.DPI(),
-			config.Quality(),
-			input.mode()
-		])
+	def DownloadHeatmap(): yield DataCache.Get(HashString())
 
 
 app_ui = ui.page_fluid(

@@ -72,6 +72,23 @@ def server(input, output, session):
 	def GetData(): return Table.data_view() if Valid() else Data()
 
 
+	def HashString():
+		inputs = [
+			File(input),
+			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
+			input.CustomColors() if config.Custom() else config.ColorMap().split(),
+			config.Interpolation(),
+			config.Bins(),
+			config.TextSize(),
+			config.Features(),
+			config.DPI(),
+			config.Elevation(),
+			input.mode(),
+		]
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
+		return inputs
+
+
 	def FASTAMatrix(file):
 		"""
 		@brief Computes the pairwise matrix from a FASTA file.
@@ -190,7 +207,6 @@ def server(input, output, session):
 		DataCache.Invalidate(File(input))
 
 		return value
-
 
 
 	def GenerateMatrix(data, value):
@@ -339,20 +355,7 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
-		inputs = [
-			File(input),
-			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
-			input.CustomColors() if config.Custom() else config.ColorMap().split(),
-			config.Interpolation(),
-			config.Bins(),
-			config.TextSize(),
-			config.Features(),
-			config.DPI(),
-			config.Elevation(),
-			input.mode(),
-		]
-
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
+		inputs = HashString()
 
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
@@ -468,19 +471,7 @@ def server(input, output, session):
 
 
 	@render.download(filename="heatmap.png")
-	def DownloadHeatmap():
-		yield DataCache.Get([
-			File(input),
-			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
-			input.CustomColors() if config.Custom() else config.ColorMap().split(),
-			config.Interpolation(),
-			config.Bins(),
-			config.TextSize(),
-			config.Features(),
-			config.DPI(),
-			config.Elevation(),
-			input.mode(),
-		])
+	def DownloadHeatmap(): yield DataCache.Get(HashString())
 
 
 	@render.ui
