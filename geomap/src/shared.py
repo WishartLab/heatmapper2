@@ -370,7 +370,7 @@ def NavBar():
 		"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
 		"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
 		"spatial": f"{Server}:{Port + 6}",
-		"spectral": f"{Server}:{Port + 7}",
+		"spectral": f"{URL}/site/spectral/index.html" if Pyodide else f"{Server}:{Port + 7}",
 	}
 
 	return (
