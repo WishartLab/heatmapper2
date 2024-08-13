@@ -437,7 +437,7 @@ app_ui = ui.page_fluid(
 				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation != 90"),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation == 90"),
 
 					ui.HTML("<b>3D</b>"),
 					config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
