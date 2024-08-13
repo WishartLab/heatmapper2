@@ -2,5 +2,6 @@
 .Rproj.user
 .vscode/*
 .zed/*
+.obsidian/*
 pyrightconfig.json
 venv
