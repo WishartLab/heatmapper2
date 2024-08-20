@@ -46,6 +46,10 @@ def server(input, output, session):
 
 
 	def Hash():
+		"""
+		@brief Compute a Hash String for the Main Heatmap
+		@return A hash of all the inputs used for the heatmap.
+		"""
 		tab = input.MainTab()
 		if tab == "HeatmapTab":
 			return [
@@ -127,6 +131,12 @@ def server(input, output, session):
 
 
 	def GenerateSimilarity():
+		"""
+		@brief Generate the Similarity matrix.
+		"""
+		
+		# Sometimes the MainTab doesn't update immediately, despite calling the function.
+		# We just return nothing if we aren't actually on the tab to avoid redundant calculation.
 		if input.MainTab() != "SimilarityTab": return
 
 		inputs = Hash()
@@ -137,6 +147,7 @@ def server(input, output, session):
 				reader = GetData()
 				if reader is None: return
 
+				# Get all the spectra the user wants.
 				distances = {}
 				indices = [int(i) for i in config.ID()]
 				spectra = []
@@ -147,10 +158,16 @@ def server(input, output, session):
 					distances[s.ID] = {}
 					for s2 in spectra:
 						p.inc(message=f"Computing similarity of spectra {s.ID} and {s2.ID}")
+						
+						# If they're the same spectra, set it to 1.
 						if s.ID == s2.ID:
 							distances[s.ID][s2.ID] = 1.0
+						
+						# If the second spectra exists, used that pre-calculated result.
 						elif s2.ID in distances:
 							distances[s.ID][s2.ID] = distances[s2.ID][s.ID]
+							
+						# Otherwise call the similarity function.
 						else:
 							distances[s.ID][s2.ID] = s.similarity_to(s2)
 
@@ -193,6 +210,11 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
+		"""
+		@brief Generate the main heatmap
+		"""
+		
+		
 		if input.MainTab() != "HeatmapTab": return
 
 		inputs = Hash()
@@ -205,16 +227,18 @@ def server(input, output, session):
 				fig, ax = subplots(subplot_kw={"projection": "3d"})
 				cmap = get_cmap(config.ColorMap().lower())
 
+				# We additionally cache interpolation.
 				interpolation_cache = [File(input), config.Peaks(), config.Dimension(), "Interpolation"]
 				if not DataCache.In(interpolation_cache):
 
 					peaks = config.Peaks().lower()
-
+					
 					x_min, x_max, y_min, y_max, z_min, z_max = 0, 0, 0, 0, 0, 0
 					values = []
 					intensities = []
 					rts = []
 
+					# For each spectra, get its values intensities, and rt.
 					for spectrum in reader:
 						p.inc(message=f"Reading Spectra {spectrum.ID}")
 						rt = spectrum.scan_time[0]
@@ -226,6 +250,7 @@ def server(input, output, session):
 						Error("No Spectra in File!")
 						return
 
+					# Get the min and max of each list.
 					vm, vM, rm, rM = min(values), max(values), min(rts), max(rts)
 
 					# Create a grid for mz and rt
@@ -236,6 +261,7 @@ def server(input, output, session):
 						linspace(rm, rM, dimension)
 					)
 
+					# Interpolate.
 					intensity_grid = griddata((values, rts), intensities, (mz_grid, rt_grid), method='cubic')
 					intensity_grid[intensity_grid < 0] = 0
 
@@ -249,6 +275,8 @@ def server(input, output, session):
 
 				ax.set_xlim(vm, vM)
 				ax.set_ylim(rm, rM)
+				
+				# This causes issues.
 				#ax.set_zlim(0, iM)
 
 				ax.view_init(elev=config.Elevation(), azim=config.Rotation())
