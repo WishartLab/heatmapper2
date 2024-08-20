@@ -3,7 +3,6 @@
 # Shared
 #
 # This file contains shared functionality between Heatmapper applications. It is not a standalone application.
-# Due to the way ShinyLive exports applications, this file is symlinked into each project to reduce redundancy.
 #
 
 from shiny import ui, reactive
@@ -81,6 +80,7 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False, remo
 	@param good: A list of column names on top of those defined by the type to be included
 	@param id: An element id to update with a new value.
 	@param all: Return all matches columns
+	@param remove_unknown: Whether we should remove unrecognized values.
 	@return: A list of column names to use.
 
 	@info This purpose of this function is to try and remove irrelevant columns from user selection,
@@ -511,7 +511,11 @@ class Config:
 	def UI(self, ui_element, make_inline=True, widths=[4,8], gap="20px", conditional=None, *args, **kwargs):
 		"""
 		@brief Displays the configured UI.
-		@param ui The Shiny interface element to use.
+		@param ui_element The Shiny interface element to use.
+		@param make_inline: Use columns to simulate inline titles for elements that don't support it
+		@param widths: The ratio between the title and the element.
+		@param gap: The gap between the title and element.
+		@param conditional: A conditional JS string.
 		@parram **kwargs: Additional arguments to be passed to the input.
 		@note	keyword arguments passed to the Config object during initialization will overrule
 					arguments passed to this function. Duplicates are allowed.

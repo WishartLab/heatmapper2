@@ -13,7 +13,6 @@ stylesheet='    <link rel="stylesheet" href="./../shinylive/heatmapper.css" />'
 for folder in "${subfolders[@]}"; do
     # Check if the subfolder exists
     if [ -d "$folder" ]; then
-    		cp shared/shared.py $folder/src/shared.py
         shinylive export --subdir $folder $folder/src site
         sed -i "/<link rel=\"stylesheet\" href=\"\.\/\.\.\/shinylive\/shinylive.css\" \/>/a $stylesheet" "site/$folder/index.html"
     else
