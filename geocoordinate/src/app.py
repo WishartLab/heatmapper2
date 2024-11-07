@@ -477,7 +477,7 @@ app_ui = ui.page_fluid(
 				),
 
 				# Add the download buttons.
-				ui.download_button("DownloadHeatmap", "Heatmap")
+				ui.download_button("DownloadHeatmap", "Download")
 			),
 			padding="10px",
 			gap="20px",
