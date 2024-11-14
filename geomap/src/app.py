@@ -39,11 +39,11 @@ URL = f"{Raw}/geomap/data/" if Pyodide else "../data/"
 def server(input, output, session):
 
 	Info = {
-		"example1.txt": "This example file is from the Open Data Portal. The data is from a carbon monoxide emissions study conducted by Environment Canada. The three columns represent results from 1990, 2000, and 2013.",
-		"example2.txt": "This example file is from Statistics Canada. The data is adapted from New cases and age-standardized rate for primary cancer (based on the February 2014 CCR tabulation file), by cancer type and sex, Canada, provinces and territories. The columns represent new cancer cases (age-standardized rate per 100,000 population) from 2006 to 2010.",
-		"example3.txt": "This example file is from the U.S. Centers for Disease Control and Prevention. The data is from Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.",
-		"example6.csv": "COVID 19 information reported by the Canadian Government, available at https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291",
-		"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "Global COVID 19 Statistics from Our World in Data."
+		"example1.txt": "Input type: txt\nContents: Data from a carbon monoxide emissions study conducted by Environment Canada. The three columns represent results from 1990, 2000, and 2013.\nSource: Open Data Portal",
+		"example2.txt": "Input type: txt\nContents: Data adapted from New cases and age-standardized rate for primary cancer (based on the February 2014 CCR tabulation file), by cancer type and sex, Canada, provinces and territories. The columns represent new cancer cases (age-standardized rate per 100,000 population) from 2006 to 2010.\nSource: Statistics Canada",
+		"example3.txt": "Input type: txt\Contents: Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.\nSource: U.S. Centers for Disease Control and Prevention",
+		"example6.csv": "Input type: csv\nContents: COVID 19 information reported by the Canadian Government.\nSource: https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291",
+		"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "File type: csv\nContents: Global COVID 19 Statistics.\nSource: Our World in Data"
 	}
 
 	def HandleData(path, p=None):

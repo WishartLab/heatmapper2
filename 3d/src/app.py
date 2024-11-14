@@ -39,15 +39,15 @@ def server(input, output, session):
 	Info = {
 		"example1.csv": {
 			"Object": "bunny.obj",
-			"Description": "A bunny, mapped with random data."
+			"Description": "Input type: csv, obj\nContents: A bunny, mapped with random data."
 		},
 		"texture.jpg": {
 			"Object": "FinalBaseMesh.obj",
-			"Description": "A human model with a sample heatmap texture applied. Sourced from https://free3d.com/3d-model/male-base-mesh-6682.html"
+			"Description": "Input type: jpg, obj\nContents: A human model with a sample heatmap texture applied.\nSource: https://free3d.com/3d-model/male-base-mesh-6682.html"
 		},
 		"4K8X.pdb": {
 			"Object": None,
-			"Description": "An example protein PDB from dash-bio at https://dash.plotly.com/dash-bio/molecule3dviewer"
+			"Description": "Input type: pdb\nContents: An example protein PDB.\nSource: https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
 

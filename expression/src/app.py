@@ -36,9 +36,9 @@ except ImportError:
 def server(input, output, session):
 	# Information about the Examples
 	Info = {
-		"example1.txt": "This example dataset is sample input retrieved from the website for the Ashley Lab Heatmap Builder.",
-		"example2.txt": "This example dataset is sample input retrieved from an online tutorial by Yan Cui (ycui2@uthsc.edu).",
-		"example3.txt": "This example dataset is retrieved from the online supplement to Eisen et al. (1998), which is a very well known paper about cluster analysis and visualization. The details of how the data was collected are outlined in the paper."
+		"example1.txt": "Input type: txt\nSource: Retrieved from the website for the Ashley Lab Heatmap Builder.",
+		"example2.txt": "Input type: txt\nSource: Retrieved from an online tutorial by Yan Cui (ycui2@uthsc.edu).",
+		"example3.txt": "Input type: txt\nContents: Gene expression in yeast under varying conditions.\nSource: Retrieved from the online supplement to Eisen et al. (1998). DOI: 10.1073/pnas.95.25.14863"
 	}
 
 	DataCache = Cache("expression")

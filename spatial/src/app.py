@@ -34,9 +34,9 @@ def server(input, output, session):
 
 	# Information regarding example files.
 	Info = {
-		"visium_hne_adata.h5ad": "Pre-processed example files provided by SquidPy",
-		"seqfish.h5ad": "Pre-processed example files provided by SquidPy",
-		"imc.h5ad": "Pre-processed example files provided by SquidPy",
+		"visium_hne_adata.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
+		"seqfish.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
+		"imc.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
 	}
 
 	InitializeConfig(config, input)
