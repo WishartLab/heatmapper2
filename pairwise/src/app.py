@@ -22,6 +22,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.cm import ScalarMappable
 from Bio.PDB import PDBParser
 from Bio import SeqIO
+#from Bio.SeqIO.FastaIO import SimpleFastaParser
 from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
@@ -39,11 +40,11 @@ def server(input, output, session):
 
 	# Information about the Examples
 	Info = {
-		"example1.txt": "This example dataset represents pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
-		"example2.txt": "This example dataset was generated randomly.",
-		"example3.txt": "This example dataset was generated randomly.",
-		"example4.fasta": "An example FASTA file.",
-		"ala_phe_ala.pdb": "An example PDB file.",
+		"example1.txt": "Input type: txt\nContents: Pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
+		"example2.txt": "Input type: txt\nContents: This example dataset was generated randomly.",
+		"example3.txt": "Input type: txt\nContents: This example dataset was generated randomly.",
+		"example4.fasta": "Input type: FASTA\nContents: ",
+		"ala_phe_ala.pdb": "Input type: PDB\nContents: ",
 	}
 
 	def HandleData(path, p=None):
@@ -210,6 +211,9 @@ def server(input, output, session):
 
 
 	def GenerateMatrix(data, value):
+		'''
+		@param data: Pandas df
+		'''
 		name_col = Filter(data.columns, ColumnType.Name)
 		if name_col is not None:
 			names = data[name_col]
@@ -221,7 +225,8 @@ def server(input, output, session):
 			# Calculate matrix
 			if value == "Distance":
 				metric = config.DistanceMethod().lower()
-				distances = pdist(data, metric=metric)
+				#distances = pdist(data, metric=metric)
+				distances = CalculateDistance(data, metric)
 				return DataFrame(squareform(distances), columns=names, index=names)
 			else:
 				method = config.CorrelationMethod().lower()
@@ -229,6 +234,19 @@ def server(input, output, session):
 		except Exception:
 			Error("Could not compute matrix. Ensure your input data is correct!")
 			return None
+
+
+	def CalculateDistance(data, metric):
+		"""
+		@brief Calculates the pairwise distances between data points
+		@param data: The data to calculate the distance from
+		@param metric: The metric to use for the distance calculation
+		@returns Condensed pairwise distance matrix
+		"""
+		if metric == "euclidean":
+			return 5
+		else:
+			raise ValueError("Invalid distance metric")
 
 
 	def HeatmapCube(df, cmap, p):
