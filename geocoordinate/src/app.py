@@ -221,8 +221,9 @@ def server(input, output, session):
 						).add_to(map)
 					else:
 						lat, lon = row[lat_col], row[lon_col]
+						rect_radius = radius / 100000
 						Rectangle(
-							bounds=[(lat - radius, lon - radius), (lat + radius, lon + radius)],
+							bounds=[[lat - rect_radius, lon - rect_radius], [lat + rect_radius, lon + rect_radius]],
 							color=color,
 							fill=True,
 							opacity=opacity,
