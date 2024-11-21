@@ -520,6 +520,30 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
+	ui.tags.style("""
+		.navbar {
+			position: fixed;  /* prevent navbar from scrolling */
+			top: 0;
+			height: 10vh;
+			width: 100%;
+			z-index: 1001;
+			overflow-x: auto;
+        }
+		.navbar-nav {
+			flex-wrap: nowrap !important;
+		}
+		.bslib-sidebar-layout {
+			margin-top: 10vh;  /* prevent content from being hidden under navbar */
+		}
+		#MainTab {
+			position: sticky;  /* prevent tabs from scrolling */
+			top: 0;
+			width: 100%;
+			z-index: 1000;
+			background: rgba(255, 255, 255, 0.25);
+		}
+	"""),
+
 	NavBar(),
 
 	ui.layout_sidebar(
