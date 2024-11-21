@@ -157,10 +157,9 @@ def server(input, output, session):
 
 		color = config.ColorMap()
 		if color == "Inferno": cmap = linear.inferno.scale
-		elif color == "Magma": cmap = linear.magma.scale
 		elif color == "Plasma": cmap = linear.plasma.scale
 		elif color == "Viridis": cmap = linear.viridis.scale
-		elif color == "Cividis": cmap = linear.cividis.scale
+		#elif color == "Cividis": cmap = linear.cividis.scale
 
 		m, M = df[v_col].min(), df[v_col].max()
 
