@@ -40,11 +40,11 @@ def server(input, output, session):
 
 	# Information about the Examples
 	Info = {
-		"example1.txt": "Input type: txt\nContents: Pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
-		"example2.txt": "Input type: txt\nContents: This example dataset was generated randomly.",
-		"example3.txt": "Input type: txt\nContents: This example dataset was generated randomly.",
-		"example4.fasta": "Input type: FASTA\nContents: ",
-		"ala_phe_ala.pdb": "Input type: PDB\nContents: ",
+		"example1.txt": "Input type: txt<br>Contents: Pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
+		"example2.txt": "Input type: txt<br>Contents: This example dataset was generated randomly.",
+		"example3.txt": "Input type: txt<br>Contents: This example dataset was generated randomly.",
+		"example4.fasta": "Input type: FASTA<br>Contents: ",
+		"ala_phe_ala.pdb": "Input type: PDB<br>Contents: ",
 	}
 
 	def HandleData(path, p=None):
@@ -225,8 +225,8 @@ def server(input, output, session):
 			# Calculate matrix
 			if value == "Distance":
 				metric = config.DistanceMethod().lower()
-				#distances = pdist(data, metric=metric)
-				distances = CalculateDistance(data, metric)
+				distances = pdist(data, metric=metric)
+				#distances = CalculateDistance(data, metric)
 				return DataFrame(squareform(distances), columns=names, index=names)
 			else:
 				method = config.CorrelationMethod().lower()
@@ -413,7 +413,7 @@ def server(input, output, session):
 					# Visibility of features
 					if "legend" in config.Features():
 						if not d3:
-							cbar = colorbar(im, ax=ax, label="Distance")
+							cbar = colorbar(im, ax=ax, label=config.MatrixType())
 						else:
 							mappable = ScalarMappable(cmap=cmap, norm=norm)
 							mappable.set_array(z)
@@ -551,11 +551,11 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={
-				"example1.txt": "Example 1",
-				"example2.txt": "Example 2",
-				"example3.txt": "Example 3",
-				"example4.fasta": "Example 4",
-				"ala_phe_ala.pdb": "Example 5",
+				"example1.txt": "Ex1: Matrix",
+				"example2.txt": "Ex2: RandomData",
+				"example3.txt": "Ex3: Cube",
+				"example4.fasta": "Ex4: FASTA",
+				"ala_phe_ala.pdb": "Ex5: PDB",
 				},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".pdb", ".dat", ".fasta"],
 				project="Pairwise"
@@ -614,7 +614,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(m_type=ui.output_image),
-		height="90vh",
+		height="86vh",
 	)
 )
 
