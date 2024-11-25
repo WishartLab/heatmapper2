@@ -45,6 +45,7 @@ def server(input, output, session):
 		"example3.txt": "Input type: txt<br>Contents: This example dataset was generated randomly.",
 		"example4.fasta": "Input type: FASTA<br>Contents: ",
 		"ala_phe_ala.pdb": "Input type: PDB<br>Contents: ",
+		"example6.txt": "Input type: txt<Br>Contents: Randomly generated data with x, y, and z columns."
 	}
 
 	def HandleData(path, p=None):
@@ -553,9 +554,10 @@ app_ui = ui.page_fluid(
 				examples={
 				"example1.txt": "Ex1: Matrix",
 				"example2.txt": "Ex2: RandomData",
-				"example3.txt": "Ex3: Cube",
+				"example3.txt": "Ex3: Matrix",
 				"example4.fasta": "Ex4: FASTA",
 				"ala_phe_ala.pdb": "Ex5: PDB",
+				"example6.txt": "Ex6: CubeMatrix",
 				},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".pdb", ".dat", ".fasta"],
 				project="Pairwise"
