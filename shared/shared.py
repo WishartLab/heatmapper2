@@ -375,7 +375,7 @@ def NavBar():
 	}
 
 	return (
-		ui.panel_title(title=None, window_title="Heatmapper"),
+		#ui.panel_title(title=None, window_title="Heatmapper"),  # added to app.py for each category to display page name
 		ui.navset_bar(
 			ui.nav_control(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>')),
 			ui.nav_control(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>')),

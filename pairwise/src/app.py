@@ -282,6 +282,7 @@ def server(input, output, session):
 
 		# Plot surfaces on the respective planes
 		ax.view_init(elev=config.Elevation(), azim=config.Rotation())
+		#ax.tick_params(axis='x', labelrotation=90)
 		ax.set_box_aspect(None, zoom=config.Zoom())
 
 		im = ax.plot_surface(x, y, zeros_like(x), facecolors=cmap(norm(dxy.values)), shade=False)
@@ -545,6 +546,7 @@ app_ui = ui.page_fluid(
 		}
 	"""),
 
+	ui.panel_title(title=None, window_title="Pairwise"),
 	NavBar(),
 
 	ui.layout_sidebar(

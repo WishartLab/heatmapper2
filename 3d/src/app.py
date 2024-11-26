@@ -39,15 +39,15 @@ def server(input, output, session):
 	Info = {
 		"example1.csv": {
 			"Object": "bunny.obj",
-			"Description": "Input type: csv, obj\nContents: A bunny, mapped with random data."
+			"Description": "Input type: csv, obj<br>Contents: A bunny, mapped with random data."
 		},
 		"texture.jpg": {
 			"Object": "FinalBaseMesh.obj",
-			"Description": "Input type: jpg, obj\nContents: A human model with a sample heatmap texture applied.\nSource: https://free3d.com/3d-model/male-base-mesh-6682.html"
+			"Description": "Input type: jpg, obj<br>Contents: A human model with a sample heatmap texture applied.<br>Source: https://free3d.com/3d-model/male-base-mesh-6682.html"
 		},
 		"4K8X.pdb": {
 			"Object": None,
-			"Description": "Input type: pdb\nContents: An example protein PDB.\nSource: https://dash.plotly.com/dash-bio/molecule3dviewer"
+			"Description": "Input type: pdb<br>Contents: An example protein PDB.<br>Source: https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
 
@@ -511,6 +511,7 @@ app_ui = ui.page_fluid(
 		}
 	"""),
 
+	ui.panel_title(title=None, window_title="3D"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -542,7 +543,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(m_type=ui.output_ui),
-		height="90vh",
+		height="86vh",
 	)
 )
 

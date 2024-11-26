@@ -551,6 +551,7 @@ app_ui = ui.page_fluid(
 		}
 	"""),
 
+	ui.panel_title(title=None, window_title="Spatial"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -651,7 +652,7 @@ app_ui = ui.page_fluid(
 			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="90vh"), value="Ripley"),
 			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="90vh"), value="Occurrence")
 		),
-		height="90vh",
+		height="86vh",
 	)
 )
 

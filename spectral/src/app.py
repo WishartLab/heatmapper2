@@ -376,6 +376,7 @@ app_ui = ui.page_fluid(
 		}
 	"""),
 
+	ui.panel_title(title=None, window_title="Spectral"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -430,7 +431,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(
-			ui.nav_panel("Similarity", ui.output_plot("Similarity", height="90vh"), value="SimilarityTab"),
+			ui.nav_panel("Similarity", ui.output_plot("Similarity", height="86vh"), value="SimilarityTab"),
 		),
 	)
 )

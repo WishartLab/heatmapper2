@@ -43,13 +43,13 @@ import branca, certifi, xyzservices, requests
 def server(input, output, session):
 
 	Info = {
-		"example1.txt": "Input type: txt\nContents: Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water.\nSource: A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
-		"example2.txt": "Input type: txt\nContents: Bike thefts in Vancouver in 2011.\nSource: Retrieved from a 2013 Vancouver Sun blog post by Chad Skelton.",
-		"example3.txt": "Input type: txt\nContents: The location of traffic signals in Toronto.\nSource: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
-		"example1.csv": "Input type: csv\nContents: Random data",
-		"example21.csv": "Input type: csv\nContents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.\nSource: https://www.nhc.noaa.gov/data/",
-		"example3.csv": "Input type: csv\Contents: Recorded mean temperature (F) in the USA in 2023 as measured by the EPA.\nSource: https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
-		"test.txt": "Input type: txt\nContents: NASA Temperature Anaomolies from 1980-2024\nSource: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
+		"example1.txt": "Input type: txt<br>Contents: Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water.<br>Source: A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
+		"example2.txt": "Input type: txt<br>Contents: Bike thefts in Vancouver in 2011.<br>Source: Retrieved from a 2013 Vancouver Sun blog post by Chad Skelton.",
+		"example3.txt": "Input type: txt<br>Contents: The location of traffic signals in Toronto.<br>Source: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
+		"example1.csv": "Input type: csv<br>Contents: Random data",
+		"example21.csv": "Input type: csv<br>Contents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.<br>Source: https://www.nhc.noaa.gov/data/",
+		"example3.csv": "Input type: csv<br>Contents: Recorded mean temperature (F) in the USA in 2023 as measured by the EPA.<br>Source: https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
+		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anaomolies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
 	}
 
 
@@ -445,6 +445,7 @@ app_ui = ui.page_fluid(
 		}
 	"""),
 
+	ui.panel_title(title=None, window_title="Geocoordinate"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -510,7 +511,7 @@ app_ui = ui.page_fluid(
 		),
 
 		MainTab(m_type=ui.output_ui),
-		height="90vh",
+		height="86vh",
 	)
 )
 

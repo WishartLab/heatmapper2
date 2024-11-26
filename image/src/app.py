@@ -263,6 +263,7 @@ app_ui = ui.page_fluid(
 		}
 	"""),
 
+	ui.panel_title(title=None, window_title="Image"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -315,6 +316,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(),
+		#height="86vh",  # removes scroll bar but compresses image
 	)
 )
 
