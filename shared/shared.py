@@ -360,7 +360,7 @@ class Cache:
 def NavBar():
 	"""
 	@brief Returns a Navigation Bar for each project, with the current project selected.
-	@returns A list, containing a ui.panel_title, and a ui.navset_bar.
+	@returns A ui.navset_bar.
 	"""
 
 	Sources = {
@@ -517,7 +517,7 @@ class Config:
 		@param widths: The ratio between the title and the element.
 		@param gap: The gap between the title and element.
 		@param conditional: A conditional JS string.
-		@parram **kwargs: Additional arguments to be passed to the input.
+		@param **kwargs: Additional arguments to be passed to the input.
 		@note	keyword arguments passed to the Config object during initialization will overrule
 					arguments passed to this function. Duplicates are allowed.
 		"""
@@ -530,10 +530,18 @@ class Config:
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()
 
+		tooltip = None
+		if "tooltip" in combined:
+			tooltip = combined["tooltip"]
+			del combined["tooltip"]
+
 		if self.visible:
 			if make_inline and "label" in combined:
 				element = Inlineify(ui_element, widths, gap, **combined)
 			else: element = ui_element(*args, **combined)
+
+			if "id" in combined and tooltip is not None:
+				element = ui.tooltip(element, tooltip, id=combined["id"]+"_tooltip")
 
 			# There doesn't seem any good way to remove the conditional panel spacing.
 			# Rather than having conditional configurations stick out due to inconsistent spacing

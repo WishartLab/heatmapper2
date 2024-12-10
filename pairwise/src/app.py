@@ -575,8 +575,8 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Heatmap</b>"),
 				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix",	choices=["Distance", "Correlation"]),
 
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1),
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90"),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1, tooltip="Change the text size of axis labels"),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip="idek tbh"),
 				config.Chain.UI(ui.input_text, id="Chain", label="Chain"),
 				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1),
 				ui.output_ui("Method"),
