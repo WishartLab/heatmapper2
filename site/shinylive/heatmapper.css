@@ -41,7 +41,7 @@
   /* Dumb as this looks, we need to have the message appear, but not give the next one too much duration */
   35% {}
   42% {content: "File upload will be immediate as you simply fetch from disk";}
-  49% {content: "You can even work offline, except for 3D";}
+  49% {content: "You can even work offline for some applications!";}
   53% {}
   57% {content: "Some heatmap applications don't yet support WebAssembly";}
   65% {content: "And you always have the option of using a server version!";}
@@ -50,4 +50,3 @@
   80% {content: "We're almost there..."}
   85% {content: "Probably downloading Scipy..."}
 }
-
