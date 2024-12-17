@@ -374,7 +374,7 @@ app_ui = ui.page_fluid(
 				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[], tooltip="Select the GeoJSON property that corresponds to your location names"),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="something is wrong"),
+				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time"),
 				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap"),
 

@@ -449,11 +449,11 @@ def server(input, output, session):
 		if type(data) == str or input.SourceFile() == "ID":
 			elements += [
 				ui.HTML("<b>Heatmap</b>"),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the model"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the heatmap"),
 				ui.HTML("<b>Surface</b>"),
-				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes),
-				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the surface"),
+				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the surface"),
 				ui.HTML("<b>Customization</b>"),
 				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0),
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),

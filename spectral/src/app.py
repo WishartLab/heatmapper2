@@ -399,11 +399,11 @@ app_ui = ui.page_fluid(
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
 
-				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip="TODO"),
+				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip="Select a method for peak generation"),
 
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="TODO"),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Calculate intermediate values between data points"),
 
-				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="TODO"),
+				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the size of contours"),
 
 
 				ui.HTML("<b>3D</b>"),

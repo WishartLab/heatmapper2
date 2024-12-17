@@ -473,11 +473,11 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns</b>"),
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="idkkkkk"),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="Define a column to use as a time index for temporal heatmaps"),
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="Color points uniformly, or color based on values in a column"),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display discrete vector points, or a smooth raster shape"),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display discrete vector points, or a smooth raster shape (does not apply to temporal heatmaps)"),
 				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"], tooltip="Select the shape of vector points"),
 				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
 

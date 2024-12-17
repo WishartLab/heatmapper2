@@ -459,7 +459,7 @@ app_ui = ui.page_fluid(
 				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
 
 				# Define how the colors are scaled.
-				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row", tooltip="Calculate z-scores???"),
+				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row", tooltip="Normalize cell values to row, column, or none using z-scores"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation == 90", tooltip="Calculate intermediate values between points"),

@@ -592,7 +592,7 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional("input.MainTab != 'TableTab'",
 				Update(),
 
-				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "TODO: add description"),
+				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Specify gene and cell count"),
 				Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
 				Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
 
@@ -612,7 +612,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Opacity</b>"),
 				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the background image"),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data point"),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data points"),
 
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
