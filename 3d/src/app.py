@@ -455,16 +455,16 @@ def server(input, output, session):
 				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the surface"),
 				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the surface"),
 				ui.HTML("<b>Customization</b>"),
-				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0),
-				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
-				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"]),
-				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Thickness", min=0, max=10, step=0.1),
-				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=0.1),
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05),
-				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, max=100, step=1),
+				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0, tooltip="Select which model to use from the PDB file"),
+				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"], tooltip="Specify the rendering style"),
+				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"], tooltip="Specify the type of surface to draw on the model"),
+				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Thickness", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify strand thickness"),
+				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify strand width"),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05, tooltip="Stick, Sphere, or Cross style only - specify sphere radius"),
+				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1, tooltip="Stick, Sphere, or Cross style only - specify a scalar to modify VDW radius"),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, max=100, step=1, tooltip="Change the size of the viewer"),
 				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"]),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"], tooltip="Modify Stick style features (dashed bonds, show non-bonded, single bonds) or Cartoon style features (tubes, trace)"),
 			]
 
 		else:
@@ -472,13 +472,13 @@ def server(input, output, session):
 			if type(data) == DataFrame:
 				elements += [
 					ui.HTML("<b>Heatmap</b>"),
-					config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
-					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"]),
+					config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the heatmap, if it is generated from table input"),
+					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"], tooltip="Specify how to render the model"),
 					ui.HTML("<b>Colors</b>"),
-					config.Colors.UI(ui.input_numeric, id="Colors", label="Number", value=256, min=1, step=1),
-					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
+					config.Colors.UI(ui.input_numeric, id="Colors", label="Number", value=256, min=1, step=1, tooltip="Specify the number of colors to use, if the heatmap is generated from table input"),
+					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Specify a color scheme to use, if the heatmap is generated from table input"),
 					ui.HTML("<b>Features</b>"),
-					config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"]),
+					config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"], tooltip="Lighting may affect color accuracy. Lighting must be toggled on for smooth shading to be applied."),
 			]
 
 		return elements

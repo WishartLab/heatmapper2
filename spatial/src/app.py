@@ -592,7 +592,7 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional("input.MainTab != 'TableTab'",
 				Update(),
 
-				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Specify gene and cell count"),
+				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Values below the minimum count will not be displayed"),
 				Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
 				Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
 
@@ -635,6 +635,7 @@ app_ui = ui.page_fluid(
 						"average_clustering": "Average Clustering",
 						"degree_centrality": "Degree Centrality"
 					},
+					tooltip="Specify which centrality score to plot",
 				),
 			),
 
@@ -642,7 +643,7 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'Ripley'",
 				ui.HTML("<b>Ripley</b>"),
 				config.Function.UI(ui.input_select, id="Function", label="Function", choices=["L", "F", "G"]),
-				config.Distance.UI(ui.input_select, id="Distance", label="Distance", choices=DistanceMethods),
+				config.Distance.UI(ui.input_select, id="Distance", label="Distance", choices=DistanceMethods, tooltip="Select a distance metric used to compute the function"),
 			),
 
 
@@ -650,9 +651,9 @@ app_ui = ui.page_fluid(
 				"input.MainTab === 'Occurrence'",
 				ui.HTML("<b>Co-Occurrence</b>"),
 				config.CoCluster.UI(ui.input_select, id="CoCluster", label="Group", choices=[]),
-				config.OccurrenceGraph.UI(ui.input_select, id="OccurrenceGraph", label="Graph", choices=["Scatter", "Line"]),
-				config.Interval.UI(ui.input_slider, id="Interval", label="Interval", min=1, max=100, step=1),
-				config.Splits.UI(ui.input_slider, id="Splits", label="Splits", min=0, max=10, step=0),
+				config.OccurrenceGraph.UI(ui.input_select, id="OccurrenceGraph", label="Graph", choices=["Scatter", "Line"], tooltip="Choose to visualize co-occurrence as a scatter or line plot"),
+				config.Interval.UI(ui.input_slider, id="Interval", label="Interval", min=1, max=100, step=1, tooltip="Define the interval at which co-occurrence is computed"),
+				config.Splits.UI(ui.input_slider, id="Splits", label="Splits", min=0, max=10, step=0, tooltip="Define the number of splits in which to divide spatial coordinates (if 0, Heatmapper selects a value automatically)"),
 			),
 			padding="10px",
 			gap="20px",
