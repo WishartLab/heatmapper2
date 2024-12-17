@@ -20,12 +20,12 @@ from pandas import DataFrame, read_csv, read_excel, read_table
 import openpyxl
 
 # Used for fetching web resources in a variety of fashions.
-URL = "https://rwoudstr.github.io/heatmapper2"
-Raw = "https://raw.githubusercontent.com/rwoudstr/heatmapper2/main"
+URL = "https://wishartlab.github.io/heatmapper2"
+Raw = "https://raw.githubusercontent.com/wishartlab/heatmapper2/main"
 
 # Define the Server and Port of the Shiny instances (Port is incremented)
 # Change these if Heatmapper is running on a server.
-Server = "http://heatmapper2.ca"
+Server = "http://35.208.86.138"
 Port = 8000
 
 # Detect the running environment
