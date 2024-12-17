@@ -363,15 +363,25 @@ def NavBar():
 	@returns A ui.navset_bar.
 	"""
 
+	# Sources = {
+	# 	"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}:{Port}",
+	# 	"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}:{Port + 1}",
+	# 	"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}:{Port + 2}",
+	# 	"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}:{Port + 3}",
+	# 	"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
+	# 	"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
+	# 	"spatial": f"{Server}:{Port + 6}",
+	# 	"spectral": f"{URL}/site/spectral/index.html" if Pyodide else f"{Server}:{Port + 7}",
+	# }
 	Sources = {
-		"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}:{Port}",
-		"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}:{Port + 1}",
-		"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}:{Port + 2}",
-		"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}:{Port + 3}",
-		"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
-		"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
-		"spatial": f"{Server}:{Port + 6}",
-		"spectral": f"{URL}/site/spectral/index.html" if Pyodide else f"{Server}:{Port + 7}",
+		"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}/expression",
+		"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}/pairwise",
+		"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}/image",
+		"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}/geomap",
+		"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}/geocoordinate",
+		"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}/3d",
+		"spatial": f"{Server}/spatial",
+		"spectral": f"{URL}/site/spectral/index.html" if Pyodide else f"{Server}/spectral",
 	}
 
 	return (
