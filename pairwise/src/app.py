@@ -87,7 +87,7 @@ def server(input, output, session):
 			config.Elevation(),
 			input.mode(),
 		]
-		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale()])
+		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 		return inputs
 
 
@@ -227,7 +227,6 @@ def server(input, output, session):
 			if value == "Distance":
 				metric = config.DistanceMethod().lower()
 				distances = pdist(data, metric=metric)
-				#distances = CalculateDistance(data, metric)
 				return DataFrame(squareform(distances), columns=names, index=names)
 			else:
 				method = config.CorrelationMethod().lower()
@@ -235,20 +234,7 @@ def server(input, output, session):
 		except Exception:
 			Error("Could not compute matrix. Ensure your input data is correct!")
 			return None
-
-
-	def CalculateDistance(data, metric):
-		"""
-		@brief Calculates the pairwise distances between data points
-		@param data: The data to calculate the distance from
-		@param metric: The metric to use for the distance calculation
-		@returns Condensed pairwise distance matrix
-		"""
-		if metric == "euclidean":
-			return 5
-		else:
-			raise ValueError("Invalid distance metric")
-
+		
 
 	def HeatmapCube(df, cmap, p):
 		fig, ax = subplots(subplot_kw={"projection": "3d"})
@@ -573,23 +559,23 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix",	choices=["Distance", "Correlation"]),
+				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix",	choices=["Distance", "Correlation"], tooltip="Compare data based on distance or correlation"),
 
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1, tooltip="Change the text size of axis labels"),
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip="idek tbh"),
-				config.Chain.UI(ui.input_text, id="Chain", label="Chain"),
-				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip="Calculate intermediate values between points"),
+				config.Chain.UI(ui.input_text, id="Chain", label="Chain", tooltip="Select the PDB chain to use"),
+				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1, tooltip="The length of K-Mer to use for FASTA files"),
 				ui.output_ui("Method"),
 
 				ui.HTML("<b>3D</b>"),
 				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation", "Cube"], conditional="input.Elevation != 90"),
 
-				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", step=1, min=1),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1),
-				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
-				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
-				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", step=1, min=1, tooltip="Change the view angle (horizontal)"),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1, tooltip="Crop the view"),
+				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1, tooltip="Calculate intermediate values between points"),
+				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars"),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),
@@ -597,7 +583,7 @@ app_ui = ui.page_fluid(
 					col_widths=[4,8]
 				),
 				ui.output_ui("Color"),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1, tooltip="Specify the number of color bins to use"),
 
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),

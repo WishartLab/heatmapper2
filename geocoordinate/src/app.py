@@ -473,33 +473,33 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns</b>"),
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="idkkkkk"),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="Color points uniformly, or color based on values in a column"),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"]),
-				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"]),
-				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display discrete vector points, or a smooth raster shape"),
+				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"], tooltip="Select the shape of vector points"),
+				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
 
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5, tooltip="Specify the size of data points"),
 
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01),
-				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01, tooltip="Specify the opacity of data points"),
+				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1, tooltip="Soften or harden the edges of raster shapes"),
 
-				config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1),
+				config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1, tooltip="Calculate intermediate values between points"),
 
 				ui.HTML("<b>Range of Interest</b>"),
-				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
-				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Only display data points within a specified range of interest"),
+				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True, tooltip="Remove data points outside the range of interest, or round them to the maximum or minimum value"),
 				ui.layout_columns(
-					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0),
-					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0),
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value"),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value"),
 				),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
-					choices=["KDE"],
+					choices=["KDE"], selected=None, tooltip="Estimate the density of data points in an area"
 				),
 
 				# Add the download buttons.

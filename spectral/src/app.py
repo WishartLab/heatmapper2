@@ -396,20 +396,20 @@ app_ui = ui.page_fluid(
 
 				config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0], conditional="input.MainTab === 'SimilarityTab'"),
 
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
 
-				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'"),
+				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip="TODO"),
 
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'"),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="TODO"),
 
-				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1),
+				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="TODO"),
 
 
 				ui.HTML("<b>3D</b>"),
-				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", step=1, min=1),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", step=1, min=1),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", step=1, min=1, tooltip="Change the view angle (horizontal)"),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", step=1, min=1, tooltip="Crop the view"),
 
 
 				ui.HTML("<b>Image Settings</b>"),

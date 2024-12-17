@@ -65,7 +65,9 @@ def server(input, output, session):
 
 	def ColumnNames(adata, p):
 		p.inc(message="Generating Annotation Keys...")
-		Filter(adata.obs["cluster"].cat.categories.to_list(), ColumnType.Free, id="CoCluster")
+		print(f"\nCOLUMNS TO LIST: \n{adata.obs.columns.to_list()}")
+		print(f"\nadata.obs: \n{adata.obs}")
+		Filter(adata.obs["cluster"].cat.categories.to_list(), ColumnType.Free, id="CoCluster") 
 		Filter(adata.obs.columns.to_list(), ColumnType.Count, id="Count")
 
 		choices = []
@@ -78,6 +80,13 @@ def server(input, output, session):
 
 
 	async def VisiumReader(temp, p):
+		'''
+		Returns AnnData object with the following structure:
+		obsm:	[spatial] - spatial spot coordinate matrix
+		uns:	[spatial][LIBRARY ID][images] - paths to hires and lowres images
+		uns:	[spatial][LIBRARY ID][scalefactors] - scalefactors for the spots
+		uns:	[spatial][LIBARARY ID][metadata] - misc metadata
+		'''
 		Path(f"{temp.name}/spatial").mkdir()
 		counts = None
 		for file in input.File():
@@ -187,6 +196,8 @@ def server(input, output, session):
 				adata = DataCache.Get(name)
 
 				if input.File()[0]["name"].endswith(".h5ad"):
+					# check for cluster obs, counts obsm, ....,
+					# TODO: !!! 
 					print("Returning")
 					Data.set(adata)
 					return
@@ -248,6 +259,8 @@ def server(input, output, session):
 
 			# With an example, just return it.
 			else:
+				# check for cluster obs, counts obsm, ....,
+				# TODO: !!! 
 				Data.set(await DataCache.Load(input, default=None))
 				ColumnNames(Data(), p)
 				p.close()
@@ -300,9 +313,9 @@ def server(input, output, session):
 		pl.spatial_segment(
 			adata,
 			color=count,
-			library_key="fov",
+			library_key="fov",  # 
 			seg_cell_id="cell_ID",
-			library_id=id,
+			library_id=id,  #
 			shape=shape,
 			img="Image" in features,
 			img_alpha=img_alpha,
@@ -579,27 +592,27 @@ app_ui = ui.page_fluid(
 			ui.panel_conditional("input.MainTab != 'TableTab'",
 				Update(),
 
-				ui.HTML("<b>Minimum Count Filtering</b>"),
+				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "TODO: add description"),
 				Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
 				Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
 
 				ui.HTML("<b>Keys</b>"),
-				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True),
-				config.Count.UI(ui.input_select, id="Count", label="Count", choices=[]),
+				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True, tooltip="Select annotation keys (each key is plotted separately)"),
+				config.Count.UI(ui.input_select, id="Count", label="Count", choices=[], tooltip="Select count values to plot (NanoString)"),
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 				ui.HTML("<b>Heatmap</b>"),
-				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"]),
-				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1),
-				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1),
+				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}, tooltip="Select a statistic to plot (Visium)"),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
+				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"], tooltip="Change the shape of each data point"),
+				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1, tooltip="Specify how many plots to display per row"),
+				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1, tooltip="Specify the spacing between plots"),
 
 				ui.HTML("<b>Opacity</b>"),
-				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1),
+				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the background image"),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data point"),
 
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
@@ -648,9 +661,9 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(
-			ui.nav_panel("Centrality Scores", ui.output_plot("Centrality", height="90vh"), value="Centrality"),
-			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="90vh"), value="Ripley"),
-			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="90vh"), value="Occurrence")
+			ui.nav_panel("Centrality Scores", ui.output_plot("Centrality", height="86vh"), value="Centrality"),
+			ui.nav_panel("Ripley's Function", ui.output_plot("Ripley", height="86vh"), value="Ripley"),
+			ui.nav_panel("Co-occurrence", ui.output_plot("Occurrence", height="86vh"), value="Occurrence")
 		),
 		height="86vh",
 	)
