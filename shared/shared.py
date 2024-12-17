@@ -5,26 +5,27 @@
 # This file contains shared functionality between Heatmapper applications. It is not a standalone application.
 #
 
+from os.path import exists
+from copy import deepcopy
+from enum import Enum
+from io import BytesIO
+from pathlib import Path
+from sys import modules
+from tempfile import NamedTemporaryFile
+
 from shiny import ui, reactive
 from shiny.types import FileInfo
 from pandas import DataFrame, read_csv, read_excel, read_table
-from io import BytesIO
-from tempfile import NamedTemporaryFile
-from sys import modules
-from pathlib import Path
-from enum import Enum
-from os.path import exists
-from copy import deepcopy
 
 import openpyxl
 
 # Used for fetching web resources in a variety of fashions.
 URL = "https://wishartlab.github.io/heatmapper2"
-Raw = "https://raw.githubusercontent.com/WishartLab/heatmapper2/main"
+Raw = "https://raw.githubusercontent.com/wishartlab/heatmapper2/main"
 
 # Define the Server and Port of the Shiny instances (Port is incremented)
 # Change these if Heatmapper is running on a server.
-Server = "http://heatmapper2.ca"
+Server = "http://server.heatmapper2.ca"
 Port = 8000
 
 # Detect the running environment
@@ -51,7 +52,7 @@ Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "
 DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
 InterpolationMethods = ["None", "Antialiased", "Nearest", "Bilinear", "Bicubic", "Spline16", "Spline36", "Hanning", "Hamming", "Hermite", "Kaiser", "Quadric", "Catrom", "Gaussian", "Bessel", "Mitchell", "Sinc", "Lanczos", "Blackman"]
 ClusteringMethods = ["Single", "Complete", "Average", "Weighted", "Centroid", "Median", "Ward"]
-ColorMaps = ["Viridis", "Plasma", "Inferno", "Magma"]
+ColorMaps = ["Viridis", "Plasma", "Inferno"]
 
 class ColumnType(Enum): Time = 0; Name = 1; Value = 2; Longitude = 3; Latitude = 4; X = 5; Y = 6; Z = 7; Cluster = 8; Free = 9; Spatial = 10; NameGeoJSON = 11; FOV = 12; Count = 13
 Columns = {
@@ -251,7 +252,7 @@ class Cache:
 			input.Example: The selected example file
 			input.SourceFile: Whether the user wants "Upload" or "Example"
 		@param source_file: The input ID that should be used to fetch the file (Defaults to input.File() if None)
-		@param example_file: The input ID that should be used to fetch th example (Defaults to input.Example() if None)
+		@param example_file: The input ID that should be used to fetch the example (Defaults to input.Example() if None)
 		@param input_switch:	The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user
 													uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
 		@param upload: The value of the input_switch such that we should fetch a source file from source_file
@@ -359,7 +360,7 @@ class Cache:
 def NavBar():
 	"""
 	@brief Returns a Navigation Bar for each project, with the current project selected.
-	@returns A list, containing a ui.panel_title, and a ui.navset_bar.
+	@returns A ui.navset_bar.
 	"""
 
 	Sources = {
@@ -374,7 +375,7 @@ def NavBar():
 	}
 
 	return (
-		ui.panel_title(title=None, window_title="Heatmapper"),
+		#ui.panel_title(title=None, window_title="Heatmapper"),  # added to app.py for each category to display page name
 		ui.navset_bar(
 			ui.nav_control(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>')),
 			ui.nav_control(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>')),
@@ -412,7 +413,7 @@ def FileSelection(examples, types, upload_label=None, multiple=False, default="U
 		input.Example: The ui.input_select for an example file selection
 	@info multiple=True is not handled properly by the Cache. You will need to create a function that properly handles
 		each file (See spatial for an implementation)
-	@info If you're examples are large files, or require significant computation, you may want to switch it to Upload instead.
+	@info If your examples are large files, or require significant computation, you may want to switch it to Upload instead.
 	"""
 
 	return [
@@ -433,7 +434,7 @@ def FileSelection(examples, types, upload_label=None, multiple=False, default="U
 		),
 		ui.panel_conditional(
 			"input.SourceFile === 'Example'",
-			Inlineify(ui.input_select, id="Example", label=ui.input_action_link(id="ExampleInfo", label="Example"), choices=examples),
+			Inlineify(ui.input_select, id="Example", label=ui.input_action_link(id="ExampleInfo", label="File Info"), choices=examples),
 		),
 	]
 
@@ -516,7 +517,7 @@ class Config:
 		@param widths: The ratio between the title and the element.
 		@param gap: The gap between the title and element.
 		@param conditional: A conditional JS string.
-		@parram **kwargs: Additional arguments to be passed to the input.
+		@param **kwargs: Additional arguments to be passed to the input.
 		@note	keyword arguments passed to the Config object during initialization will overrule
 					arguments passed to this function. Duplicates are allowed.
 		"""
@@ -529,10 +530,18 @@ class Config:
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()
 
+		tooltip = None
+		if "tooltip" in combined:
+			tooltip = combined["tooltip"]
+			del combined["tooltip"]
+
 		if self.visible:
 			if make_inline and "label" in combined:
 				element = Inlineify(ui_element, widths, gap, **combined)
 			else: element = ui_element(*args, **combined)
+
+			if "id" in combined and tooltip is not None:
+				element = ui.tooltip(element, tooltip, id=combined["id"]+"_tooltip")
 
 			# There doesn't seem any good way to remove the conditional panel spacing.
 			# Rather than having conditional configurations stick out due to inconsistent spacing
@@ -575,9 +584,9 @@ def Error(message, exception=None):
 	if exception:
 		message = f"{message} due to {type(exception).__name__}: {exception}"
 
-	return ui.notification_show(ui=message, type="error", duration=3)
+	return ui.notification_show(ui=message, type="error", duration=5)
 
-def Msg(message): return ui.notification_show(ui=message, type="default", duration=3)
+def Msg(message): return ui.notification_show(ui=message, type="default", duration=15)
 
 
 def Update(): return ui.input_action_button(

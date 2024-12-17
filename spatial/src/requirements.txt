@@ -1,4 +1,4 @@
-squidpy
-anndata
-scikit-misc
-openpyxl
+squidpy==1.6.2
+anndata==0.11.1
+scikit-misc==0.5.1
+openpyxl==3.1.5

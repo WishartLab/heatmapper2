@@ -36,9 +36,9 @@ except ImportError:
 def server(input, output, session):
 	# Information about the Examples
 	Info = {
-		"example1.txt": "This example dataset is sample input retrieved from the website for the Ashley Lab Heatmap Builder.",
-		"example2.txt": "This example dataset is sample input retrieved from an online tutorial by Yan Cui (ycui2@uthsc.edu).",
-		"example3.txt": "This example dataset is retrieved from the online supplement to Eisen et al. (1998), which is a very well known paper about cluster analysis and visualization. The details of how the data was collected are outlined in the paper."
+		"example1.txt": "Input type: txt\nSource: Retrieved from the website for the Ashley Lab Heatmap Builder.",
+		"example2.txt": "Input type: txt\nSource: Retrieved from an online tutorial by Yan Cui (ycui2@uthsc.edu).",
+		"example3.txt": "Input type: txt\nContents: Gene expression in yeast under varying conditions.\nSource: Retrieved from the online supplement to Eisen et al. (1998). DOI: 10.1073/pnas.95.25.14863"
 	}
 
 	DataCache = Cache("expression")
@@ -401,6 +401,31 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
+	ui.tags.style("""
+		.navbar {
+			position: fixed;  /* prevent navbar from scrolling */
+			top: 0;
+			height: 10vh;
+			width: 100%;
+			z-index: 1001;
+			overflow-x: auto;
+        }
+		.navbar-nav {
+			flex-wrap: nowrap !important;
+		}
+		.bslib-sidebar-layout {
+			margin-top: 10vh;  /* prevent content from being hidden under navbar */
+		}
+		#MainTab {
+			position: sticky;  /* prevent tabs from scrolling */
+			top: 0;
+			width: 100%;
+			z-index: 1000;
+			background: rgba(255, 255, 255, 0.25);
+		}
+	"""),
+
+	ui.panel_title(title=None, window_title="Expression"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -422,7 +447,7 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Heatmap</b>"),
 
 				# The column that holds names for the data.
-				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Names", choices=[], multiple=False),
+				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Names", choices=[], multiple=False, tooltip="Select a column to use for axis labels"),
 
 				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
 				config.ClusterMethod.UI(ui.input_select, id="ClusterMethod", label="Clustering", choices=ClusteringMethods),
@@ -431,21 +456,21 @@ app_ui = ui.page_fluid(
 				config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance", choices=DistanceMethods, selected="Euclidean"),
 
 				# Customize the text size of the axes.
-				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text", min=1, max=50, step=1),
+				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
 
 				# Define how the colors are scaled.
-				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row"),
+				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row", tooltip="Normalize cell values to row, column, or none using z-scores"),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation == 90"),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation == 90", tooltip="Calculate intermediate values between points"),
 
 					ui.HTML("<b>3D</b>"),
-					config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
-					config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
-					config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
-					config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1),
-					config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90"),
-					config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1),
+					config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
+					config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", tooltip="Change the view angle (horizontal)"),
+					config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1,tooltip="Crop the view"),
+					config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1, tooltip="Calculate intermediate values between points"),
+					config.MinScale.UI(ui.input_switch, id="MinScale", label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value"),
+					config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars"),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),
@@ -453,7 +478,7 @@ app_ui = ui.page_fluid(
 					col_widths=[4,8]
 				),
 				ui.output_ui("Color"),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1, tooltip="Specify the number of color bins to use"),
 
 				ui.HTML("<b>Image Settings</b>"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
@@ -484,7 +509,7 @@ app_ui = ui.page_fluid(
 			ui.nav_panel("Column Dendrogram", ui.output_plot("ColumnDendrogram", height="90vh"), value="ColumnTab"),
 			m_type=ui.output_image
 		),
-		height="90vh",
+		height="86vh",
 	)
 )
 

@@ -36,7 +36,7 @@ def server(input, output, session):
 	Info = {
 		"example1.txt": {
 			"Image": "example1.jpg",
-			"Description": "Hypothetical example illustrating data overlaid on a satellite image. Input data are count or magnitude values within the overlaid grid sections."
+			"Description": "Input type: txt, jpg\nContents: Hypothetical example illustrating data overlaid on a satellite image. Input data are count or magnitude values within the overlaid grid sections."
 		}
 	}
 
@@ -239,6 +239,31 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
+	ui.tags.style("""
+		.navbar {
+			position: fixed;  /* prevent navbar from scrolling */
+			top: 0;
+			height: 10vh;
+			width: 100%;
+			z-index: 1001;
+			overflow-x: auto;
+        }
+		.navbar-nav {
+			flex-wrap: nowrap !important;
+		}
+		.bslib-sidebar-layout {
+			margin-top: 10vh;  /* prevent content from being hidden under navbar */
+		}
+		#MainTab {
+			position: sticky;  /* prevent tabs from scrolling */
+			top: 0;
+			width: 100%;
+			z-index: 1000;
+			background: rgba(255, 255, 255, 0.25);
+		}
+	"""),
+
+	ui.panel_title(title=None, window_title="Image"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -258,21 +283,21 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"]),
-				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
+				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], tooltip="Select a contouring algorithm"),
+				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1, tooltip="Specify the number of contour levels"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the contours"),
 
 				ui.HTML("<b>3D</b>"),
-				config.Elevation.UI(ui.input_numeric, id="Elevation",	label="Elevation"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90"),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1),
-				config.Slices.UI(ui.input_switch, id="Slices",	label="Slices", conditional="input.Elevation != 90"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", tooltip="Change the view angle (horizontal)"),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1, tooltip="Crop the view"),
+				config.Slices.UI(ui.input_switch, id="Slices",	label="Slices", conditional="input.Elevation != 90", tooltip="Display slices of the heatmap on the XY, XZ, and YZ planes"),
 
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Quality.UI(ui.input_numeric, id="Quality", label="Quality", min=0.1, max=1.0, step=0.1),
+				config.Quality.UI(ui.input_numeric, id="Quality", label="Quality", min=0.1, max=1.0, step=0.1, tooltip="Reduce the quality of the base image to speed up rendering"),
 				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
 				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
 
@@ -291,6 +316,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(),
+		#height="86vh",  # removes scroll bar but compresses image
 	)
 )
 

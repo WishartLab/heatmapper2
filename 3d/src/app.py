@@ -39,15 +39,15 @@ def server(input, output, session):
 	Info = {
 		"example1.csv": {
 			"Object": "bunny.obj",
-			"Description": "A bunny, mapped with random data."
+			"Description": "Input type: csv, obj<br>Contents: A bunny, mapped with random data."
 		},
 		"texture.jpg": {
 			"Object": "FinalBaseMesh.obj",
-			"Description": "A human model with a sample heatmap texture applied. Sourced from https://free3d.com/3d-model/male-base-mesh-6682.html"
+			"Description": "Input type: jpg, obj<br>Contents: A human model with a sample heatmap texture applied.<br>Source: https://free3d.com/3d-model/male-base-mesh-6682.html"
 		},
 		"4K8X.pdb": {
 			"Object": None,
-			"Description": "An example protein PDB from dash-bio at https://dash.plotly.com/dash-bio/molecule3dviewer"
+			"Description": "Input type: pdb<br>Contents: An example protein PDB.<br>Source: https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
 
@@ -449,11 +449,11 @@ def server(input, output, session):
 		if type(data) == str or input.SourceFile() == "ID":
 			elements += [
 				ui.HTML("<b>Heatmap</b>"),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the model"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the heatmap"),
 				ui.HTML("<b>Surface</b>"),
-				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes),
-				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the surface"),
+				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the surface"),
 				ui.HTML("<b>Customization</b>"),
 				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0),
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"]),
@@ -487,6 +487,31 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
+	ui.tags.style("""
+		.navbar {
+			position: fixed;  /* prevent navbar from scrolling */
+			top: 0;
+			height: 10vh;
+			width: 100%;
+			z-index: 1001;
+			overflow-x: auto;
+        }
+		.navbar-nav {
+			flex-wrap: nowrap !important;
+		}
+		.bslib-sidebar-layout {
+			margin-top: 10vh;  /* prevent content from being hidden under navbar */
+		}
+		#MainTab {
+			position: sticky;  /* prevent tabs from scrolling */
+			top: 0;
+			width: 100%;
+			z-index: 1000;
+			background: rgba(255, 255, 255, 0.25);
+		}
+	"""),
+
+	ui.panel_title(title=None, window_title="3D"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -518,7 +543,7 @@ app_ui = ui.page_fluid(
 
 		# Add the main interface tabs.
 		MainTab(m_type=ui.output_ui),
-		height="90vh",
+		height="86vh",
 	)
 )
 

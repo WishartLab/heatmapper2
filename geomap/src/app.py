@@ -39,11 +39,11 @@ URL = f"{Raw}/geomap/data/" if Pyodide else "../data/"
 def server(input, output, session):
 
 	Info = {
-		"example1.txt": "This example file is from the Open Data Portal. The data is from a carbon monoxide emissions study conducted by Environment Canada. The three columns represent results from 1990, 2000, and 2013.",
-		"example2.txt": "This example file is from Statistics Canada. The data is adapted from New cases and age-standardized rate for primary cancer (based on the February 2014 CCR tabulation file), by cancer type and sex, Canada, provinces and territories. The columns represent new cancer cases (age-standardized rate per 100,000 population) from 2006 to 2010.",
-		"example3.txt": "This example file is from the U.S. Centers for Disease Control and Prevention. The data is from Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.",
-		"example6.csv": "COVID 19 information reported by the Canadian Government, available at https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291",
-		"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "Global COVID 19 Statistics from Our World in Data."
+		"example1.txt": "Input type: txt<br>Contents: Data from a carbon monoxide emissions study conducted by Environment Canada. The three columns represent results from 1990, 2000, and 2013.<br>Source: Open Data Portal",
+		"example2.txt": "Input type: txt<br>Contents: Data adapted from New cases and age-standardized rate for primary cancer (based on the February 2014 CCR tabulation file), by cancer type and sex, Canada, provinces and territories. The columns represent new cancer cases (age-standardized rate per 100,000 population) from 2006 to 2010.<br>Source: Statistics Canada",
+		"example3.txt": "Input type: txt<br>Contents: Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.<br>Source: U.S. Centers for Disease Control and Prevention",
+		"example6.csv": "Input type: csv<br>Contents: COVID 19 information reported by the Canadian Government.<br>Source: https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291",
+		"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "File type: csv<br>Contents: Global COVID 19 Statistics.<br>Source: Our World in Data"
 	}
 
 	def HandleData(path, p=None):
@@ -157,10 +157,9 @@ def server(input, output, session):
 
 		color = config.ColorMap()
 		if color == "Inferno": cmap = linear.inferno.scale
-		elif color == "Magma": cmap = linear.magma.scale
 		elif color == "Plasma": cmap = linear.plasma.scale
 		elif color == "Viridis": cmap = linear.viridis.scale
-		elif color == "Cividis": cmap = linear.cividis.scale
+		#elif color == "Cividis": cmap = linear.cividis.scale
 
 		m, M = df[v_col].min(), df[v_col].max()
 
@@ -310,6 +309,31 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
+	ui.tags.style("""
+		.navbar {
+			position: fixed;  /* prevent navbar from scrolling */
+			top: 0;
+			height: 10vh;
+			width: 100%;
+			z-index: 1001;
+			overflow-x: auto;
+        }
+		.navbar-nav {
+			flex-wrap: nowrap !important;
+		}
+		.bslib-sidebar-layout {
+			margin-top: 10vh;  /* prevent content from being hidden under navbar */
+		}
+		#MainTab {
+			position: sticky;  /* prevent tabs from scrolling */
+			top: 0;
+			width: 100%;
+			z-index: 1000;
+			background: rgba(255, 255, 255, 0.25);
+		}
+	"""),
+
+	ui.panel_title(title=None, window_title="Geomap"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -345,25 +369,25 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns/Properties</b>"),
-				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[]),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[]),
-				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[]),
+				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[], tooltip="Select the column in your data that contains location names"),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], tooltip="Select a data column to plot"),
+				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[], tooltip="Select the GeoJSON property that corresponds to your location names"),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal"),
-				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1),
+				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time"),
+				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap"),
 
 				ui.HTML("<b>Colors</b>"),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, max=253, step=1),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, max=253, step=1, tooltip="Specify the number of color bins to use"),
 
 				ui.HTML("<b>Range of Interest</b>"),
-				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
-				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Only display data points within a specified range of interest"),
+				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True, tooltip="Remove data points outside the range of interest, or round them to the maximum or minimum value"),
 				ui.layout_columns(
-					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0),
-					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0),
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value"),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value"),
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
@@ -372,9 +396,8 @@ app_ui = ui.page_fluid(
 			gap="20px",
 			width="250px",
 		),
-
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),
-		height="90vh",
+		height="86vh",
 	)
 )
 

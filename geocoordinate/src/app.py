@@ -43,13 +43,13 @@ import branca, certifi, xyzservices, requests
 def server(input, output, session):
 
 	Info = {
-		"example1.txt": "This example dataset shows deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water. A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
-		"example2.txt": "This example data set shows bike thefts in Vancouver in 2011. The data was obtained from a 2013 Vancouver Sun blog post by Chad Skelton.",
-		"example3.txt": "This example data set shows the location of traffic signals in Toronto. The data was obtained from Toronto Open Data. The idea to use this data set comes from this R-bloggers post by Myles Harrison.",
-		"example1.csv": "Random data",
-		"example21.csv": "A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022, available at https://www.nhc.noaa.gov/data/",
-		"example3.csv": "Recorded mean temperature (F) in the USA in 2023 as measured by the EPA, available at https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
-		"test.txt": "NASA Temperature Anaomolies from 1980-2024: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
+		"example1.txt": "Input type: txt<br>Contents: Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water.<br>Source: A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
+		"example2.txt": "Input type: txt<br>Contents: Bike thefts in Vancouver in 2011.<br>Source: Retrieved from a 2013 Vancouver Sun blog post by Chad Skelton.",
+		"example3.txt": "Input type: txt<br>Contents: The location of traffic signals in Toronto.<br>Source: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
+		"example1.csv": "Input type: csv<br>Contents: Random data",
+		"example21.csv": "Input type: csv<br>Contents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.<br>Source: https://www.nhc.noaa.gov/data/",
+		"example3.csv": "Input type: csv<br>Contents: Recorded mean temperature (F) in the USA in 2023 as measured by the EPA.<br>Source: https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
+		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anaomolies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
 	}
 
 
@@ -221,8 +221,9 @@ def server(input, output, session):
 						).add_to(map)
 					else:
 						lat, lon = row[lat_col], row[lon_col]
+						rect_radius = radius / 100000
 						Rectangle(
-							bounds=[(lat - radius, lon - radius), (lat + radius, lon + radius)],
+							bounds=[[lat - rect_radius, lon - rect_radius], [lat + rect_radius, lon + rect_radius]],
 							color=color,
 							fill=True,
 							opacity=opacity,
@@ -420,6 +421,31 @@ def server(input, output, session):
 
 app_ui = ui.page_fluid(
 
+	ui.tags.style("""
+		.navbar {
+			position: fixed;  /* prevent navbar from scrolling */
+			top: 0;
+			height: 10vh;
+			width: 100%;
+			z-index: 1001;
+			overflow-x: auto;
+        }
+		.navbar-nav {
+			flex-wrap: nowrap !important;
+		}
+		.bslib-sidebar-layout {
+			margin-top: 10vh;  /* prevent content from being hidden under navbar */
+		}
+		#MainTab {
+			position: sticky;  /* prevent tabs from scrolling */
+			top: 0;
+			width: 100%;
+			z-index: 1000;
+			background: rgba(255, 255, 255, 0.25);
+		}
+	"""),
+
+	ui.panel_title(title=None, window_title="Geocoordinate"),
 	NavBar(),
 
 	ui.layout_sidebar(
@@ -447,37 +473,37 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns</b>"),
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="Define a column to use as a time index for temporal heatmaps"),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="Color points uniformly, or color based on values in a column"),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"]),
-				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"]),
-				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display discrete vector points, or a smooth raster shape (does not apply to temporal heatmaps)"),
+				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"], tooltip="Select the shape of vector points"),
+				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
 
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5, tooltip="Specify the size of data points"),
 
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01),
-				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01, tooltip="Specify the opacity of data points"),
+				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1, tooltip="Soften or harden the edges of raster shapes"),
 
-				config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1),
+				config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1, tooltip="Calculate intermediate values between points"),
 
 				ui.HTML("<b>Range of Interest</b>"),
-				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)"),
-				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Only display data points within a specified range of interest"),
+				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True, tooltip="Remove data points outside the range of interest, or round them to the maximum or minimum value"),
 				ui.layout_columns(
-					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0),
-					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0),
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value"),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value"),
 				),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
-					choices=["KDE"],
+					choices=["KDE"], selected=None, tooltip="Estimate the density of data points in an area"
 				),
 
 				# Add the download buttons.
-				ui.download_button("DownloadHeatmap", "Heatmap")
+				ui.download_button("DownloadHeatmap", "Download")
 			),
 			padding="10px",
 			gap="20px",
@@ -485,7 +511,7 @@ app_ui = ui.page_fluid(
 		),
 
 		MainTab(m_type=ui.output_ui),
-		height="90vh",
+		height="86vh",
 	)
 )
 

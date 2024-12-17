@@ -1,377 +1,482 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8">
 
-		<title>Heatmapper</title>
-		<link rel="shortcut icon" type="image/x-icon" href="site/favicon.ico">
+<head>
+	<meta charset="UTF-8">
 
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"/>
-		<style>
-			.border-img {
-				border:0.2em solid black;
-				width:100%;
-				height:15em;
-				border-radius:0.4em;
-				max-width:20em;
-				/*max-width: 70%;*/
-				display: block;
-				margin-left: auto;
-				margin-right: auto;
-			}
+	<title>Heatmapper</title>
+	<link rel="shortcut icon" type="image/x-icon" href="../favicon.ico">
 
-			.logo {
-				/* These options are to prevent anti-aliasing */
-				image-rendering: optimizeSpeed;			 /* STOP SMOOTHING, GIVE ME SPEED	*/
-				image-rendering: -moz-crisp-edges;			/* Firefox						*/
-				image-rendering: -o-crisp-edges;			/* Opera							*/
-				image-rendering: -webkit-optimize-contrast; /* Chrome (and eventually Safari) */
-				image-rendering: pixelated; /* Chrome */
-				image-rendering: optimize-contrast;		 /* CSS3 Proposed					*/
-				-ms-interpolation-mode: nearest-neighbor;	 /* IE8+							 */
-			}
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" />
+	<style>
+		.border-img {
+			border: 0.2em solid rgb(223, 223, 223);
+			width: 100%;
+			height: 12em;
+			border-radius: 0.4em;
+			max-width: 20em;
+			/*max-width: 70%;*/
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+		}
 
-			.myTable {
-				table-layout: fixed;
-				border-spacing:1em;
-				width: 1024px; /* virtual pixel width of many iPads */
+		.img-caption {
+			text-align: center;
+			font-weight: bold;
+			color: rgb(114, 114, 114);
+			margin-top: 0.5em;
+		}
 
-			}
-			.myRow {
-				display:table-row;
-			}
-			.myCol {
-				display:table-cell;
-			}
+		.logo {
+			/* These options are to prevent anti-aliasing */
+			image-rendering: optimizeSpeed;
+			/* STOP SMOOTHING, GIVE ME SPEED	*/
+			image-rendering: -moz-crisp-edges;
+			/* Firefox						*/
+			image-rendering: -o-crisp-edges;
+			/* Opera							*/
+			image-rendering: -webkit-optimize-contrast;
+			/* Chrome (and eventually Safari) */
+			image-rendering: pixelated;
+			/* Chrome */
+			image-rendering: optimize-contrast;
+			/* CSS3 Proposed					*/
+			-ms-interpolation-mode: nearest-neighbor;
+			/* IE8+							 */
+		}
 
-			.well.myCol {
-				display:table-cell;
-			}
+		.myTable {
+			table-layout: fixed;
+			border-spacing: 1em;
+			width: 1024px;
+			/* virtual pixel width of many iPads */
 
-			.sectionStats {
-				text-align: left;
-			}
+		}
 
-			.heatmapTitle {
-				font-size: large;
-				font-weight: 500;
-				position: relative;
-				top: 3px;
-			}
+		.myRow {
+			display: table-row;
+		}
 
-			figcaption {
-				text-align:center;
-				margin-bottom:0.5em;
-			}
+		.myCol {
+			display: table-cell;
+		}
 
-			td {
-					padding: 5px;
-					vertical-align: top;
-			}
+		.well.myCol {
+			position: relative;
+			height: 16em;
+			display: table-cell;
+			overflow: hidden;
+			perspective: 1000px;
+		}
 
-			.notice-holder {
-				display:table-cell;
-				width: 67%;
-				text-align: center;
-			}
+		.flip-inner {
+			left:0;
+			position: absolute;
+			height: 100%;
+			width: 100%;
+			transition: transform 0.8s;
+			transform-style: preserve-3d;
+		}
+		.well.myCol:hover .flip-inner {
+			transform: rotateY(180deg);
+		}
 
-			.notice {
-				display:inline-block;
-				vertical-align: middle;
-				width: 80%;
-				padding: 1.0em 1.0em 0.5em 1.0em;
-				background-color: #eae0ff;
-				border-style: solid;
-				border-width: 2px;
-				border-color: #c9b1ff;
-			}
-		</style>
+		.flip-front, .flip-back {
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			-webkit-backface-visibility: hidden; /* Safari */
+			backface-visibility: hidden;
+		}
+		.flip-back {
+			padding-left: 2em;
+			padding-right: 2em;
+			transform: rotateY(180deg);
+		}
 
-		<!-- -Load a WebAssembly site in the background to cache it. -->
-		<script>
-			var appUrls = [
-					'site/expression/index.html',
-			];
+		.sectionStats {
+			text-align: left;
+		}
 
-			function preloadApplications() {
-				// Loop through each URL in appUrls array
-				appUrls.forEach(function(url) {
-						// Create a new iframe element
-						var iframe = document.createElement('iframe');
-						iframe.style.display = 'none';
-						iframe.src = url; // Set the source to the current URL in the loop
-						document.body.appendChild(iframe); // Append iframe to the document body
-				});
-			}
-			window.addEventListener('load', preloadApplications);
-		</script>
-	</head>
-	<body>
+		.heatmapTitle {
+			font-size: large;
+			font-weight: 500;
+			position: relative;
+			top: 3px;
+		}
 
-			<nav class="navbar navbar-default navbar-static-top" role="navigation">
-				<div class="navbar-header">
-					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#collapseNavbar">
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-					</button>
-					<span class = "navbar-brand" id="heatmapper-logo" style="cursor:pointer">Heatmapper</span>
-				</div>
-				<div class="collapse navbar-collapse" id="collapseNavbar">
-					<ul class="nav navbar-nav">
-						<li id="expressionTab">
-							<a id="expressionLink" href="site/expression/index.html">Expression</a>
-						</li>
-						<li id="pairwiseTab">
-							<a id="pairwiseLink" href="site/pairwise/index.html">Pairwise</a>
-						</li>
-						<li id="imageTab">
-							<a id="imageLink" href="site/image/index.html">Image Overlay</a>
-						</li>
-						<li id="geomapTab">
-							<a id="geomapLink" href="site/geomap/index.html">Geomap</a>
-						</li>
-						<li id="geocoordinateTab">
-							<a id="geocoordinateLink" href="site/geocoordinate/index.html">Geocoordinate</a>
-						</li>
-						<li id="3dTab">
-							<a id="3dLink" href="site/3d/index.html">3D</a>
-						</li>
-						<li id="spatialTab">
-							<a id="spatialLink" href="http://heatmapper2.ca:8006">Spatial</a>
-						</li>
-						<li id="spectralTab">
-							<a id="spectralLink" href="site/spectral/index.html">Spectral</a>
-						</li>
-						</li>
-						<li id="aboutTab">
-							<a id="aboutLink" href="https://github.com/WishartLab/heatmapper2/wiki">About</a>
-						</li>
-					</ul>
-				</div>
-			</nav>
+		figcaption {
+			text-align: center;
+			margin-bottom: 0.5em;
+		}
 
-		<div class="myTable">
-			<h2 style="margin-left:0px; padding-left:1.9em;">Welcome to Heatmapper!</h2>
+		td {
+			padding: 5px;
+			vertical-align: top;
+		}
 
-				<div class="notice-holder">
-					<div class="notice">
-						<p style="text-align:justify; width:100%;">
-							Heatmapper has been re-written in Python! This new version brings many new changes, including
-							WebAssembly support, speed improvements, and more features. The old, R-Based Heatmapper is
-							still available <a href=https://heatmapper.ca>here</a>. Checkout the <a href=https://github.com/WishartLab/heatmapper2/wiki>Wiki</a> for more information!
-						</p>
-					</div>
-				</div>
-			<div class="myRow" style="width:67%;">
+		.notice-holder {
+			display: table-cell;
+			width: 67%;
+			text-align: center;
+		}
 
-<!--
-				<div style="display:table-cell; width:100%;">
- -->
+		.notice {
+			display: inline-block;
+			vertical-align: middle;
+			width: 100%;
+			padding: 1.2em 1.5em 0.5em 1.5em;
+			background-color: #eae0ff;
+			border-style: solid;
+			border-width: 2px;
+			border-color: #c9b1ff;
+		}
+	</style>
+
+	<!-- -Load a WebAssembly site in the background to cache it. -->
+	<script>
+		var appUrls = [
+			'https://heatmapper2.ca/site/expression/index.html',
+		];
+
+		function preloadApplications() {
+			// Loop through each URL in appUrls array
+			appUrls.forEach(function (url) {
+				// Create a new iframe element
+				var iframe = document.createElement('iframe');
+				iframe.style.display = 'none';
+				iframe.src = url; // Set the source to the current URL in the loop
+				document.body.appendChild(iframe); // Append iframe to the document body
+			});
+		}
+		window.addEventListener('load', preloadApplications);
+	</script>
+</head>
 
 
-				<div class="myCol" style="display:table-cell; width:67%; padding-left:3em; padding-right:3em;">
+<body>
+	<nav class="navbar navbar-default navbar-static-top" role="navigation">
 
-				<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/logo.png?raw=true" class="logo" style="width:240px; padding-left:1em; padding-bottom:1em; float:right;">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#collapseNavbar">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<span class="navbar-brand" id="heatmapper-logo" style="cursor:pointer">Heatmapper</span>
+		</div>
 
-				<div style="width:57%; border: 2px solid #002aff; background-color: #deffce; padding-top:0.6em; padding-left:0.6em; margin:0.25em; margin-bottom:1em;">
-					<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/arrow.png?raw=true" style="width:48px; padding-left:0.2em; padding-right:0.8em; padding-top:0.1em; float:left;">
+		<div class="collapse navbar-collapse" id="collapseNavbar">
+			<ul class="nav navbar-nav">
+				<li id="expressionTab">
+					<a id="expressionLink" href="https://heatmapper2.ca/site/expression/index.html">Expression</a>
+				</li>
+				<li id="pairwiseTab">
+					<a id="pairwiseLink" href="https://heatmapper2.ca/site/pairwise/index.html">Pairwise</a>
+				</li>
+				<li id="imageTab">
+					<a id="imageLink" href="https://heatmapper2.ca/site/image/index.html">Image Overlay</a>
+				</li>
+				<li id="geomapTab">
+					<a id="geomapLink" href="https://heatmapper2.ca/site/geomap/index.html">Geomap</a>
+				</li>
+				<li id="geocoordinateTab">
+					<a id="geocoordinateLink" href="https://heatmapper2.ca/site/geocoordinate/index.html">Geocoordinate</a>
+				</li>
+				<li id="3dTab">
+					<a id="3dLink" href="https://heatmapper2.ca/site/3d/index.html">3D</a>
+				</li>
+				<li id="spatialTab">
+					<a id="spatialLink" href="http://server.heatmapper2.ca/spatial">Spatial</a>
+				</li>
+				<li id="spectralTab">
+					<a id="spectralLink" href="https://heatmapper2.ca/site/spectral/index.html">Spectral</a>
+				</li>
+				</li>
+				<li id="aboutTab">
+					<a id="aboutLink" href="https://github.com/WishartLab/heatmapper2/wiki">About</a>
+				</li>
+			</ul>
+		</div>
+
+	</nav>
+
+	<div class="myTable">
+		<h2 style="margin-left:0px; padding-left:2em;"><b>Welcome to Heatmapper!</b></h2>
+
+		<div class="notice-holder" style="width:67%; padding-left:3.2em; padding-right:3em;">
+			<div class="notice">
+				<p style="text-align:left;">
+					<b>Heatmapper has been re-written in Python!</b> This version brings new changes, including
+					WebAssembly support, speed improvements, and more features. The old, R-Based Heatmapper is
+					still available <a href=https://heatmapper.ca>here</a>. Checkout the <a
+						href=https://github.com/WishartLab/heatmapper2/wiki>Wiki</a> for more information!
+				</p>
+			</div>
+		</div>
+
+		<div class="myRow" style="width:67%;">
+			<div class="myCol" style="display:table-cell; width:67%; padding-left:3em; padding-right:3em;">
+				<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/logo.png?raw=true"
+					class="logo" style="width:240px; padding-left:1em; padding-bottom:1em; float:right;">
+
+				<div
+					style="width:57%; border: 2px solid #002aff; background-color: #deffce; padding-top:0.6em; padding-left:0.6em; margin:0.25em; margin-bottom:1em;">
+					<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/arrow.png?raw=true"
+						style="width:48px; padding-left:0.2em; padding-right:0.8em; padding-top:0.1em; float:left;">
 
 					<p style="text-align:left;">
-					<i>Click in the menu above or on the buttons below to start making your heat map!</i>
+						Click in the menu above or on the buttons below to start making your heat map!
 					</p>
 				</div>
 
-				<p style="text-align:justify; width:100%;">
-				Heatmapper is a freely available web server that allows users to interactively
-				visualize their data in the form of heat maps through an easy-to-use graphical
-				interface. Heatmapper is a versatile tool that allows users to easily create a
-				wide variety of heat maps for many different data types and applications.
-				Heatmapper allows users to generate, cluster and visualize: 1) <b>expression-based
-				heat maps</b> from transcriptomic, proteomic and metabolomic experiments;
-				2) <b>pairwise distance maps</b>; 3) <b>correlation maps</b>; 4) <b>image overlay heat maps</b>;
-				5) <b>latitude and longitude heat maps</b>, 6) <b>geopolitical (choropleth) heat maps</b>,
-				7) <b>temporal choropleth heat maps</b>, 8) <b>temporal latitude and longitude heat maps</b>,
-				9) <b>3D model heat maps</b>, and 10) <b>spatial molecular data heat maps</b>.
-				Heatmapper offers a number of simple and intuitive customization options for
-				easy adjustments to each heat map’s appearance and plotting parameters.
-				Heatmapper also allows users to interactively by using a searchable/sortable/editable
-				data table view.
+				<p style="text-align:left; width:57%; padding-top:1em; padding-left:0.25em;">
+					Heatmapper is a freely available web server that allows users to interactively
+					visualize their data through an easy-to-use graphical interface. 
+					<br>Heatmapper allows users to generate, cluster and visualize a
+					wide variety of heat maps for many different data types and applications.
+					<br>Heatmapper offers customization options for each heat map’s appearance and plotting parameters.
+					<br>Heatmapper also allows users to interact with data via a searchable/sortable/editable
+					data table view.
 				</p>
+				<p style="text-align:left; width:100%; padding-top:1em; padding-left:0.25em;">
+					<b><i>Hover over the images below for more information!</i></b>
+				</p>
+			</div>
 
-
-				</div>
-
-<!--
-				</div>
-
-				<div class="well" style="display:table-cell; width:100%; float:right; ">
- -->
-
-				<div class="myCol well" style="display:table-cell; width:33%;">
-				<h5>Please cite:</h5>
+			<div class="myCol well" style="display:table-cell; width:33%;">
+				<h4>Please cite:</h4>
 				<p>
-				Sasha Babicki, David Arndt, Ana Marcu, Yongjie Liang, Jason R. Grant,
-				Adam Maciejewski, and David S. Wishart. Heatmapper: web-enabled heat mapping for all.
-				<a href="http://www.ncbi.nlm.nih.gov/pubmed/27190236" target="_blank">
-				<i>Nucleic Acids Res.</i> 2016 May 17 (epub ahead of print). doi:10.1093/nar/gkw419</a>
+					Sasha Babicki, David Arndt, Ana Marcu, Yongjie Liang, Jason R. Grant,
+					Adam Maciejewski, and David S. Wishart. Heatmapper: web-enabled heat mapping for all.
+					<a href="http://www.ncbi.nlm.nih.gov/pubmed/27190236" target="_blank">
+						<i>Nucleic Acids Res.</i> 2016 May 17 (epub ahead of print). doi:10.1093/nar/gkw419</a>
 				</p>
 
 				<br />
-				<h5>Funding</b>
+				<h4>Funding</h4>
 
 				<p>
-					<a href="http://www.cihr-irsc.gc.ca" target="_blank">
-						<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/cihr.png?raw=true" style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
+					<a href="http://www.innovation.ca/" target="_blank">
+						<img src="https://github.com/rwoudstr/heatmapper2/blob/main/site/cfi.png?raw=true"
+							style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
 					</a>
 
 					<a href="http://genomealberta.ca" target="_blank">
-						<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/galberta.png?raw=true" style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
+						<img src="https://github.com/rwoudstr/heatmapper2/blob/main/site/galberta.png?raw=true"
+							style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
 					</a>
 				</p>
 
-				</div>
-
 			</div>
 
 		</div>
-		<div class="myTable" style="display:table;">
 
-			<div class="myRow">
-				<div class="well myCol">
-					<figure>
-						<a id="expressionImg" href="site/expression/index.html">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Expression.png" alt="Expression" class="border-img">
+	</div>
+	<div class="myTable" style="display:table;">
+
+		<div class="myRow">
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="expressionImg" href="https://heatmapper2.ca/site/expression/index.html">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Expression.png" alt="Expression"
+									class="border-img">
+							</a>
+							<p class="img-caption">EXPRESSION</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="expressionDescr" href="https://heatmapper2.ca/site/expression/index.html">
+							<b>EXPRESSION</b><br>View data from your "omics" experiment as-is in a heatmap, or cluster it with dendrograms on rows and/or columns. <br><br>Supports .txt, .dat, .tsv, .tab, and .xlsx files.
 						</a>
-						<p style="text-align:center;">
-							<i>Expression</i>
-						</p>
-					 </figure>
-				</div>
-				<div class="well myCol">
-					<figure>
-						<a id="pairwiseImg" href="site/pairwise/index.html">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Pairwise.png" alt="Pairwise" class="border-img">
-						</a>
-						<p style="text-align:center;">
-							<i>Pairwise</i>
-						</p>
-					 </figure>
-				</div>
-				<div class="well myCol">
-					<figure>
-						<a id="imageImg" href="site/image/index.html">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Image.png" alt="Image" class="border-img">
-						</a>
-						<p style="text-align:center;">
-							<i>Image</i>
-						</p>
-					 </figure>
+					</div>
 				</div>
 			</div>
-			<div class="myRow">
-				<div class="well myCol">
-					<figure>
-						<a id="geomapImg" href="site/geomap/index.html">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geomap.png" alt="Geomap" class="border-img">
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="pairwiseImg" href="https://heatmapper2.ca/site/pairwise/index.html">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Pairwise.png" alt="Pairwise"
+								class="border-img">
+							</a>
+							<p class="img-caption">PAIRWISE</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="pairwiseDescr" href="https://heatmapper2.ca/site/pairwise/index.html">
+							<b>PAIRWISE</b><br>Calculate a correlation or distance matrix, or display a pre-computed matrix as-is in a heatmap. Have 3 columns of data? Generate a cube matrix! <br><br>Supports .txt, .dat, .tsv, .tab, .xlsx, .pdb, and .fasta files.
 						</a>
-						<p style="text-align:center;">
-							<i>Geomap</i>
-						</p>
-					 </figure>
-				</div>
-				<div class="well myCol">
-					<figure>
-						<a id="geocoordinateImg" href="site/geocoordinate/index.html">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geocoordinate.png" alt="Geocoordinate" class="border-img">
-						</a>
-						<p style="text-align:center;">
-							<i>Geocoordinate</i>
-						</p>
-					 </figure>
-				</div>
-				<div class="well myCol">
-					<figure>
-						<a id="3dImg" href="site/3d/index.html">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/3D.png" alt="3D" class="border-img">
-						</a>
-						<p style="text-align:center;">
-							<i>3D</i>
-						</p>
-					 </figure>
+					</div>
 				</div>
 			</div>
-			<div class="myRow">
-				<div class="well myCol">
-					<figure>
-						<a id="spatialImg" href="http://heatmapper2.ca:8006">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spatial.png" alt="Spatial" class="border-img">
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="imageImg" href="https://heatmapper2.ca/site/image/index.html">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Image.png" alt="Image"
+									class="border-img" style="width: auto; max-width: 100%; height: auto;">
+							</a>
+							<p class="img-caption">IMAGE</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="imageDescr" href="https://heatmapper2.ca/site/image/index.html">
+							<b>IMAGE</b><br>Visualize an input table over an image. Data without column names is displayed as-is, while explicit X, Y, Z, and value columns are treated as coordinates. <br><br>Supports .bmp, .gif, .h5, .hdf, .ico, .jpeg, .jpg, .tif, .tiff, .webp, and .png files for images.
 						</a>
-						<p style="text-align:center;">
-							<i>Spatial</i>
-						</p>
-					 </figure>
-				</div>
-				<div class="well myCol">
-					<figure>
-						<a id="spectralImg" href="http://heatmapper2.ca:8007">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spectral.png" alt="Spectral" class="border-img">
-						</a>
-						<p style="text-align:center;">
-							<i>Spectral</i>
-						</p>
-					 </figure>
-				</div>
-				<div class="well myCol">
-					<figure>
-						<a id="aboutImg" href="https://github.com/WishartLab/heatmapper2/wiki">
-							<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/About.png" alt="About" class="border-img">
-						</a>
-						<p style="text-align:center;">
-							<i>About</i>
-						</p>
-					 </figure>
+					</div>
 				</div>
 			</div>
 		</div>
+		<div class="myRow">
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="geomapImg" href="https://heatmapper2.ca/site/geomap/index.html">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geomap.png" alt="Geomap"
+									class="border-img" style="width: auto; max-width: 100%; height: auto;">
+							</a>
+							<p class="img-caption">GEOMAP</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="geomapDescr" href="https://heatmapper2.ca/site/geomap/index.html">
+							<b>GEOMAP</b><br>Display values for defined territories on a map using GeoJSON files. Have temporal data? Scrub through time points with a media player-style slider. <br><br>Supports .txt, .dat, .tsv, .tab, and .xlsx files, plus .geojson for maps.
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="geocoordinateImg" href="https://heatmapper2.ca/site/geocoordinate/index.html">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geocoordinate.png"
+									alt="Geocoordinate" class="border-img" style="width: auto; max-width: 100%; height: auto;">
+							</a>
+							<p class="img-caption">GEOCOORDINATE</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="geocoordinateDescr" href="https://heatmapper2.ca/site/geocoordinate/index.html">
+							<b>GEOCOORDINATE</b><br>Plot coordinates with associated values onto a map. Have temporal data? Scrub through time points with a media player-style slider. <br><br>Supports .txt, .dat, .tsv, .tab, and .xlsx files.
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="3dImg" href="https://heatmapper2.ca/site/3d/index.html">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/3D.png" alt="3D"
+									class="border-img" style="width: auto; max-width: 100%; height: auto;">
+							</a>
+							<p class="img-caption">3D</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="3dDescr" href="https://heatmapper2.ca/site/3d/index.html">
+							<b>3D</b><br>Visualize data on the surface of a 3D object.<br><br>Supports:<br>an .obj file with either a table of values or image file to display on the surface, OR<br>a .pdb file or PDB ID.
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="myRow">
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="spatialImg" href="http://server.heatmapper2.ca/spatial">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spatial.png" alt="Spatial"
+									class="border-img" style="width: auto; max-width: 100%; height: auto;">
+		
+							</a>
+							<p class="img-caption">SPATIAL</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="spatialDescr" href="http://server.heatmapper2.ca/spatial">
+							<b>SPATIAL</b><br>Display spatial molecular data, and generate plots of related metrics. <br><br>Supports Visium or NanoString collections of files. <br>Spatial heatmaps are run on the server.
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="well myCol">
+				<div class="flip-inner">
+					<div class="flip-front">
+						<figure>
+							<a id="spectralImg" href="http://server.heatmapper2.ca/spectral">
+								<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spectral.png" alt="Spectral"
+									class="border-img" style="width: auto; max-width: 100%; height: auto;">
+							</a>
+							<p class="img-caption">SPECTRAL</p>
+						</figure>
+					</div>
+					<div class="flip-back">
+						<a id="spectralDescr" href="http://server.heatmapper2.ca/spectral">
+							<b>SPECTRAL</b><br>Visualize mass spectrometry data as a 3D contour plot or a color matrix. <br><br>Supports .mzML files. <br>Spatial heatmaps are run on the server.
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="well myCol">
+				<figure>
+					<a id="aboutImg" href="https://github.com/WishartLab/heatmapper2/wiki">
+						<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/About.png" alt="About"
+							class="border-img" style="width: auto; max-width: 100%; height: auto;">
+					</a>
+					<p class="img-caption">ABOUT</p>
+				</figure>
+			</div>
+		</div>
+	</div>
 
-		<div style="font-size: small; text-align:center;">
-		Questions or comments? Please use our <a href="http://feedback.wishartlab.com/?site=heatmapper" target="_blank">feedback page</a>.
+	<div style="font-size: small; text-align:center;">
+		Questions or comments? Please use our <a href="http://feedback.wishartlab.com/?site=heatmapper"
+			target="_blank">feedback page</a>.
 		License: <a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-BY-SA</a>
-		</div>
+	</div>
 
-		<script>
-			// Function to check for WebAssembly support
-			function isWebAssemblySupported() {
-				try {
-					if (typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function") {
-						return true;
-					}
-				} catch (e) {}
-				return false;
-			}
-
-			// Modify links only if WebAssembly is not supported
-			window.onload = function() {
-				if (!isWebAssemblySupported()) {
-					document.getElementById('expressionLink').href = 'http://heatmapper2.ca:8000';
-					document.getElementById('pairwiseLink').href = 'http://heatmapper2.ca:8001';
-					document.getElementById('imageLink').href = 'http://heatmapper2.ca:8002';
-					document.getElementById('geomapLink').href = 'http://heatmapper2.ca:8003';
-					document.getElementById('geocoordinateLink').href = 'http://heatmapper2.ca:8004';
-					document.getElementById('3dLink').href = 'http://heatmapper2.ca:8005';
-					document.getElementById('spectralLink').href = 'http://heatmapper2.ca:8007';
-
-
-					document.getElementById('expressionImg').href = 'http://heatmapper2.ca:8000';
-					document.getElementById('pairwiseImg').href = 'http://heatmapper2.ca:8001';
-					document.getElementById('imageImg').href = 'http://heatmapper2.ca:8002';
-					document.getElementById('geomapImg').href = 'http://heatmapper2.ca:8003';
-					document.getElementById('geocoordinateImg').href = 'http://heatmapper2.ca:8004';
-					document.getElementById('3dImg').href = 'http://heatmapper2.ca:8005';
-					document.getElementById('spectraImg').href = 'http://heatmapper2.ca:8007';
+	<script>
+		// Function to check for WebAssembly support
+		function isWebAssemblySupported() {
+			try {
+				if (typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function") {
+					return true;
 				}
-			};
-		</script>
-	</body>
+			} catch (e) { }
+			return false;
+		}
+
+		// Modify links only if WebAssembly is not supported
+		window.onload = function () {
+			if (!isWebAssemblySupported()) {
+				document.getElementById('expressionLink').href = 'http://server.heatmapper2.ca/expression';
+				document.getElementById('pairwiseLink').href = 'http://server.heatmapper2.ca/pairwise';
+				document.getElementById('imageLink').href = 'http://server.heatmapper2.ca/image';
+				document.getElementById('geomapLink').href = 'http://server.heatmapper2.ca/geomap';
+				document.getElementById('geocoordinateLink').href = 'http://server.heatmapper2.ca/geocoordinate';
+				document.getElementById('3dLink').href = 'http://server.heatmapper2.ca/3d';
+				document.getElementById('spectralLink').href = 'http://server.heatmapper2.ca/spectral';
+
+
+				document.getElementById('expressionImg').href = 'http://server.heatmapper2.ca/expression';
+				document.getElementById('pairwiseImg').href = 'http://server.heatmapper2.ca/pairwise';
+				document.getElementById('imageImg').href = 'http://server.heatmapper2.ca/image';
+				document.getElementById('geomapImg').href = 'http://server.heatmapper2.ca/geomap';
+				document.getElementById('geocoordinateImg').href = 'http://server.heatmapper2.ca/geocoordinate';
+				document.getElementById('3dImg').href = 'http://server.heatmapper2.ca/3d';
+				document.getElementById('spectralImg').href = 'http://server.heatmapper2.ca/spectral';
+			}
+		};
+	</script>
+</body>
+
 </html>

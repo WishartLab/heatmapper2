@@ -1,15 +1,7 @@
-// Shinylive 0.4.1
+// Shinylive 0.9.0
 // Copyright 2024 Posit, PBC
 import {
   Icon,
-  __commonJS,
-  __esm,
-  __export,
-  __privateAdd,
-  __privateMethod,
-  __publicField,
-  __toCommonJS,
-  __toESM,
   appUrlPrefix,
   currentScriptDir,
   editorUrlPrefix,
@@ -21,7 +13,17 @@ import {
   require_jsx_runtime,
   require_react,
   stringToUint8Array
-} from "./chunk-HW2MHHPP.js";
+} from "./chunk-ASVBLSKJ.js";
+import {
+  __commonJS,
+  __esm,
+  __export,
+  __privateAdd,
+  __privateMethod,
+  __publicField,
+  __toCommonJS,
+  __toESM
+} from "./chunk-YYZJYZVZ.js";
 
 // node_modules/events/events.js
 var require_events = __commonJS({
@@ -3754,7 +3756,7 @@ var init_main = __esm({
       }
       CodeDescription2.is = is;
     })(CodeDescription || (CodeDescription = {}));
-    (function(Diagnostic4) {
+    (function(Diagnostic2) {
       function create(range, message, severity, code, source, relatedInformation) {
         let result = { range, message };
         if (Is.defined(severity)) {
@@ -3771,15 +3773,15 @@ var init_main = __esm({
         }
         return result;
       }
-      Diagnostic4.create = create;
+      Diagnostic2.create = create;
       function is(value) {
         var _a3;
         let candidate = value;
         return Is.defined(candidate) && Range2.is(candidate.range) && Is.string(candidate.message) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a3 = candidate.codeDescription) === null || _a3 === void 0 ? void 0 : _a3.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
       }
-      Diagnostic4.is = is;
+      Diagnostic2.is = is;
     })(Diagnostic || (Diagnostic = {}));
-    (function(Command3) {
+    (function(Command2) {
       function create(title, command2, ...args) {
         let result = { title, command: command2 };
         if (Is.defined(args) && args.length > 0) {
@@ -3787,12 +3789,12 @@ var init_main = __esm({
         }
         return result;
       }
-      Command3.create = create;
+      Command2.create = create;
       function is(value) {
         let candidate = value;
         return Is.defined(candidate) && Is.string(candidate.title) && Is.string(candidate.command);
       }
-      Command3.is = is;
+      Command2.is = is;
     })(Command || (Command = {}));
     (function(TextEdit2) {
       function replace(range, newText) {
@@ -4245,16 +4247,16 @@ var init_main = __esm({
       }
       OptionalVersionedTextDocumentIdentifier2.is = is;
     })(OptionalVersionedTextDocumentIdentifier || (OptionalVersionedTextDocumentIdentifier = {}));
-    (function(TextDocumentItem3) {
+    (function(TextDocumentItem2) {
       function create(uri, languageId, version, text) {
         return { uri, languageId, version, text };
       }
-      TextDocumentItem3.create = create;
+      TextDocumentItem2.create = create;
       function is(value) {
         let candidate = value;
         return Is.defined(candidate) && Is.string(candidate.uri) && Is.string(candidate.languageId) && Is.integer(candidate.version) && Is.string(candidate.text);
       }
-      TextDocumentItem3.is = is;
+      TextDocumentItem2.is = is;
     })(TextDocumentItem || (TextDocumentItem = {}));
     (function(MarkupKind2) {
       MarkupKind2.PlainText = "plaintext";
@@ -4265,12 +4267,12 @@ var init_main = __esm({
       }
       MarkupKind2.is = is;
     })(MarkupKind || (MarkupKind = {}));
-    (function(MarkupContent4) {
+    (function(MarkupContent2) {
       function is(value) {
         const candidate = value;
         return Is.objectLiteral(value) && MarkupKind.is(candidate.kind) && Is.string(candidate.value);
       }
-      MarkupContent4.is = is;
+      MarkupContent2.is = is;
     })(MarkupContent || (MarkupContent = {}));
     (function(CompletionItemKind3) {
       CompletionItemKind3.Text = 1;
@@ -4328,17 +4330,17 @@ var init_main = __esm({
       }
       CompletionItemLabelDetails2.is = is;
     })(CompletionItemLabelDetails || (CompletionItemLabelDetails = {}));
-    (function(CompletionItem3) {
+    (function(CompletionItem2) {
       function create(label) {
         return { label };
       }
-      CompletionItem3.create = create;
+      CompletionItem2.create = create;
     })(CompletionItem || (CompletionItem = {}));
-    (function(CompletionList3) {
+    (function(CompletionList2) {
       function create(items, isIncomplete) {
         return { items: items ? items : [], isIncomplete: !!isIncomplete };
       }
-      CompletionList3.create = create;
+      CompletionList2.create = create;
     })(CompletionList || (CompletionList = {}));
     (function(MarkedString2) {
       function fromPlainText(plainText) {
@@ -6079,12 +6081,12 @@ var require_protocol = __commonJS({
       ShowMessageRequest2.messageDirection = messages_1.MessageDirection.serverToClient;
       ShowMessageRequest2.type = new messages_1.ProtocolRequestType(ShowMessageRequest2.method);
     })(ShowMessageRequest || (exports.ShowMessageRequest = ShowMessageRequest = {}));
-    var LogMessageNotification2;
-    (function(LogMessageNotification3) {
-      LogMessageNotification3.method = "window/logMessage";
-      LogMessageNotification3.messageDirection = messages_1.MessageDirection.serverToClient;
-      LogMessageNotification3.type = new messages_1.ProtocolNotificationType(LogMessageNotification3.method);
-    })(LogMessageNotification2 || (exports.LogMessageNotification = LogMessageNotification2 = {}));
+    var LogMessageNotification;
+    (function(LogMessageNotification2) {
+      LogMessageNotification2.method = "window/logMessage";
+      LogMessageNotification2.messageDirection = messages_1.MessageDirection.serverToClient;
+      LogMessageNotification2.type = new messages_1.ProtocolNotificationType(LogMessageNotification2.method);
+    })(LogMessageNotification || (exports.LogMessageNotification = LogMessageNotification = {}));
     var TelemetryEventNotification;
     (function(TelemetryEventNotification2) {
       TelemetryEventNotification2.method = "telemetry/event";
@@ -6103,19 +6105,19 @@ var require_protocol = __commonJS({
       DidOpenTextDocumentNotification3.messageDirection = messages_1.MessageDirection.clientToServer;
       DidOpenTextDocumentNotification3.type = new messages_1.ProtocolNotificationType(DidOpenTextDocumentNotification3.method);
     })(DidOpenTextDocumentNotification2 || (exports.DidOpenTextDocumentNotification = DidOpenTextDocumentNotification2 = {}));
-    var TextDocumentContentChangeEvent2;
-    (function(TextDocumentContentChangeEvent3) {
+    var TextDocumentContentChangeEvent;
+    (function(TextDocumentContentChangeEvent2) {
       function isIncremental(event) {
         let candidate = event;
         return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range !== void 0 && (candidate.rangeLength === void 0 || typeof candidate.rangeLength === "number");
       }
-      TextDocumentContentChangeEvent3.isIncremental = isIncremental;
+      TextDocumentContentChangeEvent2.isIncremental = isIncremental;
       function isFull(event) {
         let candidate = event;
         return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range === void 0 && candidate.rangeLength === void 0;
       }
-      TextDocumentContentChangeEvent3.isFull = isFull;
-    })(TextDocumentContentChangeEvent2 || (exports.TextDocumentContentChangeEvent = TextDocumentContentChangeEvent2 = {}));
+      TextDocumentContentChangeEvent2.isFull = isFull;
+    })(TextDocumentContentChangeEvent || (exports.TextDocumentContentChangeEvent = TextDocumentContentChangeEvent = {}));
     var DidChangeTextDocumentNotification2;
     (function(DidChangeTextDocumentNotification3) {
       DidChangeTextDocumentNotification3.method = "textDocument/didChange";
@@ -9957,7 +9959,7 @@ EditorState.changeFilter = changeFilter;
 EditorState.transactionFilter = transactionFilter;
 EditorState.transactionExtender = transactionExtender;
 Compartment.reconfigure = /* @__PURE__ */ StateEffect.define();
-function combineConfig(configs, defaults4, combine = {}) {
+function combineConfig(configs, defaults5, combine = {}) {
   let result = {};
   for (let config2 of configs)
     for (let key of Object.keys(config2)) {
@@ -9971,9 +9973,9 @@ function combineConfig(configs, defaults4, combine = {}) {
       else
         throw new Error("Config merge conflict for field " + key);
     }
-  for (let key in defaults4)
+  for (let key in defaults5)
     if (result[key] === void 0)
-      result[key] = defaults4[key];
+      result[key] = defaults5[key];
   return result;
 }
 var RangeValue = class {
@@ -21574,30 +21576,7 @@ var LanguageServerClient = class extends import_events.EventEmitter {
     this.rootUri = rootUri;
     this.versions = /* @__PURE__ */ new Map();
     this.diagnostics = /* @__PURE__ */ new Map();
-  }
-  on(event, listener) {
-    super.on(event, listener);
-    return this;
-  }
-  currentDiagnostics(uri) {
-    return this.diagnostics.get(uri) ?? [];
-  }
-  allDiagnostics() {
-    return Array.from(this.diagnostics.values()).flat();
-  }
-  errorCount() {
-    return this.allDiagnostics().filter(
-      (e2) => e2.severity === import_vscode_languageserver_protocol.DiagnosticSeverity.Error
-    ).length;
-  }
-  /**
-   * Initialize or wait for in-progress initialization.
-   */
-  async initialize() {
-    if (this.initializePromise) {
-      return this.initializePromise;
-    }
-    this.initializePromise = (async () => {
+    this.initPromise = (async () => {
       this.connection.onNotification(
         import_vscode_languageserver_protocol.PublishDiagnosticsNotification.type,
         (params) => {
@@ -21653,8 +21632,7 @@ var LanguageServerClient = class extends import_events.EventEmitter {
         },
         initializationOptions: await this.getInitializationOptions(),
         processId: null,
-        // Do we need both of these?
-        rootUri: this.rootUri,
+        rootUri: null,
         workspaceFolders: [
           {
             name: "src",
@@ -21669,11 +21647,65 @@ var LanguageServerClient = class extends import_events.EventEmitter {
       this.capabilities = capabilities;
       await this.connection.sendNotification(import_vscode_languageserver_protocol.InitializedNotification.type, {});
     })();
-    return this.initializePromise;
   }
+  on(event, listener) {
+    this.initPromise.then(() => {
+      super.on(event, listener);
+    }).catch(() => {
+    });
+    return this;
+  }
+  off(event, listener) {
+    this.initPromise.then(() => {
+      super.off(event, listener);
+    }).catch(() => {
+    });
+    return this;
+  }
+  currentDiagnostics(uri) {
+    return this.diagnostics.get(uri) ?? [];
+  }
+  allDiagnostics() {
+    return Array.from(this.diagnostics.values()).flat();
+  }
+  errorCount() {
+    return this.allDiagnostics().filter(
+      (e2) => e2.severity === import_vscode_languageserver_protocol.DiagnosticSeverity.Error
+    ).length;
+  }
+  // This can be overridden by subclasses. It's used to pass initialization
+  // options to the server.
   async getInitializationOptions() {
+    return null;
+  }
+  async createFile(filename, content2) {
+    const languageId = inferFiletype(filename);
+    if (!languageId) {
+      console.log(
+        `LanguageServerClientExtended: Could not infer language for ${filename}`
+      );
+      return;
+    }
+    await this.didOpenTextDocument({
+      textDocument: {
+        languageId,
+        text: content2,
+        uri: createUri(filename)
+      }
+    });
+  }
+  async deleteFile(filename) {
+    await this.didCloseTextDocument({
+      textDocument: {
+        uri: createUri(filename)
+      }
+    });
+  }
+  async changeFile(filename, changeEvent) {
+    await this.didChangeTextDocument(createUri(filename), [changeEvent]);
   }
   async didOpenTextDocument(params) {
+    await this.initPromise;
     await this.connection.sendNotification(
       import_vscode_languageserver_protocol.DidOpenTextDocumentNotification.type,
       {
@@ -21687,12 +21719,14 @@ var LanguageServerClient = class extends import_events.EventEmitter {
   // We close Python files that are deleted. We never write to the file system,
   // so that way they're effectively deleted.
   async didCloseTextDocument(params) {
+    await this.initPromise;
     await this.connection.sendNotification(
       import_vscode_languageserver_protocol.DidCloseTextDocumentNotification.type,
       params
     );
   }
   async didChangeTextDocument(uri, contentChanges) {
+    await this.initPromise;
     await this.connection.sendNotification(
       import_vscode_languageserver_protocol.DidChangeTextDocumentNotification.type,
       {
@@ -21705,6 +21739,7 @@ var LanguageServerClient = class extends import_events.EventEmitter {
     );
   }
   async completionRequest(params) {
+    await this.initPromise;
     const results = await this.connection.sendRequest(
       import_vscode_languageserver_protocol.CompletionRequest.type,
       params
@@ -21724,60 +21759,12 @@ var LanguageServerClient = class extends import_events.EventEmitter {
   }
 };
 
-// src/language-server/lsp-client.ts
-var LSPClient = class {
-  // The constructor for derive
-  constructor(client) {
-    this.client = client;
-    this.initPromise = this.client.initialize();
-  }
-  on(event, listener) {
-    this.initPromise.then(() => {
-      this.client.on(event, listener);
-    }).catch(() => {
-    });
-  }
-  off(event, listener) {
-    this.initPromise.then(() => {
-      this.client.off(event, listener);
-    }).catch(() => {
-    });
-  }
-  async createFile(filename, content2) {
-    await this.initPromise;
-    const languageId = inferFiletype(filename);
-    if (!languageId) {
-      console.log(`LSPClient: Could not infer language for ${filename}`);
-      return;
-    }
-    this.client.didOpenTextDocument({
-      textDocument: {
-        languageId,
-        text: content2,
-        uri: createUri(filename)
-      }
-    });
-  }
-  async deleteFile(filename) {
-    await this.initPromise;
-    this.client.didCloseTextDocument({
-      textDocument: {
-        uri: createUri(filename)
-      }
-    });
-  }
-  async changeFile(filename, changeEvent) {
-    await this.initPromise;
-    this.client.didChangeTextDocument(createUri(filename), [changeEvent]);
-  }
-};
-
 // src/language-server/null-client.ts
 var import_vscode_jsonrpc = __toESM(require_main());
 var nullClient = null;
 function ensureNullClient() {
   if (!nullClient) {
-    nullClient = new NullClient();
+    nullClient = new NullLspClient();
   }
   return nullClient;
 }
@@ -21793,86 +21780,51 @@ var NullMessageWriter = class extends import_vscode_jsonrpc.AbstractMessageWrite
   end() {
   }
 };
-var NullClient = class extends LSPClient {
+var NullLspClient = class extends LanguageServerClient {
   constructor() {
     const conn = (0, import_vscode_jsonrpc.createMessageConnection)(
       new NullMessageReader(),
       new NullMessageWriter()
     );
     conn.listen();
-    const client = new LanguageServerClient(conn, "en", createUri(""));
-    super(client);
+    super(conn, "en", createUri(""));
   }
-};
-
-// src/language-server/pyright.ts
-var import_vscode_jsonrpc2 = __toESM(require_main());
-var import_browser = __toESM(require_browser());
-var workerScriptName = "pyright-main-9de05813f9fe07eabc93.worker.js";
-var pyright = (language2) => {
-  if (!window.Worker) {
-    return void 0;
-  }
-  const workerScript = currentScriptDir() + `/pyright/${workerScriptName}`;
-  const foreground = new Worker(workerScript, {
-    name: "Pyright-foreground"
-  });
-  foreground.postMessage({
-    type: "browser/boot",
-    mode: "foreground"
-  });
-  const connection = (0, import_vscode_jsonrpc2.createMessageConnection)(
-    new import_browser.BrowserMessageReader(foreground),
-    new import_browser.BrowserMessageWriter(foreground)
-  );
-  const workers = [foreground];
-  connection.onDispose(() => {
-    workers.forEach((w2) => w2.terminate());
-  });
-  let backgroundWorkerCount = 0;
-  foreground.addEventListener("message", (e2) => {
-    if (e2.data && e2.data.type === "browser/newWorker") {
-      const { initialData, port } = e2.data;
-      const background = new Worker(workerScript, {
-        name: `Pyright-background-${++backgroundWorkerCount}`
-      });
-      workers.push(background);
-      background.postMessage(
-        {
-          type: "browser/boot",
-          mode: "background",
-          initialData,
-          port
-        },
-        [port]
-      );
-    }
-  });
-  connection.listen();
-  return new LanguageServerClient(connection, language2, createUri(""));
 };
 
 // src/language-server/pyright-client.ts
+var import_vscode_jsonrpc2 = __toESM(require_main());
+var import_browser = __toESM(require_browser());
+var workerScriptName = "pyright.worker.js";
 var pyrightClient = null;
 function ensurePyrightClient() {
   if (!pyrightClient) {
-    pyrightClient = new PyrightClient();
+    pyrightClient = new PyrightLspClient();
   }
   return pyrightClient;
 }
-var PyrightClient = class extends LSPClient {
+var PyrightLspClient = class extends LanguageServerClient {
   constructor() {
-    const locale = "en";
-    const client = pyright(locale);
-    client.getInitializationOptions = getInitializationOptions;
-    super(client);
+    const workerScript = currentScriptDir() + `/pyright/${workerScriptName}`;
+    const foreground = new Worker(workerScript, {
+      name: "pyright-foreground"
+    });
+    const connection = (0, import_vscode_jsonrpc2.createMessageConnection)(
+      new import_browser.BrowserMessageReader(foreground),
+      new import_browser.BrowserMessageWriter(foreground)
+    );
+    const workers = [foreground];
+    connection.onDispose(() => {
+      workers.forEach((w2) => w2.terminate());
+    });
+    connection.listen();
+    super(connection, "en", createUri(""));
   }
   async createFile(filename, content2) {
     const params = {
       uri: createUri(filename),
       kind: "create"
     };
-    await this.client.connection.sendNotification("pyright/createFile", params);
+    await this.connection.sendNotification("$/createFile", params);
     await super.createFile(filename, content2);
   }
   async deleteFile(filename) {
@@ -21880,19 +21832,23 @@ var PyrightClient = class extends LSPClient {
       uri: createUri(filename),
       kind: "delete"
     };
-    await this.client.connection.sendNotification("pyright/deleteFile", params);
+    await this.connection.sendNotification("$/deleteFile", params);
     await super.deleteFile(filename);
   }
+  /**
+   * This uses fetch() instead of import() so that esbuild will not inline the
+   * entire JSON file into the .js bundle.
+   */
+  async getInitializationOptions() {
+    const response = await fetch(
+      currentScriptDir() + "/pyright/typeshed.en.json"
+    );
+    const typeshed = await response.json();
+    return {
+      files: typeshed
+    };
+  }
 };
-async function getInitializationOptions() {
-  const response = await fetch(
-    currentScriptDir() + "/pyright/typeshed.en.json"
-  );
-  const typeshed = await response.json();
-  return {
-    files: typeshed
-  };
-}
 
 // src/Components/ShareModal.tsx
 var React2 = __toESM(require_react());
@@ -22195,14 +22151,19 @@ var NodeProp = class {
 NodeProp.closedBy = new NodeProp({ deserialize: (str) => str.split(" ") });
 NodeProp.openedBy = new NodeProp({ deserialize: (str) => str.split(" ") });
 NodeProp.group = new NodeProp({ deserialize: (str) => str.split(" ") });
+NodeProp.isolate = new NodeProp({ deserialize: (value) => {
+  if (value && value != "rtl" && value != "ltr" && value != "auto")
+    throw new RangeError("Invalid value for isolate: " + value);
+  return value || "auto";
+} });
 NodeProp.contextHash = new NodeProp({ perNode: true });
 NodeProp.lookAhead = new NodeProp({ perNode: true });
 NodeProp.mounted = new NodeProp({ perNode: true });
 var MountedTree = class {
-  constructor(tree, overlay, parser6) {
+  constructor(tree, overlay, parser7) {
     this.tree = tree;
     this.overlay = overlay;
-    this.parser = parser6;
+    this.parser = parser7;
   }
   /**
   @internal
@@ -22839,11 +22800,12 @@ function getChildren(node, type, before, after) {
   let cur2 = node.cursor(), result = [];
   if (!cur2.firstChild())
     return result;
-  if (before != null) {
-    while (!cur2.type.is(before))
+  if (before != null)
+    for (let found = false; !found; ) {
+      found = cur2.type.is(before);
       if (!cur2.nextSibling())
         return result;
-  }
+    }
   for (; ; ) {
     if (after != null && cur2.type.is(after))
       return result;
@@ -23808,8 +23770,8 @@ function parseMixed(nest) {
   return (parse, input, fragments, ranges) => new MixedParse(parse, nest, input, fragments, ranges);
 }
 var InnerParse = class {
-  constructor(parser6, parse, overlay, target, from) {
-    this.parser = parser6;
+  constructor(parser7, parse, overlay, target, from) {
+    this.parser = parser7;
     this.parse = parse;
     this.overlay = overlay;
     this.target = target;
@@ -23821,8 +23783,8 @@ function checkRanges(ranges) {
     throw new RangeError("Invalid inner parse ranges given: " + JSON.stringify(ranges));
 }
 var ActiveOverlay = class {
-  constructor(parser6, predicate, mounts, index, start, target, prev) {
-    this.parser = parser6;
+  constructor(parser7, predicate, mounts, index, start, target, prev) {
+    this.parser = parser7;
     this.predicate = predicate;
     this.mounts = mounts;
     this.index = index;
@@ -23981,16 +23943,12 @@ function sliceBuf(buf, startI, endI, nodes, positions, off) {
 }
 function materialize(cursor) {
   let { node } = cursor, stack = [];
+  let buffer = node.context.buffer;
   do {
     stack.push(cursor.index);
     cursor.parent();
   } while (!cursor.tree);
-  let i2 = 0, base2 = cursor.tree, off = 0;
-  for (; ; i2++) {
-    off = base2.positions[i2] + cursor.from;
-    if (off <= node.from && off + base2.children[i2].length >= node.to)
-      break;
-  }
+  let base2 = cursor.tree, i2 = base2.children.indexOf(buffer);
   let buf = base2.children[i2], b3 = buf.buffer, newStack = [i2];
   function split(startI, endI, type, innerOffset, length, stackPos) {
     let targetI = stack[stackPos];
@@ -24071,14 +24029,14 @@ var FragmentCursor = class {
       this.inner = new StructureCursor(frag.tree, -frag.offset);
     }
   }
-  findMounts(pos, parser6) {
+  findMounts(pos, parser7) {
     var _a3;
     let result = [];
     if (this.inner) {
       this.inner.cursor.moveTo(pos, 1);
       for (let pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
         let mount = (_a3 = pos2.tree) === null || _a3 === void 0 ? void 0 : _a3.prop(NodeProp.mounted);
-        if (mount && mount.parser == parser6) {
+        if (mount && mount.parser == parser7) {
           for (let i2 = this.fragI; i2 < this.fragments.length; i2++) {
             let frag = this.fragments[i2];
             if (frag.from >= pos2.to)
@@ -24886,14 +24844,14 @@ var Language = class {
   configure your parser to [attach](https://codemirror.net/6/docs/ref/#language.languageDataProp) it
   to the language's outer syntax node.
   */
-  constructor(data, parser6, extraExtensions = [], name2 = "") {
+  constructor(data, parser7, extraExtensions = [], name2 = "") {
     this.data = data;
     this.name = name2;
     if (!EditorState.prototype.hasOwnProperty("tree"))
       Object.defineProperty(EditorState.prototype, "tree", { get() {
         return syntaxTree(this);
       } });
-    this.parser = parser6;
+    this.parser = parser7;
     this.extension = [
       language.of(this),
       EditorState.languageData.of((state, pos, side) => {
@@ -24980,9 +24938,9 @@ function topNodeAt(state, pos, side) {
   return tree;
 }
 var LRLanguage = class _LRLanguage extends Language {
-  constructor(data, parser6, name2) {
-    super(data, parser6, [], name2);
-    this.parser = parser6;
+  constructor(data, parser7, name2) {
+    super(data, parser7, [], name2);
+    this.parser = parser7;
   }
   /**
   Define a language from a parser.
@@ -25043,8 +25001,8 @@ var DocInput = class {
 };
 var currentContext = null;
 var ParseContext = class _ParseContext {
-  constructor(parser6, state, fragments = [], tree, treeLen, viewport, skipped, scheduleOn) {
-    this.parser = parser6;
+  constructor(parser7, state, fragments = [], tree, treeLen, viewport, skipped, scheduleOn) {
+    this.parser = parser7;
     this.state = state;
     this.fragments = fragments;
     this.tree = tree;
@@ -25058,8 +25016,8 @@ var ParseContext = class _ParseContext {
   /**
   @internal
   */
-  static create(parser6, state, viewport) {
-    return new _ParseContext(parser6, state, [], Tree.empty, 0, viewport, [], null);
+  static create(parser7, state, viewport) {
+    return new _ParseContext(parser7, state, [], Tree.empty, 0, viewport, [], null);
   }
   startParse() {
     return this.parser.startParse(new DocInput(this.state.doc), this.fragments);
@@ -25207,7 +25165,7 @@ var ParseContext = class _ParseContext {
     return new class extends Parser {
       createParse(input, fragments, ranges) {
         let from = ranges[0].from, to = ranges[ranges.length - 1].to;
-        let parser6 = {
+        let parser7 = {
           parsedPos: from,
           advance() {
             let cx = currentContext;
@@ -25224,7 +25182,7 @@ var ParseContext = class _ParseContext {
           stopAt() {
           }
         };
-        return parser6;
+        return parser7;
       }
     }();
   }
@@ -26452,20 +26410,20 @@ function defaultCopyState(state) {
 }
 var IndentedFrom = /* @__PURE__ */ new WeakMap();
 var StreamLanguage = class _StreamLanguage extends Language {
-  constructor(parser6) {
-    let data = defineLanguageFacet(parser6.languageData);
-    let p2 = fullParser(parser6), self2;
+  constructor(parser7) {
+    let data = defineLanguageFacet(parser7.languageData);
+    let p2 = fullParser(parser7), self2;
     let impl = new class extends Parser {
       createParse(input, fragments, ranges) {
         return new Parse(self2, input, fragments, ranges);
       }
     }();
-    super(data, impl, [indentService.of((cx, pos) => this.getIndent(cx, pos))], parser6.name);
+    super(data, impl, [indentService.of((cx, pos) => this.getIndent(cx, pos))], parser7.name);
     this.topNode = docID(data);
     self2 = this;
     this.streamParser = p2;
     this.stateAfter = new NodeProp({ perNode: true });
-    this.tokenTable = parser6.tokenTable ? new TokenTable(p2.tokenTable) : defaultTokenTable;
+    this.tokenTable = parser7.tokenTable ? new TokenTable(p2.tokenTable) : defaultTokenTable;
   }
   /**
   Define a stream language.
@@ -26611,9 +26569,9 @@ var Parse = class {
   lineAfter(pos) {
     let chunk = this.input.chunk(pos);
     if (!this.input.lineChunks) {
-      let eol = chunk.indexOf("\n");
-      if (eol > -1)
-        chunk = chunk.slice(0, eol);
+      let eol2 = chunk.indexOf("\n");
+      if (eol2 > -1)
+        chunk = chunk.slice(0, eol2);
     } else if (chunk == "\n") {
       chunk = "";
     }
@@ -28302,11 +28260,11 @@ var deleteBracketPair = ({ state, dispatch }) => {
   if (state.readOnly)
     return false;
   let conf = config(state, state.selection.main.head);
-  let tokens = conf.brackets || defaults2.brackets;
+  let tokens2 = conf.brackets || defaults2.brackets;
   let dont = null, changes = state.changeByRange((range) => {
     if (range.empty) {
       let before = prevChar(state.doc, range.head);
-      for (let token of tokens) {
+      for (let token of tokens2) {
         if (token == before && nextChar(state.doc, range.head) == closing(codePointAt(token, 0)))
           return {
             changes: { from: range.head - token.length, to: range.head + token.length },
@@ -28325,11 +28283,11 @@ var closeBracketsKeymap = [
 ];
 function insertBracket(state, bracket2) {
   let conf = config(state, state.selection.main.head);
-  let tokens = conf.brackets || defaults2.brackets;
-  for (let tok of tokens) {
+  let tokens2 = conf.brackets || defaults2.brackets;
+  for (let tok of tokens2) {
     let closed = closing(codePointAt(tok, 0));
     if (bracket2 == tok)
-      return closed == tok ? handleSame(state, tok, tokens.indexOf(tok + tok + tok) > -1, conf) : handleOpen(state, tok, closed, conf.before || defaults2.before);
+      return closed == tok ? handleSame(state, tok, tokens2.indexOf(tok + tok + tok) > -1, conf) : handleOpen(state, tok, closed, conf.before || defaults2.before);
     if (bracket2 == closed && closedBracketAt(state, state.selection.main.from))
       return handleClose(state, tok, closed);
   }
@@ -28574,21 +28532,21 @@ function selectedLineRanges(state) {
   return ranges;
 }
 function changeBlockComment(option, state, ranges = state.selection.ranges) {
-  let tokens = ranges.map((r2) => getConfig(state, r2.from).block);
-  if (!tokens.every((c2) => c2))
+  let tokens2 = ranges.map((r2) => getConfig(state, r2.from).block);
+  if (!tokens2.every((c2) => c2))
     return null;
-  let comments = ranges.map((r2, i2) => findBlockComment(state, tokens[i2], r2.from, r2.to));
+  let comments = ranges.map((r2, i2) => findBlockComment(state, tokens2[i2], r2.from, r2.to));
   if (option != 2 && !comments.every((c2) => c2)) {
     return { changes: state.changes(ranges.map((range, i2) => {
       if (comments[i2])
         return [];
-      return [{ from: range.from, insert: tokens[i2].open + " " }, { from: range.to, insert: " " + tokens[i2].close }];
+      return [{ from: range.from, insert: tokens2[i2].open + " " }, { from: range.to, insert: " " + tokens2[i2].close }];
     })) };
   } else if (option != 1 && comments.some((c2) => c2)) {
     let changes = [];
     for (let i2 = 0, comment2; i2 < comments.length; i2++)
       if (comment2 = comments[i2]) {
-        let token = tokens[i2], { open, close } = comment2;
+        let token = tokens2[i2], { open, close } = comment2;
         changes.push({ from: open.pos - token.open.length, to: open.pos + open.margin }, { from: close.pos - close.margin, to: close.pos + token.close.length });
       }
     return { changes };
@@ -29568,13 +29526,13 @@ var Stack = class _Stack {
   reduce(action) {
     var _a3;
     let depth = action >> 19, type = action & 65535;
-    let { parser: parser6 } = this.p;
-    let dPrec = parser6.dynamicPrecedence(type);
+    let { parser: parser7 } = this.p;
+    let dPrec = parser7.dynamicPrecedence(type);
     if (dPrec)
       this.score += dPrec;
     if (depth == 0) {
-      this.pushState(parser6.getGoto(this.state, type, true), this.reducePos);
-      if (type < parser6.minRepeatTerm)
+      this.pushState(parser7.getGoto(this.state, type, true), this.reducePos);
+      if (type < parser7.minRepeatTerm)
         this.storeNode(type, this.reducePos, this.reducePos, 4, true);
       this.reduceContext(type, this.reducePos);
       return;
@@ -29592,8 +29550,8 @@ var Stack = class _Stack {
       }
     }
     let bufferBase = base2 ? this.stack[base2 - 1] : 0, count = this.bufferBase + this.buffer.length - bufferBase;
-    if (type < parser6.minRepeatTerm || action & 131072) {
-      let pos = parser6.stateFlag(
+    if (type < parser7.minRepeatTerm || action & 131072) {
+      let pos = parser7.stateFlag(
         this.state,
         1
         /* StateFlag.Skipped */
@@ -29604,7 +29562,7 @@ var Stack = class _Stack {
       this.state = this.stack[base2];
     } else {
       let baseStateID = this.stack[base2 - 3];
-      this.state = parser6.getGoto(baseStateID, type, true);
+      this.state = parser7.getGoto(baseStateID, type, true);
     }
     while (this.stack.length > base2)
       this.stack.pop();
@@ -29658,10 +29616,10 @@ var Stack = class _Stack {
     if (action & 131072) {
       this.pushState(action & 65535, this.pos);
     } else if ((action & 262144) == 0) {
-      let nextState = action, { parser: parser6 } = this.p;
-      if (end > this.pos || type <= parser6.maxNode) {
+      let nextState = action, { parser: parser7 } = this.p;
+      if (end > this.pos || type <= parser7.maxNode) {
         this.pos = end;
-        if (!parser6.stateFlag(
+        if (!parser7.stateFlag(
           nextState,
           1
           /* StateFlag.Skipped */
@@ -29670,7 +29628,7 @@ var Stack = class _Stack {
       }
       this.pushState(nextState, start);
       this.shiftContext(type, start);
-      if (type <= parser6.maxNode)
+      if (type <= parser7.maxNode)
         this.buffer.push(type, start, end, 4);
     } else {
       this.pos = end;
@@ -29804,18 +29762,18 @@ var Stack = class _Stack {
   @internal
   */
   forceReduce() {
-    let { parser: parser6 } = this.p;
-    let reduce = parser6.stateSlot(
+    let { parser: parser7 } = this.p;
+    let reduce = parser7.stateSlot(
       this.state,
       5
       /* ParseState.ForcedReduce */
     );
     if ((reduce & 65536) == 0)
       return false;
-    if (!parser6.validAction(this.state, reduce)) {
+    if (!parser7.validAction(this.state, reduce)) {
       let depth = reduce >> 19, term = reduce & 65535;
       let target = this.stack.length - depth * 3;
-      if (target < 0 || parser6.getGoto(this.stack[target], term, false) < 0) {
+      if (target < 0 || parser7.getGoto(this.stack[target], term, false) < 0) {
         let backup = this.findForcedReduction();
         if (backup == null)
           return false;
@@ -29834,19 +29792,19 @@ var Stack = class _Stack {
   isn't a valid action. @internal
   */
   findForcedReduction() {
-    let { parser: parser6 } = this.p, seen = [];
+    let { parser: parser7 } = this.p, seen = [];
     let explore = (state, depth) => {
       if (seen.includes(state))
         return;
       seen.push(state);
-      return parser6.allActions(state, (action) => {
+      return parser7.allActions(state, (action) => {
         if (action & (262144 | 131072))
           ;
         else if (action & 65536) {
           let rDepth = (action >> 19) - depth;
           if (rDepth > 1) {
             let term = action & 65535, target = this.stack.length - rDepth * 3;
-            if (target >= 0 && parser6.getGoto(this.stack[target], term, false) >= 0)
+            if (target >= 0 && parser7.getGoto(this.stack[target], term, false) >= 0)
               return rDepth << 19 | 65536 | term;
           }
         } else {
@@ -29882,12 +29840,12 @@ var Stack = class _Stack {
   get deadEnd() {
     if (this.stack.length != 3)
       return false;
-    let { parser: parser6 } = this.p;
-    return parser6.data[parser6.stateSlot(
+    let { parser: parser7 } = this.p;
+    return parser7.data[parser7.stateSlot(
       this.state,
       1
       /* ParseState.Actions */
-    )] == 65535 && !parser6.stateSlot(
+    )] == 65535 && !parser7.stateSlot(
       this.state,
       4
       /* ParseState.DefaultReduce */
@@ -30048,7 +30006,7 @@ var StackBufferCursor = class _StackBufferCursor {
     return new _StackBufferCursor(this.stack, this.pos, this.index);
   }
 };
-function decodeArray(input, Type = Uint16Array) {
+function decodeArray(input, Type2 = Uint16Array) {
   if (typeof input != "string")
     return input;
   let array = null;
@@ -30077,7 +30035,7 @@ function decodeArray(input, Type = Uint16Array) {
     if (array)
       array[out++] = value;
     else
-      array = new Type(value);
+      array = new Type2(value);
   }
   return array;
 }
@@ -30302,8 +30260,8 @@ var TokenGroup = class {
     this.id = id2;
   }
   token(input, stack) {
-    let { parser: parser6 } = stack.p;
-    readToken2(this.data, input, stack, this.id, parser6.data, parser6.tokenPrecTable);
+    let { parser: parser7 } = stack.p;
+    readToken2(this.data, input, stack, this.id, parser7.data, parser7.tokenPrecTable);
   }
 };
 TokenGroup.prototype.contextual = TokenGroup.prototype.fallback = TokenGroup.prototype.extend = false;
@@ -30351,7 +30309,7 @@ var ExternalTokenizer = class {
   }
 };
 function readToken2(data, input, stack, group, precTable, precOffset) {
-  let state = 0, groupMask = 1 << group, { dialect } = stack.p.parser;
+  let state = 0, groupMask = 1 << group, { dialect: dialect2 } = stack.p.parser;
   scan:
     for (; ; ) {
       if ((groupMask & data[state]) == 0)
@@ -30360,7 +30318,7 @@ function readToken2(data, input, stack, group, precTable, precOffset) {
       for (let i2 = state + 3; i2 < accEnd; i2 += 2)
         if ((data[i2 + 1] & groupMask) > 0) {
           let term = data[i2];
-          if (dialect.allows(term) && (input.token.value == -1 || input.token.value == term || overrides(term, input.token.value, precTable, precOffset))) {
+          if (dialect2.allows(term) && (input.token.value == -1 || input.token.value == term || overrides(term, input.token.value, precTable, precOffset))) {
             input.acceptToken(term);
             break;
           }
@@ -30505,18 +30463,18 @@ var FragmentCursor2 = class {
   }
 };
 var TokenCache = class {
-  constructor(parser6, stream) {
+  constructor(parser7, stream) {
     this.stream = stream;
     this.tokens = [];
     this.mainToken = null;
     this.actions = [];
-    this.tokens = parser6.tokenizers.map((_2) => new CachedToken());
+    this.tokens = parser7.tokenizers.map((_2) => new CachedToken());
   }
   getActions(stack) {
     let actionIndex = 0;
     let main = null;
-    let { parser: parser6 } = stack.p, { tokenizers } = parser6;
-    let mask = parser6.stateSlot(
+    let { parser: parser7 } = stack.p, { tokenizers } = parser7;
+    let mask = parser7.stateSlot(
       stack.state,
       3
       /* ParseState.TokenizerMask */
@@ -30574,10 +30532,10 @@ var TokenCache = class {
     let start = this.stream.clipPos(stack.pos);
     tokenizer.token(this.stream.reset(start, token), stack);
     if (token.value > -1) {
-      let { parser: parser6 } = stack.p;
-      for (let i2 = 0; i2 < parser6.specialized.length; i2++)
-        if (parser6.specialized[i2] == token.value) {
-          let result = parser6.specializers[i2](this.stream.read(token.start, token.end), stack);
+      let { parser: parser7 } = stack.p;
+      for (let i2 = 0; i2 < parser7.specialized.length; i2++)
+        if (parser7.specialized[i2] == token.value) {
+          let result = parser7.specializers[i2](this.stream.read(token.start, token.end), stack);
           if (result >= 0 && stack.p.parser.dialect.allows(result >> 1)) {
             if ((result & 1) == 0)
               token.value = result >> 1;
@@ -30601,9 +30559,9 @@ var TokenCache = class {
     return index;
   }
   addActions(stack, token, end, index) {
-    let { state } = stack, { parser: parser6 } = stack.p, { data } = parser6;
+    let { state } = stack, { parser: parser7 } = stack.p, { data } = parser7;
     for (let set = 0; set < 2; set++) {
-      for (let i2 = parser6.stateSlot(
+      for (let i2 = parser7.stateSlot(
         state,
         set ? 2 : 1
         /* ParseState.Actions */
@@ -30625,8 +30583,8 @@ var TokenCache = class {
   }
 };
 var Parse2 = class {
-  constructor(parser6, input, fragments, ranges) {
-    this.parser = parser6;
+  constructor(parser7, input, fragments, ranges) {
+    this.parser = parser7;
     this.input = input;
     this.ranges = ranges;
     this.recovering = 0;
@@ -30638,11 +30596,11 @@ var Parse2 = class {
     this.lastBigReductionSize = 0;
     this.bigReductionCount = 0;
     this.stream = new InputStream(input, ranges);
-    this.tokens = new TokenCache(parser6, this.stream);
-    this.topTerm = parser6.top[1];
+    this.tokens = new TokenCache(parser7, this.stream);
+    this.topTerm = parser7.top[1];
     let { from } = ranges[0];
-    this.stacks = [Stack.start(this, parser6.top[0], from)];
-    this.fragments = fragments.length && this.stream.end - from > parser6.bufferLength * 4 ? new FragmentCursor2(fragments, parser6.nodeSet) : null;
+    this.stacks = [Stack.start(this, parser7.top[0], from)];
+    this.fragments = fragments.length && this.stream.end - from > parser7.bufferLength * 4 ? new FragmentCursor2(fragments, parser7.nodeSet) : null;
   }
   get parsedPos() {
     return this.minStackPos;
@@ -30754,18 +30712,18 @@ var Parse2 = class {
   // given, stacks split off by ambiguous operations will be pushed to
   // `split`, or added to `stacks` if they move `pos` forward.
   advanceStack(stack, stacks, split) {
-    let start = stack.pos, { parser: parser6 } = this;
+    let start = stack.pos, { parser: parser7 } = this;
     let base2 = verbose ? this.stackID(stack) + " -> " : "";
     if (this.stoppedAt != null && start > this.stoppedAt)
       return stack.forceReduce() ? stack : null;
     if (this.fragments) {
       let strictCx = stack.curContext && stack.curContext.tracker.strict, cxHash = strictCx ? stack.curContext.hash : 0;
       for (let cached = this.fragments.nodeAt(start); cached; ) {
-        let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser6.getGoto(stack.state, cached.type.id) : -1;
+        let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser7.getGoto(stack.state, cached.type.id) : -1;
         if (match > -1 && cached.length && (!strictCx || (cached.prop(NodeProp.contextHash) || 0) == cxHash)) {
           stack.useNode(cached, match);
           if (verbose)
-            console.log(base2 + this.stackID(stack) + ` (via reuse of ${parser6.getName(cached.type.id)})`);
+            console.log(base2 + this.stackID(stack) + ` (via reuse of ${parser7.getName(cached.type.id)})`);
           return true;
         }
         if (!(cached instanceof Tree) || cached.children.length == 0 || cached.positions[0] > 0)
@@ -30777,7 +30735,7 @@ var Parse2 = class {
           break;
       }
     }
-    let defaultReduce = parser6.stateSlot(
+    let defaultReduce = parser7.stateSlot(
       stack.state,
       4
       /* ParseState.DefaultReduce */
@@ -30785,7 +30743,7 @@ var Parse2 = class {
     if (defaultReduce > 0) {
       stack.reduce(defaultReduce);
       if (verbose)
-        console.log(base2 + this.stackID(stack) + ` (via always-reduce ${parser6.getName(
+        console.log(base2 + this.stackID(stack) + ` (via always-reduce ${parser7.getName(
           defaultReduce & 65535
           /* Action.ValueMask */
         )})`);
@@ -30803,10 +30761,10 @@ var Parse2 = class {
       let main = this.tokens.mainToken;
       localStack.apply(action, term, main ? main.start : localStack.pos, end);
       if (verbose)
-        console.log(base2 + this.stackID(localStack) + ` (via ${(action & 65536) == 0 ? "shift" : `reduce of ${parser6.getName(
+        console.log(base2 + this.stackID(localStack) + ` (via ${(action & 65536) == 0 ? "shift" : `reduce of ${parser7.getName(
           action & 65535
           /* Action.ValueMask */
-        )}`} for ${parser6.getName(term)} @ ${start}${localStack == stack ? "" : ", split"})`);
+        )}`} for ${parser7.getName(term)} @ ${start}${localStack == stack ? "" : ", split"})`);
       if (last)
         return true;
       else if (localStack.pos > start)
@@ -30830,10 +30788,10 @@ var Parse2 = class {
       }
     }
   }
-  runRecovery(stacks, tokens, newStacks) {
+  runRecovery(stacks, tokens2, newStacks) {
     let finished = null, restarted = false;
     for (let i2 = 0; i2 < stacks.length; i2++) {
-      let stack = stacks[i2], token = tokens[i2 << 1], tokenEnd = tokens[(i2 << 1) + 1];
+      let stack = stacks[i2], token = tokens2[i2 << 1], tokenEnd = tokens2[(i2 << 1) + 1];
       let base2 = verbose ? this.stackID(stack) + " -> " : "";
       if (stack.deadEnd) {
         if (restarted)
@@ -31206,10 +31164,10 @@ var LRParser = class _LRParser extends Parser {
   /**
   @internal
   */
-  parseDialect(dialect) {
+  parseDialect(dialect2) {
     let values2 = Object.keys(this.dialects), flags = values2.map(() => false);
-    if (dialect)
-      for (let part of dialect.split(" ")) {
+    if (dialect2)
+      for (let part of dialect2.split(" ")) {
         let id2 = values2.indexOf(part);
         if (id2 >= 0)
           flags[id2] = true;
@@ -31220,7 +31178,7 @@ var LRParser = class _LRParser extends Parser {
         for (let j3 = this.dialects[values2[i2]], id2; (id2 = this.data[j3++]) != 65535; )
           (disabled || (disabled = new Uint8Array(this.maxTerm + 1)))[id2] = 1;
       }
-    return new Dialect(dialect, flags, disabled);
+    return new Dialect(dialect2, flags, disabled);
   }
   /**
   Used by the output of the parser generator. Not available to
@@ -33752,14 +33710,14 @@ var htmlLanguage = /* @__PURE__ */ htmlPlain.configure({
   wrap: /* @__PURE__ */ configureNesting(defaultNesting, defaultAttrs)
 });
 function html(config2 = {}) {
-  let dialect = "", wrap;
+  let dialect2 = "", wrap;
   if (config2.matchClosingTags === false)
-    dialect = "noMatch";
+    dialect2 = "noMatch";
   if (config2.selfClosingTags === true)
-    dialect = (dialect ? dialect + " " : "") + "selfClosing";
+    dialect2 = (dialect2 ? dialect2 + " " : "") + "selfClosing";
   if (config2.nestedLanguages && config2.nestedLanguages.length || config2.nestedAttributes && config2.nestedAttributes.length)
     wrap = configureNesting((config2.nestedLanguages || []).concat(defaultNesting), (config2.nestedAttributes || []).concat(defaultAttrs));
-  let lang = wrap ? htmlPlain.configure({ wrap, dialect }) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage;
+  let lang = wrap ? htmlPlain.configure({ wrap, dialect: dialect2 }) : dialect2 ? htmlLanguage.configure({ dialect: dialect2 }) : htmlLanguage;
   return new LanguageSupport(lang, [
     htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config2) }),
     config2.autoCloseTags !== false ? autoCloseTags2 : [],
@@ -34463,6 +34421,695 @@ function python() {
   ]);
 }
 
+// node_modules/@codemirror/lang-sql/dist/index.js
+var whitespace = 36;
+var LineComment2 = 1;
+var BlockComment2 = 2;
+var String$1 = 3;
+var Number2 = 4;
+var Bool2 = 5;
+var Null = 6;
+var ParenL2 = 7;
+var ParenR = 8;
+var BraceL2 = 9;
+var BraceR = 10;
+var BracketL2 = 11;
+var BracketR = 12;
+var Semi = 13;
+var Dot = 14;
+var Operator = 15;
+var Punctuation = 16;
+var SpecialVar = 17;
+var Identifier3 = 18;
+var QuotedIdentifier = 19;
+var Keyword = 20;
+var Type = 21;
+var Bits = 22;
+var Bytes = 23;
+var Builtin = 24;
+function isAlpha2(ch) {
+  return ch >= 65 && ch <= 90 || ch >= 97 && ch <= 122 || ch >= 48 && ch <= 57;
+}
+function isHexDigit(ch) {
+  return ch >= 48 && ch <= 57 || ch >= 97 && ch <= 102 || ch >= 65 && ch <= 70;
+}
+function readLiteral(input, endQuote, backslashEscapes) {
+  for (let escaped = false; ; ) {
+    if (input.next < 0)
+      return;
+    if (input.next == endQuote && !escaped) {
+      input.advance();
+      return;
+    }
+    escaped = backslashEscapes && !escaped && input.next == 92;
+    input.advance();
+  }
+}
+function readDoubleDollarLiteral(input, tag) {
+  scan:
+    for (; ; ) {
+      if (input.next < 0)
+        return console.log("exit at end", input.pos);
+      if (input.next == 36) {
+        input.advance();
+        for (let i2 = 0; i2 < tag.length; i2++) {
+          if (input.next != tag.charCodeAt(i2))
+            continue scan;
+          input.advance();
+        }
+        if (input.next == 36) {
+          input.advance();
+          return;
+        }
+      } else {
+        input.advance();
+      }
+    }
+}
+function readPLSQLQuotedLiteral(input, openDelim) {
+  let matchingDelim = "[{<(".indexOf(String.fromCharCode(openDelim));
+  let closeDelim = matchingDelim < 0 ? openDelim : "]}>)".charCodeAt(matchingDelim);
+  for (; ; ) {
+    if (input.next < 0)
+      return;
+    if (input.next == closeDelim && input.peek(1) == 39) {
+      input.advance(2);
+      return;
+    }
+    input.advance();
+  }
+}
+function readWord(input, result) {
+  for (; ; ) {
+    if (input.next != 95 && !isAlpha2(input.next))
+      break;
+    if (result != null)
+      result += String.fromCharCode(input.next);
+    input.advance();
+  }
+  return result;
+}
+function readWordOrQuoted(input) {
+  if (input.next == 39 || input.next == 34 || input.next == 96) {
+    let quote = input.next;
+    input.advance();
+    readLiteral(input, quote, false);
+  } else {
+    readWord(input);
+  }
+}
+function readBits(input, endQuote) {
+  while (input.next == 48 || input.next == 49)
+    input.advance();
+  if (endQuote && input.next == endQuote)
+    input.advance();
+}
+function readNumber(input, sawDot) {
+  for (; ; ) {
+    if (input.next == 46) {
+      if (sawDot)
+        break;
+      sawDot = true;
+    } else if (input.next < 48 || input.next > 57) {
+      break;
+    }
+    input.advance();
+  }
+  if (input.next == 69 || input.next == 101) {
+    input.advance();
+    if (input.next == 43 || input.next == 45)
+      input.advance();
+    while (input.next >= 48 && input.next <= 57)
+      input.advance();
+  }
+}
+function eol(input) {
+  while (!(input.next < 0 || input.next == 10))
+    input.advance();
+}
+function inString(ch, str) {
+  for (let i2 = 0; i2 < str.length; i2++)
+    if (str.charCodeAt(i2) == ch)
+      return true;
+  return false;
+}
+var Space = " 	\r\n";
+function keywords2(keywords4, types2, builtin) {
+  let result = /* @__PURE__ */ Object.create(null);
+  result["true"] = result["false"] = Bool2;
+  result["null"] = result["unknown"] = Null;
+  for (let kw of keywords4.split(" "))
+    if (kw)
+      result[kw] = Keyword;
+  for (let tp of types2.split(" "))
+    if (tp)
+      result[tp] = Type;
+  for (let kw of (builtin || "").split(" "))
+    if (kw)
+      result[kw] = Builtin;
+  return result;
+}
+var SQLTypes = "array binary bit boolean char character clob date decimal double float int integer interval large national nchar nclob numeric object precision real smallint time timestamp varchar varying ";
+var SQLKeywords = "absolute action add after all allocate alter and any are as asc assertion at authorization before begin between both breadth by call cascade cascaded case cast catalog check close collate collation column commit condition connect connection constraint constraints constructor continue corresponding count create cross cube current current_date current_default_transform_group current_transform_group_for_type current_path current_role current_time current_timestamp current_user cursor cycle data day deallocate declare default deferrable deferred delete depth deref desc describe descriptor deterministic diagnostics disconnect distinct do domain drop dynamic each else elseif end end-exec equals escape except exception exec execute exists exit external fetch first for foreign found from free full function general get global go goto grant group grouping handle having hold hour identity if immediate in indicator initially inner inout input insert intersect into is isolation join key language last lateral leading leave left level like limit local localtime localtimestamp locator loop map match method minute modifies module month names natural nesting new next no none not of old on only open option or order ordinality out outer output overlaps pad parameter partial path prepare preserve primary prior privileges procedure public read reads recursive redo ref references referencing relative release repeat resignal restrict result return returns revoke right role rollback rollup routine row rows savepoint schema scroll search second section select session session_user set sets signal similar size some space specific specifictype sql sqlexception sqlstate sqlwarning start state static system_user table temporary then timezone_hour timezone_minute to trailing transaction translation treat trigger under undo union unique unnest until update usage user using value values view when whenever where while with without work write year zone ";
+var defaults3 = {
+  backslashEscapes: false,
+  hashComments: false,
+  spaceAfterDashes: false,
+  slashComments: false,
+  doubleQuotedStrings: false,
+  doubleDollarQuotedStrings: false,
+  unquotedBitLiterals: false,
+  treatBitsAsBytes: false,
+  charSetCasts: false,
+  plsqlQuotingMechanism: false,
+  operatorChars: "*+-%<>!=&|~^/",
+  specialVar: "?",
+  identifierQuotes: '"',
+  caseInsensitiveIdentifiers: false,
+  words: /* @__PURE__ */ keywords2(SQLKeywords, SQLTypes)
+};
+function dialect(spec, kws, types2, builtin) {
+  let dialect2 = {};
+  for (let prop in defaults3)
+    dialect2[prop] = (spec.hasOwnProperty(prop) ? spec : defaults3)[prop];
+  if (kws)
+    dialect2.words = keywords2(kws, types2 || "", builtin);
+  return dialect2;
+}
+function tokensFor(d2) {
+  return new ExternalTokenizer((input) => {
+    var _a3;
+    let { next } = input;
+    input.advance();
+    if (inString(next, Space)) {
+      while (inString(input.next, Space))
+        input.advance();
+      input.acceptToken(whitespace);
+    } else if (next == 36 && d2.doubleDollarQuotedStrings) {
+      let tag = readWord(input, "");
+      if (input.next == 36) {
+        input.advance();
+        readDoubleDollarLiteral(input, tag);
+        input.acceptToken(String$1);
+      }
+    } else if (next == 39 || next == 34 && d2.doubleQuotedStrings) {
+      readLiteral(input, next, d2.backslashEscapes);
+      input.acceptToken(String$1);
+    } else if (next == 35 && d2.hashComments || next == 47 && input.next == 47 && d2.slashComments) {
+      eol(input);
+      input.acceptToken(LineComment2);
+    } else if (next == 45 && input.next == 45 && (!d2.spaceAfterDashes || input.peek(1) == 32)) {
+      eol(input);
+      input.acceptToken(LineComment2);
+    } else if (next == 47 && input.next == 42) {
+      input.advance();
+      for (let depth = 1; ; ) {
+        let cur2 = input.next;
+        if (input.next < 0)
+          break;
+        input.advance();
+        if (cur2 == 42 && input.next == 47) {
+          depth--;
+          input.advance();
+          if (!depth)
+            break;
+        } else if (cur2 == 47 && input.next == 42) {
+          depth++;
+          input.advance();
+        }
+      }
+      input.acceptToken(BlockComment2);
+    } else if ((next == 101 || next == 69) && input.next == 39) {
+      input.advance();
+      readLiteral(input, 39, true);
+      input.acceptToken(String$1);
+    } else if ((next == 110 || next == 78) && input.next == 39 && d2.charSetCasts) {
+      input.advance();
+      readLiteral(input, 39, d2.backslashEscapes);
+      input.acceptToken(String$1);
+    } else if (next == 95 && d2.charSetCasts) {
+      for (let i2 = 0; ; i2++) {
+        if (input.next == 39 && i2 > 1) {
+          input.advance();
+          readLiteral(input, 39, d2.backslashEscapes);
+          input.acceptToken(String$1);
+          break;
+        }
+        if (!isAlpha2(input.next))
+          break;
+        input.advance();
+      }
+    } else if (d2.plsqlQuotingMechanism && (next == 113 || next == 81) && input.next == 39 && input.peek(1) > 0 && !inString(input.peek(1), Space)) {
+      let openDelim = input.peek(1);
+      input.advance(2);
+      readPLSQLQuotedLiteral(input, openDelim);
+      input.acceptToken(String$1);
+    } else if (next == 40) {
+      input.acceptToken(ParenL2);
+    } else if (next == 41) {
+      input.acceptToken(ParenR);
+    } else if (next == 123) {
+      input.acceptToken(BraceL2);
+    } else if (next == 125) {
+      input.acceptToken(BraceR);
+    } else if (next == 91) {
+      input.acceptToken(BracketL2);
+    } else if (next == 93) {
+      input.acceptToken(BracketR);
+    } else if (next == 59) {
+      input.acceptToken(Semi);
+    } else if (d2.unquotedBitLiterals && next == 48 && input.next == 98) {
+      input.advance();
+      readBits(input);
+      input.acceptToken(Bits);
+    } else if ((next == 98 || next == 66) && (input.next == 39 || input.next == 34)) {
+      const quoteStyle = input.next;
+      input.advance();
+      if (d2.treatBitsAsBytes) {
+        readLiteral(input, quoteStyle, d2.backslashEscapes);
+        input.acceptToken(Bytes);
+      } else {
+        readBits(input, quoteStyle);
+        input.acceptToken(Bits);
+      }
+    } else if (next == 48 && (input.next == 120 || input.next == 88) || (next == 120 || next == 88) && input.next == 39) {
+      let quoted = input.next == 39;
+      input.advance();
+      while (isHexDigit(input.next))
+        input.advance();
+      if (quoted && input.next == 39)
+        input.advance();
+      input.acceptToken(Number2);
+    } else if (next == 46 && input.next >= 48 && input.next <= 57) {
+      readNumber(input, true);
+      input.acceptToken(Number2);
+    } else if (next == 46) {
+      input.acceptToken(Dot);
+    } else if (next >= 48 && next <= 57) {
+      readNumber(input, false);
+      input.acceptToken(Number2);
+    } else if (inString(next, d2.operatorChars)) {
+      while (inString(input.next, d2.operatorChars))
+        input.advance();
+      input.acceptToken(Operator);
+    } else if (inString(next, d2.specialVar)) {
+      if (input.next == next)
+        input.advance();
+      readWordOrQuoted(input);
+      input.acceptToken(SpecialVar);
+    } else if (inString(next, d2.identifierQuotes)) {
+      readLiteral(input, next, false);
+      input.acceptToken(QuotedIdentifier);
+    } else if (next == 58 || next == 44) {
+      input.acceptToken(Punctuation);
+    } else if (isAlpha2(next)) {
+      let word = readWord(input, String.fromCharCode(next));
+      input.acceptToken(input.next == 46 || input.peek(-word.length - 1) == 46 ? Identifier3 : (_a3 = d2.words[word.toLowerCase()]) !== null && _a3 !== void 0 ? _a3 : Identifier3);
+    }
+  });
+}
+var tokens = /* @__PURE__ */ tokensFor(defaults3);
+var parser$1 = /* @__PURE__ */ LRParser.deserialize({
+  version: 14,
+  states: "%vQ]QQOOO#wQRO'#DSO$OQQO'#CwO%eQQO'#CxO%lQQO'#CyO%sQQO'#CzOOQQ'#DS'#DSOOQQ'#C}'#C}O'UQRO'#C{OOQQ'#Cv'#CvOOQQ'#C|'#C|Q]QQOOQOQQOOO'`QQO'#DOO(xQRO,59cO)PQQO,59cO)UQQO'#DSOOQQ,59d,59dO)cQQO,59dOOQQ,59e,59eO)jQQO,59eOOQQ,59f,59fO)qQQO,59fOOQQ-E6{-E6{OOQQ,59b,59bOOQQ-E6z-E6zOOQQ,59j,59jOOQQ-E6|-E6|O+VQRO1G.}O+^QQO,59cOOQQ1G/O1G/OOOQQ1G/P1G/POOQQ1G/Q1G/QP+kQQO'#C}O+rQQO1G.}O)PQQO,59cO,PQQO'#Cw",
+  stateData: ",[~OtOSPOSQOS~ORUOSUOTUOUUOVROXSOZTO]XO^QO_UO`UOaPObPOcPOdUOeUOfUOgUOhUO~O^]ORvXSvXTvXUvXVvXXvXZvX]vX_vX`vXavXbvXcvXdvXevXfvXgvXhvX~OsvX~P!jOa_Ob_Oc_O~ORUOSUOTUOUUOVROXSOZTO^tO_UO`UOa`Ob`Oc`OdUOeUOfUOgUOhUO~OWaO~P$ZOYcO~P$ZO[eO~P$ZORUOSUOTUOUUOVROXSOZTO^QO_UO`UOaPObPOcPOdUOeUOfUOgUOhUO~O]hOsoX~P%zOajObjOcjO~O^]ORkaSkaTkaUkaVkaXkaZka]ka_ka`kaakabkackadkaekafkagkahka~Oska~P'kO^]O~OWvXYvX[vX~P!jOWnO~P$ZOYoO~P$ZO[pO~P$ZO^]ORkiSkiTkiUkiVkiXkiZki]ki_ki`kiakibkickidkiekifkigkihki~Oski~P)xOWkaYka[ka~P'kO]hO~P$ZOWkiYki[ki~P)xOasObsOcsO~O",
+  goto: "#hwPPPPPPPPPPPPPPPPPPPPPPPPPPx||||!Y!^!d!xPPP#[TYOZeUORSTWZbdfqT[OZQZORiZSWOZQbRQdSQfTZgWbdfqQ^PWk^lmrQl_Qm`RrseVORSTWZbdfq",
+  nodeNames: "\u26A0 LineComment BlockComment String Number Bool Null ( ) { } [ ] ; . Operator Punctuation SpecialVar Identifier QuotedIdentifier Keyword Type Bits Bytes Builtin Script Statement CompositeIdentifier Parens Braces Brackets Statement",
+  maxTerm: 38,
+  nodeProps: [
+    ["isolate", -4, 1, 2, 3, 19, ""]
+  ],
+  skippedNodes: [0, 1, 2],
+  repeatNodeCount: 3,
+  tokenData: "RORO",
+  tokenizers: [0, tokens],
+  topRules: { "Script": [0, 25] },
+  tokenPrec: 0
+});
+function tokenBefore(tree) {
+  let cursor = tree.cursor().moveTo(tree.from, -1);
+  while (/Comment/.test(cursor.name))
+    cursor.moveTo(cursor.from, -1);
+  return cursor.node;
+}
+function idName(doc2, node) {
+  let text = doc2.sliceString(node.from, node.to);
+  let quoted = /^([`'"])(.*)\1$/.exec(text);
+  return quoted ? quoted[2] : text;
+}
+function plainID(node) {
+  return node && (node.name == "Identifier" || node.name == "QuotedIdentifier");
+}
+function pathFor(doc2, id2) {
+  if (id2.name == "CompositeIdentifier") {
+    let path = [];
+    for (let ch = id2.firstChild; ch; ch = ch.nextSibling)
+      if (plainID(ch))
+        path.push(idName(doc2, ch));
+    return path;
+  }
+  return [idName(doc2, id2)];
+}
+function parentsFor(doc2, node) {
+  for (let path = []; ; ) {
+    if (!node || node.name != ".")
+      return path;
+    let name2 = tokenBefore(node);
+    if (!plainID(name2))
+      return path;
+    path.unshift(idName(doc2, name2));
+    node = tokenBefore(name2);
+  }
+}
+function sourceContext(state, startPos) {
+  let pos = syntaxTree(state).resolveInner(startPos, -1);
+  let aliases = getAliases(state.doc, pos);
+  if (pos.name == "Identifier" || pos.name == "QuotedIdentifier" || pos.name == "Keyword") {
+    return {
+      from: pos.from,
+      quoted: pos.name == "QuotedIdentifier" ? state.doc.sliceString(pos.from, pos.from + 1) : null,
+      parents: parentsFor(state.doc, tokenBefore(pos)),
+      aliases
+    };
+  }
+  if (pos.name == ".") {
+    return { from: startPos, quoted: null, parents: parentsFor(state.doc, pos), aliases };
+  } else {
+    return { from: startPos, quoted: null, parents: [], empty: true, aliases };
+  }
+}
+var EndFrom = /* @__PURE__ */ new Set(/* @__PURE__ */ "where group having order union intersect except all distinct limit offset fetch for".split(" "));
+function getAliases(doc2, at) {
+  let statement;
+  for (let parent = at; !statement; parent = parent.parent) {
+    if (!parent)
+      return null;
+    if (parent.name == "Statement")
+      statement = parent;
+  }
+  let aliases = null;
+  for (let scan = statement.firstChild, sawFrom = false, prevID = null; scan; scan = scan.nextSibling) {
+    let kw = scan.name == "Keyword" ? doc2.sliceString(scan.from, scan.to).toLowerCase() : null;
+    let alias = null;
+    if (!sawFrom) {
+      sawFrom = kw == "from";
+    } else if (kw == "as" && prevID && plainID(scan.nextSibling)) {
+      alias = idName(doc2, scan.nextSibling);
+    } else if (kw && EndFrom.has(kw)) {
+      break;
+    } else if (prevID && plainID(scan)) {
+      alias = idName(doc2, scan);
+    }
+    if (alias) {
+      if (!aliases)
+        aliases = /* @__PURE__ */ Object.create(null);
+      aliases[alias] = pathFor(doc2, prevID);
+    }
+    prevID = /Identifier$/.test(scan.name) ? scan : null;
+  }
+  return aliases;
+}
+function maybeQuoteCompletions(quote, completions) {
+  if (!quote)
+    return completions;
+  return completions.map((c2) => Object.assign(Object.assign({}, c2), { label: c2.label[0] == quote ? c2.label : quote + c2.label + quote, apply: void 0 }));
+}
+var Span = /^\w*$/;
+var QuotedSpan = /^[`'"]?\w*[`'"]?$/;
+function isSelfTag(namespace) {
+  return namespace.self && typeof namespace.self.label == "string";
+}
+var CompletionLevel = class _CompletionLevel {
+  constructor(idQuote, idCaseInsensitive) {
+    this.idQuote = idQuote;
+    this.idCaseInsensitive = idCaseInsensitive;
+    this.list = [];
+    this.children = void 0;
+  }
+  child(name2) {
+    let children = this.children || (this.children = /* @__PURE__ */ Object.create(null));
+    let found = children[name2];
+    if (found)
+      return found;
+    if (name2 && !this.list.some((c2) => c2.label == name2))
+      this.list.push(nameCompletion(name2, "type", this.idQuote, this.idCaseInsensitive));
+    return children[name2] = new _CompletionLevel(this.idQuote, this.idCaseInsensitive);
+  }
+  maybeChild(name2) {
+    return this.children ? this.children[name2] : null;
+  }
+  addCompletion(option) {
+    let found = this.list.findIndex((o2) => o2.label == option.label);
+    if (found > -1)
+      this.list[found] = option;
+    else
+      this.list.push(option);
+  }
+  addCompletions(completions) {
+    for (let option of completions)
+      this.addCompletion(typeof option == "string" ? nameCompletion(option, "property", this.idQuote, this.idCaseInsensitive) : option);
+  }
+  addNamespace(namespace) {
+    if (Array.isArray(namespace)) {
+      this.addCompletions(namespace);
+    } else if (isSelfTag(namespace)) {
+      this.addNamespace(namespace.children);
+    } else {
+      this.addNamespaceObject(namespace);
+    }
+  }
+  addNamespaceObject(namespace) {
+    for (let name2 of Object.keys(namespace)) {
+      let children = namespace[name2], self2 = null;
+      let parts = name2.replace(/\\?\./g, (p2) => p2 == "." ? "\0" : p2).split("\0");
+      let scope = this;
+      if (isSelfTag(children)) {
+        self2 = children.self;
+        children = children.children;
+      }
+      for (let i2 = 0; i2 < parts.length; i2++) {
+        if (self2 && i2 == parts.length - 1)
+          scope.addCompletion(self2);
+        scope = scope.child(parts[i2].replace(/\\\./g, "."));
+      }
+      scope.addNamespace(children);
+    }
+  }
+};
+function nameCompletion(label, type, idQuote, idCaseInsensitive) {
+  if (new RegExp("^[a-z_][a-z_\\d]*$", idCaseInsensitive ? "i" : "").test(label))
+    return { label, type };
+  return { label, type, apply: idQuote + label + idQuote };
+}
+function completeFromSchema(schema, tables, schemas, defaultTableName, defaultSchemaName, dialect2) {
+  var _a3;
+  let idQuote = ((_a3 = dialect2 === null || dialect2 === void 0 ? void 0 : dialect2.spec.identifierQuotes) === null || _a3 === void 0 ? void 0 : _a3[0]) || '"';
+  let top2 = new CompletionLevel(idQuote, !!(dialect2 === null || dialect2 === void 0 ? void 0 : dialect2.spec.caseInsensitiveIdentifiers));
+  let defaultSchema = defaultSchemaName ? top2.child(defaultSchemaName) : null;
+  top2.addNamespace(schema);
+  if (tables)
+    (defaultSchema || top2).addCompletions(tables);
+  if (schemas)
+    top2.addCompletions(schemas);
+  if (defaultSchema)
+    top2.addCompletions(defaultSchema.list);
+  if (defaultTableName)
+    top2.addCompletions((defaultSchema || top2).child(defaultTableName).list);
+  return (context) => {
+    let { parents, from, quoted, empty: empty2, aliases } = sourceContext(context.state, context.pos);
+    if (empty2 && !context.explicit)
+      return null;
+    if (aliases && parents.length == 1)
+      parents = aliases[parents[0]] || parents;
+    let level = top2;
+    for (let name2 of parents) {
+      while (!level.children || !level.children[name2]) {
+        if (level == top2 && defaultSchema)
+          level = defaultSchema;
+        else if (level == defaultSchema && defaultTableName)
+          level = level.child(defaultTableName);
+        else
+          return null;
+      }
+      let next = level.maybeChild(name2);
+      if (!next)
+        return null;
+      level = next;
+    }
+    let quoteAfter = quoted && context.state.sliceDoc(context.pos, context.pos + 1) == quoted;
+    let options2 = level.list;
+    if (level == top2 && aliases)
+      options2 = options2.concat(Object.keys(aliases).map((name2) => ({ label: name2, type: "constant" })));
+    return {
+      from,
+      to: quoteAfter ? context.pos + 1 : void 0,
+      options: maybeQuoteCompletions(quoted, options2),
+      validFor: quoted ? QuotedSpan : Span
+    };
+  };
+}
+function completeKeywords(keywords4, upperCase) {
+  let completions = Object.keys(keywords4).map((keyword2) => ({
+    label: upperCase ? keyword2.toUpperCase() : keyword2,
+    type: keywords4[keyword2] == Type ? "type" : keywords4[keyword2] == Keyword ? "keyword" : "variable",
+    boost: -1
+  }));
+  return ifNotIn(["QuotedIdentifier", "SpecialVar", "String", "LineComment", "BlockComment", "."], completeFromList(completions));
+}
+var parser5 = /* @__PURE__ */ parser$1.configure({
+  props: [
+    /* @__PURE__ */ indentNodeProp.add({
+      Statement: /* @__PURE__ */ continuedIndent()
+    }),
+    /* @__PURE__ */ foldNodeProp.add({
+      Statement(tree, state) {
+        return { from: Math.min(tree.from + 100, state.doc.lineAt(tree.from).to), to: tree.to };
+      },
+      BlockComment(tree) {
+        return { from: tree.from + 2, to: tree.to - 2 };
+      }
+    }),
+    /* @__PURE__ */ styleTags({
+      Keyword: tags.keyword,
+      Type: tags.typeName,
+      Builtin: /* @__PURE__ */ tags.standard(tags.name),
+      Bits: tags.number,
+      Bytes: tags.string,
+      Bool: tags.bool,
+      Null: tags.null,
+      Number: tags.number,
+      String: tags.string,
+      Identifier: tags.name,
+      QuotedIdentifier: /* @__PURE__ */ tags.special(tags.string),
+      SpecialVar: /* @__PURE__ */ tags.special(tags.name),
+      LineComment: tags.lineComment,
+      BlockComment: tags.blockComment,
+      Operator: tags.operator,
+      "Semi Punctuation": tags.punctuation,
+      "( )": tags.paren,
+      "{ }": tags.brace,
+      "[ ]": tags.squareBracket
+    })
+  ]
+});
+var SQLDialect = class _SQLDialect {
+  constructor(dialect2, language2, spec) {
+    this.dialect = dialect2;
+    this.language = language2;
+    this.spec = spec;
+  }
+  /**
+  Returns the language for this dialect as an extension.
+  */
+  get extension() {
+    return this.language.extension;
+  }
+  /**
+  Define a new dialect.
+  */
+  static define(spec) {
+    let d2 = dialect(spec, spec.keywords, spec.types, spec.builtin);
+    let language2 = LRLanguage.define({
+      name: "sql",
+      parser: parser5.configure({
+        tokenizers: [{ from: tokens, to: tokensFor(d2) }]
+      }),
+      languageData: {
+        commentTokens: { line: "--", block: { open: "/*", close: "*/" } },
+        closeBrackets: { brackets: ["(", "[", "{", "'", '"', "`"] }
+      }
+    });
+    return new _SQLDialect(d2, language2, spec);
+  }
+};
+function keywordCompletionSource(dialect2, upperCase = false) {
+  return completeKeywords(dialect2.dialect.words, upperCase);
+}
+function keywordCompletion(dialect2, upperCase = false) {
+  return dialect2.language.data.of({
+    autocomplete: keywordCompletionSource(dialect2, upperCase)
+  });
+}
+function schemaCompletionSource(config2) {
+  return config2.schema ? completeFromSchema(config2.schema, config2.tables, config2.schemas, config2.defaultTable, config2.defaultSchema, config2.dialect || StandardSQL) : () => null;
+}
+function schemaCompletion(config2) {
+  return config2.schema ? (config2.dialect || StandardSQL).language.data.of({
+    autocomplete: schemaCompletionSource(config2)
+  }) : [];
+}
+function sql(config2 = {}) {
+  let lang = config2.dialect || StandardSQL;
+  return new LanguageSupport(lang.language, [schemaCompletion(config2), keywordCompletion(lang, !!config2.upperCaseKeywords)]);
+}
+var StandardSQL = /* @__PURE__ */ SQLDialect.define({});
+var PostgreSQL = /* @__PURE__ */ SQLDialect.define({
+  charSetCasts: true,
+  doubleDollarQuotedStrings: true,
+  operatorChars: "+-*/<>=~!@#%^&|`?",
+  specialVar: "",
+  keywords: SQLKeywords + "a abort abs absent access according ada admin aggregate alias also always analyse analyze array_agg array_max_cardinality asensitive assert assignment asymmetric atomic attach attribute attributes avg backward base64 begin_frame begin_partition bernoulli bit_length blocked bom c cache called cardinality catalog_name ceil ceiling chain char_length character_length character_set_catalog character_set_name character_set_schema characteristics characters checkpoint class class_origin cluster coalesce cobol collation_catalog collation_name collation_schema collect column_name columns command_function command_function_code comment comments committed concurrently condition_number configuration conflict connection_name constant constraint_catalog constraint_name constraint_schema contains content control conversion convert copy corr cost covar_pop covar_samp csv cume_dist current_catalog current_row current_schema cursor_name database datalink datatype datetime_interval_code datetime_interval_precision db debug defaults defined definer degree delimiter delimiters dense_rank depends derived detach detail dictionary disable discard dispatch dlnewcopy dlpreviouscopy dlurlcomplete dlurlcompleteonly dlurlcompletewrite dlurlpath dlurlpathonly dlurlpathwrite dlurlscheme dlurlserver dlvalue document dump dynamic_function dynamic_function_code element elsif empty enable encoding encrypted end_frame end_partition endexec enforced enum errcode error event every exclude excluding exclusive exp explain expression extension extract family file filter final first_value flag floor following force foreach fortran forward frame_row freeze fs functions fusion g generated granted greatest groups handler header hex hierarchy hint id ignore ilike immediately immutable implementation implicit import include including increment indent index indexes info inherit inherits inline insensitive instance instantiable instead integrity intersection invoker isnull k key_member key_type label lag last_value lead leakproof least length library like_regex link listen ln load location lock locked log logged lower m mapping matched materialized max max_cardinality maxvalue member merge message message_length message_octet_length message_text min minvalue mod mode more move multiset mumps name namespace nfc nfd nfkc nfkd nil normalize normalized nothing notice notify notnull nowait nth_value ntile nullable nullif nulls number occurrences_regex octet_length octets off offset oids operator options ordering others over overlay overriding owned owner p parallel parameter_mode parameter_name parameter_ordinal_position parameter_specific_catalog parameter_specific_name parameter_specific_schema parser partition pascal passing passthrough password percent percent_rank percentile_cont percentile_disc perform period permission pg_context pg_datatype_name pg_exception_context pg_exception_detail pg_exception_hint placing plans pli policy portion position position_regex power precedes preceding prepared print_strict_params procedural procedures program publication query quote raise range rank reassign recheck recovery refresh regr_avgx regr_avgy regr_count regr_intercept regr_r2 regr_slope regr_sxx regr_sxy regr_syy reindex rename repeatable replace replica requiring reset respect restart restore result_oid returned_cardinality returned_length returned_octet_length returned_sqlstate returning reverse routine_catalog routine_name routine_schema routines row_count row_number rowtype rule scale schema_name schemas scope scope_catalog scope_name scope_schema security selective self sensitive sequence sequences serializable server server_name setof share show simple skip slice snapshot source specific_name sqlcode sqlerror sqrt stable stacked standalone statement statistics stddev_pop stddev_samp stdin stdout storage strict strip structure style subclass_origin submultiset subscription substring substring_regex succeeds sum symmetric sysid system system_time t table_name tables tablesample tablespace temp template ties token top_level_count transaction_active transactions_committed transactions_rolled_back transform transforms translate translate_regex trigger_catalog trigger_name trigger_schema trim trim_array truncate trusted type types uescape unbounded uncommitted unencrypted unlink unlisten unlogged unnamed untyped upper uri use_column use_variable user_defined_type_catalog user_defined_type_code user_defined_type_name user_defined_type_schema vacuum valid validate validator value_of var_pop var_samp varbinary variable_conflict variadic verbose version versioning views volatile warning whitespace width_bucket window within wrapper xmlagg xmlattributes xmlbinary xmlcast xmlcomment xmlconcat xmldeclaration xmldocument xmlelement xmlexists xmlforest xmliterate xmlnamespaces xmlparse xmlpi xmlquery xmlroot xmlschema xmlserialize xmltable xmltext xmlvalidate yes",
+  types: SQLTypes + "bigint int8 bigserial serial8 varbit bool box bytea cidr circle precision float8 inet int4 json jsonb line lseg macaddr macaddr8 money numeric pg_lsn point polygon float4 int2 smallserial serial2 serial serial4 text timetz timestamptz tsquery tsvector txid_snapshot uuid xml"
+});
+var MySQLKeywords = "accessible algorithm analyze asensitive authors auto_increment autocommit avg avg_row_length binlog btree cache catalog_name chain change changed checkpoint checksum class_origin client_statistics coalesce code collations columns comment committed completion concurrent consistent contains contributors convert database databases day_hour day_microsecond day_minute day_second delay_key_write delayed delimiter des_key_file dev_pop dev_samp deviance directory disable discard distinctrow div dual dumpfile enable enclosed ends engine engines enum errors escaped even event events every explain extended fast field fields flush force found_rows fulltext grants handler hash high_priority hosts hour_microsecond hour_minute hour_second ignore ignore_server_ids import index index_statistics infile innodb insensitive insert_method install invoker iterate keys kill linear lines list load lock logs low_priority master master_heartbeat_period master_ssl_verify_server_cert masters max max_rows maxvalue message_text middleint migrate min min_rows minute_microsecond minute_second mod mode modify mutex mysql_errno no_write_to_binlog offline offset one online optimize optionally outfile pack_keys parser partition partitions password phase plugin plugins prev processlist profile profiles purge query quick range read_write rebuild recover regexp relaylog remove rename reorganize repair repeatable replace require resume rlike row_format rtree schedule schema_name schemas second_microsecond security sensitive separator serializable server share show slave slow snapshot soname spatial sql_big_result sql_buffer_result sql_cache sql_calc_found_rows sql_no_cache sql_small_result ssl starting starts std stddev stddev_pop stddev_samp storage straight_join subclass_origin sum suspend table_name table_statistics tables tablespace terminated triggers truncate uncommitted uninstall unlock upgrade use use_frm user_resources user_statistics utc_date utc_time utc_timestamp variables views warnings xa xor year_month zerofill";
+var MySQLTypes = SQLTypes + "bool blob long longblob longtext medium mediumblob mediumint mediumtext tinyblob tinyint tinytext text bigint int1 int2 int3 int4 int8 float4 float8 varbinary varcharacter precision datetime unsigned signed";
+var MySQLBuiltin = "charset clear edit ego help nopager notee nowarning pager print prompt quit rehash source status system tee";
+var MySQL = /* @__PURE__ */ SQLDialect.define({
+  operatorChars: "*+-%<>!=&|^",
+  charSetCasts: true,
+  doubleQuotedStrings: true,
+  unquotedBitLiterals: true,
+  hashComments: true,
+  spaceAfterDashes: true,
+  specialVar: "@?",
+  identifierQuotes: "`",
+  keywords: SQLKeywords + "group_concat " + MySQLKeywords,
+  types: MySQLTypes,
+  builtin: MySQLBuiltin
+});
+var MariaSQL = /* @__PURE__ */ SQLDialect.define({
+  operatorChars: "*+-%<>!=&|^",
+  charSetCasts: true,
+  doubleQuotedStrings: true,
+  unquotedBitLiterals: true,
+  hashComments: true,
+  spaceAfterDashes: true,
+  specialVar: "@?",
+  identifierQuotes: "`",
+  keywords: SQLKeywords + "always generated groupby_concat hard persistent shutdown soft virtual " + MySQLKeywords,
+  types: MySQLTypes,
+  builtin: MySQLBuiltin
+});
+var MSSQL = /* @__PURE__ */ SQLDialect.define({
+  keywords: SQLKeywords + "trigger proc view index for add constraint key primary foreign collate clustered nonclustered declare exec go if use index holdlock nolock nowait paglock pivot readcommitted readcommittedlock readpast readuncommitted repeatableread rowlock serializable snapshot tablock tablockx unpivot updlock with",
+  types: SQLTypes + "bigint smallint smallmoney tinyint money real text nvarchar ntext varbinary image hierarchyid uniqueidentifier sql_variant xml",
+  builtin: "binary_checksum checksum connectionproperty context_info current_request_id error_line error_message error_number error_procedure error_severity error_state formatmessage get_filestream_transaction_context getansinull host_id host_name isnull isnumeric min_active_rowversion newid newsequentialid rowcount_big xact_state object_id",
+  operatorChars: "*+-%<>!=^&|/",
+  specialVar: "@"
+});
+var SQLite = /* @__PURE__ */ SQLDialect.define({
+  keywords: SQLKeywords + "abort analyze attach autoincrement conflict database detach exclusive fail glob ignore index indexed instead isnull notnull offset plan pragma query raise regexp reindex rename replace temp vacuum virtual",
+  types: SQLTypes + "bool blob long longblob longtext medium mediumblob mediumint mediumtext tinyblob tinyint tinytext text bigint int2 int8 unsigned signed real",
+  builtin: "auth backup bail changes clone databases dbinfo dump echo eqp explain fullschema headers help import imposter indexes iotrace lint load log mode nullvalue once print prompt quit restore save scanstats separator shell show stats system tables testcase timeout timer trace vfsinfo vfslist vfsname width",
+  operatorChars: "*+-%<>!=&|/~",
+  identifierQuotes: '`"',
+  specialVar: "@:?$"
+});
+var Cassandra = /* @__PURE__ */ SQLDialect.define({
+  keywords: "add all allow alter and any apply as asc authorize batch begin by clustering columnfamily compact consistency count create custom delete desc distinct drop each_quorum exists filtering from grant if in index insert into key keyspace keyspaces level limit local_one local_quorum modify nan norecursive nosuperuser not of on one order password permission permissions primary quorum rename revoke schema select set storage superuser table three to token truncate ttl two type unlogged update use user users using values where with writetime infinity NaN",
+  types: SQLTypes + "ascii bigint blob counter frozen inet list map static text timeuuid tuple uuid varint",
+  slashComments: true
+});
+var PLSQL = /* @__PURE__ */ SQLDialect.define({
+  keywords: SQLKeywords + "abort accept access add all alter and any arraylen as asc assert assign at attributes audit authorization avg base_table begin between binary_integer body by case cast char_base check close cluster clusters colauth column comment commit compress connected constant constraint crash create current currval cursor data_base database dba deallocate debugoff debugon declare default definition delay delete desc digits dispose distinct do drop else elseif elsif enable end entry exception exception_init exchange exclusive exists external fast fetch file for force form from function generic goto grant group having identified if immediate in increment index indexes indicator initial initrans insert interface intersect into is key level library like limited local lock log logging loop master maxextents maxtrans member minextents minus mislabel mode modify multiset new next no noaudit nocompress nologging noparallel not nowait number_base of off offline on online only option or order out package parallel partition pctfree pctincrease pctused pls_integer positive positiven pragma primary prior private privileges procedure public raise range raw rebuild record ref references refresh rename replace resource restrict return returning returns reverse revoke rollback row rowid rowlabel rownum rows run savepoint schema segment select separate set share snapshot some space split sql start statement storage subtype successful synonym tabauth table tables tablespace task terminate then to trigger truncate type union unique unlimited unrecoverable unusable update use using validate value values variable view views when whenever where while with work",
+  builtin: "appinfo arraysize autocommit autoprint autorecovery autotrace blockterminator break btitle cmdsep colsep compatibility compute concat copycommit copytypecheck define echo editfile embedded feedback flagger flush heading headsep instance linesize lno loboffset logsource longchunksize markup native newpage numformat numwidth pagesize pause pno recsep recsepchar repfooter repheader serveroutput shiftinout show showmode spool sqlblanklines sqlcase sqlcode sqlcontinue sqlnumber sqlpluscompatibility sqlprefix sqlprompt sqlterminator suffix tab term termout timing trimout trimspool ttitle underline verify version wrap",
+  types: SQLTypes + "ascii bfile bfilename bigserial bit blob dec long number nvarchar nvarchar2 serial smallint string text uid varchar2 xml",
+  operatorChars: "*/+-%<>!=~",
+  doubleQuotedStrings: true,
+  charSetCasts: true,
+  plsqlQuotingMechanism: true
+});
+
 // node_modules/@codemirror/legacy-modes/mode/r.js
 function wordObj(words) {
   var res = {};
@@ -34476,7 +35123,7 @@ var commonKeywords = ["if", "else", "repeat", "while", "function", "for", "in", 
 var commonBlockKeywords = ["if", "else", "repeat", "while", "function", "for"];
 var atoms = wordObj(commonAtoms);
 var builtins = wordObj(commonBuiltins);
-var keywords2 = wordObj(commonKeywords);
+var keywords3 = wordObj(commonKeywords);
 var blockkeywords = wordObj(commonBlockKeywords);
 var opChars = /[+\-*\/^<>=!&|~$:]/;
 var curPunc;
@@ -34508,7 +35155,7 @@ function tokenBase(stream, state) {
     var word = stream.current();
     if (atoms.propertyIsEnumerable(word))
       return "atom";
-    if (keywords2.propertyIsEnumerable(word)) {
+    if (keywords3.propertyIsEnumerable(word)) {
       if (blockkeywords.propertyIsEnumerable(word) && !stream.match(/\s*if(\s+|$)/, false))
         curPunc = "block";
       return "keyword";
@@ -36465,6 +37112,7 @@ var LANG_EXTENSIONS = {
   javascript,
   html,
   css,
+  sql,
   r: () => StreamLanguage.define(r)
 };
 function getLanguageExtension(filetype) {
@@ -36505,6 +37153,9 @@ var lintGutterCustomTheme = EditorView.baseTheme({
   }
 });
 
+// src/Components/codeMirror/language-server/diagnostics.ts
+var LSP = __toESM(require_main2());
+
 // src/Components/codeMirror/language-server/positions.ts
 var positionToOffset = (document2, position) => {
   if (position.line >= document2.lines) {
@@ -36524,7 +37175,6 @@ var offsetToPosition = (document2, offset) => {
 };
 
 // src/Components/codeMirror/language-server/diagnostics.ts
-var LSP = __toESM(require_main2());
 var severityMapping = {
   [LSP.DiagnosticSeverity.Error]: "error",
   [LSP.DiagnosticSeverity.Warning]: "warning",
@@ -36554,16 +37204,18 @@ function diagnosticToTransaction(editorState, lspDiagnostics) {
   return diagnosticsTransaction;
 }
 
+// src/Components/codeMirror/language-server/autocompletion.ts
+var import_vscode_languageserver_protocol2 = __toESM(require_main2());
+
 // src/Components/codeMirror/language-server/regexp-util.ts
 var escapeRegExp = (unescaped) => {
   return unescaped.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
 };
 
 // src/Components/codeMirror/language-server/autocompletion.ts
-var import_vscode_languageserver_protocol2 = __toESM(require_main2());
 var identifierLike = /[a-zA-Z0-9_\u{a1}-\u{10ffff}]+/u;
 function autocompletion2(lspClient, filename) {
-  const client = lspClient.client;
+  const client = lspClient;
   const uri = createUri(filename);
   const findCompletion = async (context) => {
     if (!client || !uri || !client.capabilities?.completionProvider) {
@@ -36667,6 +37319,9 @@ var boost = (item) => {
   return void 0;
 };
 
+// src/Components/codeMirror/language-server/hover.ts
+var import_vscode_languageserver_protocol3 = __toESM(require_main2());
+
 // src/Components/codeMirror/language-server/documentation.ts
 var import_dompurify = __toESM(require_purify());
 
@@ -36695,9 +37350,9 @@ function getDefaults() {
     xhtml: false
   };
 }
-var defaults3 = getDefaults();
+var defaults4 = getDefaults();
 function changeDefaults(newDefaults) {
-  defaults3 = newDefaults;
+  defaults4 = newDefaults;
 }
 var escapeTest = /[&<>"']/;
 var escapeReplace = new RegExp(escapeTest.source, "g");
@@ -36947,7 +37602,7 @@ function indentCodeCompensation(raw, text) {
 }
 var Tokenizer = class {
   constructor(options2) {
-    this.options = options2 || defaults3;
+    this.options = options2 || defaults4;
   }
   space(src) {
     const cap = this.rules.block.newline.exec(src);
@@ -37019,12 +37674,12 @@ var Tokenizer = class {
       const text = cap[0].replace(/^ *>[ \t]?/gm, "");
       const top2 = this.lexer.state.top;
       this.lexer.state.top = true;
-      const tokens = this.lexer.blockTokens(text);
+      const tokens2 = this.lexer.blockTokens(text);
       this.lexer.state.top = top2;
       return {
         type: "blockquote",
         raw: cap[0],
-        tokens,
+        tokens: tokens2,
         text
       };
     }
@@ -37697,7 +38352,7 @@ var Lexer = class _Lexer {
   constructor(options2) {
     this.tokens = [];
     this.tokens.links = /* @__PURE__ */ Object.create(null);
-    this.options = options2 || defaults3;
+    this.options = options2 || defaults4;
     this.options.tokenizer = this.options.tokenizer || new Tokenizer();
     this.tokenizer = this.options.tokenizer;
     this.tokenizer.options = this.options;
@@ -37763,7 +38418,7 @@ var Lexer = class _Lexer {
   /**
    * Lexing
    */
-  blockTokens(src, tokens = []) {
+  blockTokens(src, tokens2 = []) {
     if (this.options.pedantic) {
       src = src.replace(/\t/g, "    ").replace(/^ +$/gm, "");
     } else {
@@ -37774,9 +38429,9 @@ var Lexer = class _Lexer {
     let token, lastToken, cutSrc, lastParagraphClipped;
     while (src) {
       if (this.options.extensions && this.options.extensions.block && this.options.extensions.block.some((extTokenizer) => {
-        if (token = extTokenizer.call({ lexer: this }, src, tokens)) {
+        if (token = extTokenizer.call({ lexer: this }, src, tokens2)) {
           src = src.substring(token.raw.length);
-          tokens.push(token);
+          tokens2.push(token);
           return true;
         }
         return false;
@@ -37785,58 +38440,58 @@ var Lexer = class _Lexer {
       }
       if (token = this.tokenizer.space(src)) {
         src = src.substring(token.raw.length);
-        if (token.raw.length === 1 && tokens.length > 0) {
-          tokens[tokens.length - 1].raw += "\n";
+        if (token.raw.length === 1 && tokens2.length > 0) {
+          tokens2[tokens2.length - 1].raw += "\n";
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         continue;
       }
       if (token = this.tokenizer.code(src)) {
         src = src.substring(token.raw.length);
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastToken && (lastToken.type === "paragraph" || lastToken.type === "text")) {
           lastToken.raw += "\n" + token.raw;
           lastToken.text += "\n" + token.text;
           this.inlineQueue[this.inlineQueue.length - 1].src = lastToken.text;
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         continue;
       }
       if (token = this.tokenizer.fences(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.heading(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.hr(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.blockquote(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.list(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.html(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.def(src)) {
         src = src.substring(token.raw.length);
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastToken && (lastToken.type === "paragraph" || lastToken.type === "text")) {
           lastToken.raw += "\n" + token.raw;
           lastToken.text += "\n" + token.raw;
@@ -37851,12 +38506,12 @@ var Lexer = class _Lexer {
       }
       if (token = this.tokenizer.table(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.lheading(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       cutSrc = src;
@@ -37875,14 +38530,14 @@ var Lexer = class _Lexer {
         }
       }
       if (this.state.top && (token = this.tokenizer.paragraph(cutSrc))) {
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastParagraphClipped && lastToken.type === "paragraph") {
           lastToken.raw += "\n" + token.raw;
           lastToken.text += "\n" + token.text;
           this.inlineQueue.pop();
           this.inlineQueue[this.inlineQueue.length - 1].src = lastToken.text;
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         lastParagraphClipped = cutSrc.length !== src.length;
         src = src.substring(token.raw.length);
@@ -37890,14 +38545,14 @@ var Lexer = class _Lexer {
       }
       if (token = this.tokenizer.text(src)) {
         src = src.substring(token.raw.length);
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastToken && lastToken.type === "text") {
           lastToken.raw += "\n" + token.raw;
           lastToken.text += "\n" + token.text;
           this.inlineQueue.pop();
           this.inlineQueue[this.inlineQueue.length - 1].src = lastToken.text;
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         continue;
       }
@@ -37912,16 +38567,16 @@ var Lexer = class _Lexer {
       }
     }
     this.state.top = true;
-    return tokens;
+    return tokens2;
   }
-  inline(src, tokens = []) {
-    this.inlineQueue.push({ src, tokens });
-    return tokens;
+  inline(src, tokens2 = []) {
+    this.inlineQueue.push({ src, tokens: tokens2 });
+    return tokens2;
   }
   /**
    * Lexing/Compiling
    */
-  inlineTokens(src, tokens = []) {
+  inlineTokens(src, tokens2 = []) {
     let token, lastToken, cutSrc;
     let maskedSrc = src;
     let match;
@@ -37948,9 +38603,9 @@ var Lexer = class _Lexer {
       }
       keepPrevChar = false;
       if (this.options.extensions && this.options.extensions.inline && this.options.extensions.inline.some((extTokenizer) => {
-        if (token = extTokenizer.call({ lexer: this }, src, tokens)) {
+        if (token = extTokenizer.call({ lexer: this }, src, tokens2)) {
           src = src.substring(token.raw.length);
-          tokens.push(token);
+          tokens2.push(token);
           return true;
         }
         return false;
@@ -37959,64 +38614,64 @@ var Lexer = class _Lexer {
       }
       if (token = this.tokenizer.escape(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.tag(src)) {
         src = src.substring(token.raw.length);
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastToken && token.type === "text" && lastToken.type === "text") {
           lastToken.raw += token.raw;
           lastToken.text += token.text;
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         continue;
       }
       if (token = this.tokenizer.link(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.reflink(src, this.tokens.links)) {
         src = src.substring(token.raw.length);
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastToken && token.type === "text" && lastToken.type === "text") {
           lastToken.raw += token.raw;
           lastToken.text += token.text;
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         continue;
       }
       if (token = this.tokenizer.emStrong(src, maskedSrc, prevChar2)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.codespan(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.br(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.del(src)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (token = this.tokenizer.autolink(src, mangle)) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       if (!this.state.inLink && (token = this.tokenizer.url(src, mangle))) {
         src = src.substring(token.raw.length);
-        tokens.push(token);
+        tokens2.push(token);
         continue;
       }
       cutSrc = src;
@@ -38040,12 +38695,12 @@ var Lexer = class _Lexer {
           prevChar2 = token.raw.slice(-1);
         }
         keepPrevChar = true;
-        lastToken = tokens[tokens.length - 1];
+        lastToken = tokens2[tokens2.length - 1];
         if (lastToken && lastToken.type === "text") {
           lastToken.raw += token.raw;
           lastToken.text += token.text;
         } else {
-          tokens.push(token);
+          tokens2.push(token);
         }
         continue;
       }
@@ -38059,12 +38714,12 @@ var Lexer = class _Lexer {
         }
       }
     }
-    return tokens;
+    return tokens2;
   }
 };
 var Renderer = class {
   constructor(options2) {
-    this.options = options2 || defaults3;
+    this.options = options2 || defaults4;
   }
   code(code, infostring, escaped) {
     const lang = (infostring || "").match(/\S*/)[0];
@@ -38294,7 +38949,7 @@ var Slugger = class {
 };
 var Parser2 = class _Parser {
   constructor(options2) {
-    this.options = options2 || defaults3;
+    this.options = options2 || defaults4;
     this.options.renderer = this.options.renderer || new Renderer();
     this.renderer = this.options.renderer;
     this.renderer.options = this.options;
@@ -38304,25 +38959,25 @@ var Parser2 = class _Parser {
   /**
    * Static Parse Method
    */
-  static parse(tokens, options2) {
-    const parser6 = new _Parser(options2);
-    return parser6.parse(tokens);
+  static parse(tokens2, options2) {
+    const parser7 = new _Parser(options2);
+    return parser7.parse(tokens2);
   }
   /**
    * Static Parse Inline Method
    */
-  static parseInline(tokens, options2) {
-    const parser6 = new _Parser(options2);
-    return parser6.parseInline(tokens);
+  static parseInline(tokens2, options2) {
+    const parser7 = new _Parser(options2);
+    return parser7.parseInline(tokens2);
   }
   /**
    * Parse Loop
    */
-  parse(tokens, top2 = true) {
+  parse(tokens2, top2 = true) {
     let out = "", i2, j3, k, l22, l3, row, cell, header, body, token, ordered, start, loose, itemBody, item, checked, task, checkbox, ret;
-    const l4 = tokens.length;
+    const l4 = tokens2.length;
     for (i2 = 0; i2 < l4; i2++) {
-      token = tokens[i2];
+      token = tokens2[i2];
       if (this.options.extensions && this.options.extensions.renderers && this.options.extensions.renderers[token.type]) {
         ret = this.options.extensions.renderers[token.type].call({ parser: this }, token);
         if (ret !== false || !["space", "hr", "heading", "code", "table", "blockquote", "list", "html", "paragraph", "text"].includes(token.type)) {
@@ -38433,8 +39088,8 @@ var Parser2 = class _Parser {
         }
         case "text": {
           body = token.tokens ? this.parseInline(token.tokens) : token.text;
-          while (i2 + 1 < l4 && tokens[i2 + 1].type === "text") {
-            token = tokens[++i2];
+          while (i2 + 1 < l4 && tokens2[i2 + 1].type === "text") {
+            token = tokens2[++i2];
             body += "\n" + (token.tokens ? this.parseInline(token.tokens) : token.text);
           }
           out += top2 ? this.renderer.paragraph(body) : body;
@@ -38456,12 +39111,12 @@ var Parser2 = class _Parser {
   /**
    * Parse Inline Tokens
    */
-  parseInline(tokens, renderer) {
+  parseInline(tokens2, renderer) {
     renderer = renderer || this.renderer;
     let out = "", i2, token, ret;
-    const l3 = tokens.length;
+    const l3 = tokens2.length;
     for (i2 = 0; i2 < l3; i2++) {
-      token = tokens[i2];
+      token = tokens2[i2];
       if (this.options.extensions && this.options.extensions.renderers && this.options.extensions.renderers[token.type]) {
         ret = this.options.extensions.renderers[token.type].call({ parser: this }, token);
         if (ret !== false || !["escape", "html", "link", "image", "strong", "em", "codespan", "br", "del", "text"].includes(token.type)) {
@@ -38526,7 +39181,7 @@ var Parser2 = class _Parser {
 };
 var Hooks = class {
   constructor(options2) {
-    this.options = options2 || defaults3;
+    this.options = options2 || defaults4;
   }
   /**
    * Process markdown before marked
@@ -38565,9 +39220,9 @@ var Marked = class {
     __publicField(this, "Hooks", Hooks);
     this.use(...args);
   }
-  walkTokens(tokens, callback) {
+  walkTokens(tokens2, callback) {
     let values2 = [];
-    for (const token of tokens) {
+    for (const token of tokens2) {
       values2 = values2.concat(callback.call(this, token));
       switch (token.type) {
         case "table": {
@@ -38728,7 +39383,7 @@ var Marked = class {
   }
 };
 _parseMarkdown = new WeakSet();
-parseMarkdown_fn = function(lexer2, parser6) {
+parseMarkdown_fn = function(lexer2, parser7) {
   return (src, opt, callback) => {
     if (typeof opt === "function") {
       callback = opt;
@@ -38749,12 +39404,12 @@ parseMarkdown_fn = function(lexer2, parser6) {
     }
     if (callback) {
       const highlight = opt.highlight;
-      let tokens;
+      let tokens2;
       try {
         if (opt.hooks) {
           src = opt.hooks.preprocess(src);
         }
-        tokens = lexer2(src, opt);
+        tokens2 = lexer2(src, opt);
       } catch (e2) {
         return throwError(e2);
       }
@@ -38763,9 +39418,9 @@ parseMarkdown_fn = function(lexer2, parser6) {
         if (!err2) {
           try {
             if (opt.walkTokens) {
-              this.walkTokens(tokens, opt.walkTokens);
+              this.walkTokens(tokens2, opt.walkTokens);
             }
-            out = parser6(tokens, opt);
+            out = parser7(tokens2, opt);
             if (opt.hooks) {
               out = opt.hooks.postprocess(out);
             }
@@ -38780,10 +39435,10 @@ parseMarkdown_fn = function(lexer2, parser6) {
         return done();
       }
       delete opt.highlight;
-      if (!tokens.length)
+      if (!tokens2.length)
         return done();
       let pending = 0;
-      this.walkTokens(tokens, (token) => {
+      this.walkTokens(tokens2, (token) => {
         if (token.type === "code") {
           pending++;
           setTimeout(() => {
@@ -38809,17 +39464,17 @@ parseMarkdown_fn = function(lexer2, parser6) {
       return;
     }
     if (opt.async) {
-      return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src).then((src2) => lexer2(src2, opt)).then((tokens) => opt.walkTokens ? Promise.all(this.walkTokens(tokens, opt.walkTokens)).then(() => tokens) : tokens).then((tokens) => parser6(tokens, opt)).then((html2) => opt.hooks ? opt.hooks.postprocess(html2) : html2).catch(throwError);
+      return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src).then((src2) => lexer2(src2, opt)).then((tokens2) => opt.walkTokens ? Promise.all(this.walkTokens(tokens2, opt.walkTokens)).then(() => tokens2) : tokens2).then((tokens2) => parser7(tokens2, opt)).then((html2) => opt.hooks ? opt.hooks.postprocess(html2) : html2).catch(throwError);
     }
     try {
       if (opt.hooks) {
         src = opt.hooks.preprocess(src);
       }
-      const tokens = lexer2(src, opt);
+      const tokens2 = lexer2(src, opt);
       if (opt.walkTokens) {
-        this.walkTokens(tokens, opt.walkTokens);
+        this.walkTokens(tokens2, opt.walkTokens);
       }
-      let html2 = parser6(tokens, opt);
+      let html2 = parser7(tokens2, opt);
       if (opt.hooks) {
         html2 = opt.hooks.postprocess(html2);
       }
@@ -38854,7 +39509,7 @@ onError_fn = function(silent, async, callback) {
     throw e2;
   };
 };
-var markedInstance = new Marked(defaults3);
+var markedInstance = new Marked(defaults4);
 function marked(src, opt, callback) {
   return markedInstance.parse(src, opt, callback);
 }
@@ -38865,15 +39520,15 @@ marked.options = marked.setOptions = function(opt) {
   return marked;
 };
 marked.getDefaults = getDefaults;
-marked.defaults = defaults3;
+marked.defaults = defaults4;
 marked.use = function(...args) {
   markedInstance.use(...args);
   marked.defaults = markedInstance.defaults;
   changeDefaults(marked.defaults);
   return marked;
 };
-marked.walkTokens = function(tokens, callback) {
-  return markedInstance.walkTokens(tokens, callback);
+marked.walkTokens = function(tokens2, callback) {
+  return markedInstance.walkTokens(tokens2, callback);
 };
 marked.parseInline = markedInstance.parseInline;
 marked.Parser = Parser2;
@@ -38891,7 +39546,7 @@ var setOptions = marked.setOptions;
 var use = marked.use;
 var walkTokens = marked.walkTokens;
 var parseInline = marked.parseInline;
-var parser5 = Parser2.parse;
+var parser6 = Parser2.parse;
 var lexer = Lexer.lex;
 
 // src/Components/codeMirror/language-server/documentation.ts
@@ -38930,9 +39585,8 @@ var renderMarkdown = (markdown) => {
 };
 
 // src/Components/codeMirror/language-server/hover.ts
-var import_vscode_languageserver_protocol3 = __toESM(require_main2());
 function hover(lspClient, filename) {
-  return createHoverTooltip(lspClient.client, filename);
+  return createHoverTooltip(lspClient, filename);
 }
 function createHoverTooltip(client, filename) {
   const uri = createUri(filename);
@@ -38959,6 +39613,9 @@ function createHoverTooltip(client, filename) {
   });
 }
 
+// src/Components/codeMirror/language-server/signatureHelp.ts
+var import_vscode_languageserver_protocol4 = __toESM(require_main2());
+
 // src/Components/codeMirror/language-server/names.ts
 var removeFullyQualifiedName = (fn) => {
   const bracket2 = fn.indexOf("(");
@@ -38975,7 +39632,6 @@ var nameFromSignature = (fn) => {
 };
 
 // src/Components/codeMirror/language-server/signatureHelp.ts
-var import_vscode_languageserver_protocol4 = __toESM(require_main2());
 var setSignatureHelpEffect = StateEffect.define(
   {}
 );
@@ -38999,7 +39655,7 @@ var closeSignatureHelp = (view) => {
   return false;
 };
 var triggerSignatureHelpRequest = async (view, client, uri) => {
-  await client.initialize();
+  await client.initPromise;
   const pos = view.state.selection.main.from;
   const params = {
     textDocument: { uri },
@@ -39120,7 +39776,7 @@ var formatHighlightedParameter = (label, from, to, signatureDoc, activeParameter
   return parent;
 };
 var signatureHelp = (lspClient, filename, automatic) => {
-  const client = lspClient.client;
+  const client = lspClient;
   const uri = createUri(filename);
   class SignatureHelpView {
     constructor(view, automatic2) {
@@ -39210,7 +39866,27 @@ function useTabbedCodeMirror({
     );
     setActiveFileIdx(0);
     setNewFileCounter(1);
-  }, [currentFilesFromApp, inferEditorExtensions]);
+    (async () => {
+      for (const file of files) {
+        if (file.type === "text" && inferFiletype(file.name) === "python") {
+          await lspClient.deleteFile(lspPathPrefix + file.name);
+        }
+      }
+      for (const file of currentFilesFromApp) {
+        if (file.type === "text" && inferFiletype(file.name) === "python") {
+          await lspClient.createFile(lspPathPrefix + file.name, file.content);
+        }
+      }
+    })();
+  }, [
+    // Note that the linter thinks we need to depend on `files`, but we don't --
+    // if we did, this would result in an infinite loop. We only want to remove
+    // `files` if `currentFilesFromApp` changes.
+    lspClient,
+    lspPathPrefix,
+    currentFilesFromApp,
+    inferEditorExtensions
+  ]);
   function closeFile(e2, index) {
     e2.stopPropagation();
     const updatedFiles = [...files];
@@ -39281,15 +39957,17 @@ function useTabbedCodeMirror({
     setFiles(updatedFiles);
     setEditingFilename(null);
     setFilesHaveChanged(true);
-    if (inferFiletype(oldFileName) === "python") {
-      lspClient.deleteFile(lspPathPrefix + oldFileName);
-    }
-    if (inferFiletype(newFileName) === "python") {
-      lspClient.createFile(
-        lspPathPrefix + newFileName,
-        updatedFiles[fileIndex].ref.editorState.doc.toString()
-      );
-    }
+    (async () => {
+      if (inferFiletype(oldFileName) === "python") {
+        await lspClient.deleteFile(lspPathPrefix + oldFileName);
+      }
+      if (inferFiletype(newFileName) === "python") {
+        await lspClient.createFile(
+          lspPathPrefix + newFileName,
+          updatedFiles[fileIndex].ref.editorState.doc.toString()
+        );
+      }
+    })();
   }
   function selectFile(fileName) {
     const fileIndex = files.findIndex((f3) => f3.name === fileName);
@@ -39378,6 +40056,7 @@ function Editor({
   setCurrentFiles,
   setFilesHaveChanged,
   setHeaderBarCallbacks,
+  setEditorMethods,
   terminalMethods,
   viewerMethods = null,
   utilityMethods = null,
@@ -39387,7 +40066,8 @@ function Editor({
   showHeaderBar = true,
   floatingButtons = false,
   updateUrlHashOnRerun = false,
-  appEngine
+  appEngine,
+  style
 }) {
   const lspClient = appEngine === "python" ? ensurePyrightClient() : ensureNullClient();
   const editorInstanceId = useInstanceCounter();
@@ -39418,11 +40098,23 @@ function Editor({
         }),
         languageServerExtensions(lspClient, lspPathPrefix + file.name),
         Prec.high(
-          keymap.of(keyBindings({ runSelectedTextOrCurrentLine, runAllAuto }))
+          keymap.of(
+            keyBindings({
+              runSelectedTextOrCurrentLine,
+              runAllAuto,
+              appEngine
+            })
+          )
         )
       ];
     },
-    [lineNumbers2, setFilesHaveChangedCombined, lspClient, lspPathPrefix]
+    [
+      lineNumbers2,
+      appEngine,
+      setFilesHaveChangedCombined,
+      lspClient,
+      lspPathPrefix
+    ]
   );
   const [cmView, setCmView] = React4.useState();
   const tabbedFiles = useTabbedCodeMirror({
@@ -39531,6 +40223,14 @@ function Editor({
       }
     })();
   }, [runOnLoad, currentFilesFromApp, terminalMethods, runCodeInTerminal]);
+  React4.useEffect(() => {
+    setEditorMethods({
+      getActiveFileContents: () => {
+        syncActiveFileState();
+        return editorFilesToFileContents(files);
+      }
+    });
+  }, [syncActiveFileState, setEditorMethods, files]);
   const cmDivRef = React4.useRef(null);
   React4.useEffect(() => {
     if (!cmDivRef.current) {
@@ -39731,13 +40431,13 @@ function Editor({
     "button",
     {
       className: "code-run-button",
-      "aria-label": `Re-run ${isShinyApp ? "app" : "code"} (${modKeySymbol()})-Shift-Enter`,
+      "aria-label": `Re-run ${isShinyApp ? "app" : "code"} (${modKeySymbol()}-Shift-Enter)`,
       "data-balloon-pos": "down",
       onClick: () => runAllAuto.current(),
       children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Icon, { icon: "play" })
     }
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "shinylive-editor", children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "shinylive-editor", style, children: [
     shareModal,
     showHeaderBar ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "editor-header", children: [
       showFileTabs ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(FileTabs, { ...tabbedFiles }) : null,
@@ -39831,12 +40531,7 @@ function fileContentsSize(files) {
   return size;
 }
 function diagnosticFilter(diagnostic) {
-  if (diagnostic.severity === 4 && /is unused$/.test(diagnostic.message)) {
-    return false;
-  }
-  if (/Argument does not match parameter type for parameter "value".*Iterable\[SliderValueArg@input_slider\]/s.test(
-    diagnostic.message
-  )) {
+  if (diagnostic.severity === 4 && /is not accessed$/.test(diagnostic.message)) {
     return false;
   }
   return true;
@@ -39854,9 +40549,10 @@ function useInstanceCounter() {
 }
 function keyBindings({
   runSelectedTextOrCurrentLine,
-  runAllAuto
+  runAllAuto,
+  appEngine
 }) {
-  return [
+  const bindings = [
     {
       key: "Mod-Enter",
       run: (view) => {
@@ -39876,6 +40572,41 @@ function keyBindings({
       }
     }
   ];
+  if (appEngine === "r") {
+    const maybeAddWhiteSpace = (view, range, text) => {
+      const line = view.state.doc.lineAt(range.head);
+      const before = view.state.doc.sliceString(line.from, range.from);
+      const after = view.state.doc.sliceString(range.to, line.to);
+      if (!before.endsWith(" ") && !before.endsWith("\n")) {
+        text = " " + text;
+      }
+      if (!after.startsWith(" ") && !after.startsWith("\n")) {
+        text = text + " ";
+      }
+      return text;
+    };
+    const insertText = (view, text) => {
+      const result = view.state.changeByRange((range) => {
+        const adjustedText = maybeAddWhiteSpace(view, range, text);
+        const cursorPosAfter = Math.min(range.from, range.to) + adjustedText.length;
+        return {
+          range: EditorSelection.range(cursorPosAfter, cursorPosAfter),
+          changes: { from: range.from, to: range.to, insert: adjustedText }
+        };
+      });
+      view.dispatch(result);
+      return true;
+    };
+    bindings.push({
+      key: "Alt--",
+      run: (view) => insertText(view, "<-")
+    });
+    bindings.push({
+      key: "Mod-Shift-m",
+      run: (view) => insertText(view, "|>")
+    });
+  }
+  return bindings;
 }
 async function updateBrowserUrlHash(fileContents) {
   const encodedFileContents = await fileContentsToUrlStringInWebWorker(fileContents);
