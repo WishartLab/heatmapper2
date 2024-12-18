@@ -38,10 +38,10 @@ except ImportError:
 
 
 def server(input, output, session):
-
 	# Information regarding example files.
 	Info = {
-		"1min.mzml": "An Example mzML from https://github.com/HUPO-PSI/mzML"
+		#"1min.mzml": "An Example mzML from https://github.com/HUPO-PSI/mzML"
+		"BSA1-subset.mzML": "A subset of 8 spectra from the OpenMS Bovine Serum Albumin sample<br>https://github.com/OpenMS/OpenMS/tree/develop/share/OpenMS/examples/BSA"
 	}
 
 
@@ -118,7 +118,22 @@ def server(input, output, session):
 
 	@output
 	@render.data_frame
-	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	# def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	def Table(): 
+		Valid.set(True)
+		if type(Data()) == "pymzml.run.Reader":
+			# turn pymzml.run.Reader object into a dataframe
+			for spectrum in Data():
+				if spectrum.ms_level:
+					spectrum_dict = {
+						"ID": spectrum.ID,
+						"MS Level": spectrum.ms_level,
+					}
+			df = DataFrame()
+			print(f"Data: {df}")
+			return render.DataGrid(df, editable=True)
+		else:
+			return render.DataGrid(Data(), editable=True)
 
 
 	@Table.set_patch_fn
@@ -149,30 +164,33 @@ def server(input, output, session):
 
 				# Get all the spectra the user wants.
 				distances = {}
-				indices = [int(i) for i in config.ID()]
+				#indices = [int(i) for i in config.ID()]
+				indices = [i for i in config.ID()]
 				spectra = []
 				for s in reader:
-					if s.ID in indices: spectra.append(s)
+					if str(s.ID) in indices: spectra.append(s)
 
 				for s in spectra:
-					distances[s.ID] = {}
+					sid1 = str(s.ID)
+					distances[sid1] = {}
 					for s2 in spectra:
 						p.inc(message=f"Computing similarity of spectra {s.ID} and {s2.ID}")
+						sid2 = str(s2.ID)
 						
 						# If they're the same spectra, set it to 1.
 						if s.ID == s2.ID:
-							distances[s.ID][s2.ID] = 1.0
+							distances[sid1][sid2] = 1.0
 						
-						# If the second spectra exists, used that pre-calculated result.
-						elif s2.ID in distances:
-							distances[s.ID][s2.ID] = distances[s2.ID][s.ID]
+						# If the second spectra exists, use that pre-calculated result.
+						elif sid2 in distances:
+							distances[sid1][sid2] = distances[sid2][sid1]
 							
 						# Otherwise call the similarity function.
 						else:
-							distances[s.ID][s2.ID] = s.similarity_to(s2)
+							distances[sid1][sid2] = s.similarity_to(s2)
 
 				p.inc(message="Plotting")
-				df = DataFrame(distances, columns=indices, index=indices)
+				df = DataFrame(data=distances, columns=indices, index=indices, dtype="float")
 				fig, ax = subplots()
 				interpolation = config.Interpolation().lower()
 				plot = ax.imshow(df, cmap=config.ColorMap().lower(), interpolation=interpolation, aspect="equal")
@@ -213,7 +231,6 @@ def server(input, output, session):
 		"""
 		@brief Generate the main heatmap
 		"""
-		
 		
 		if input.MainTab() != "HeatmapTab": return
 
@@ -382,7 +399,7 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"1min.mzml": "Example 1"}, types=[".mzml", ".mzML"], project="Spectral"),
+			FileSelection(examples={"BSA1-subset.mzML": "Example 1"}, types=[".mzml", ".mzML"], project="Spectral"),
 
 			TableOptions(config),
 
@@ -403,7 +420,7 @@ app_ui = ui.page_fluid(
 
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Calculate intermediate values between data points"),
 
-				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the size of contours"),
+				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the interpolation size for generating contours (lower values improve computation time but decrease accuracy)"),
 
 
 				ui.HTML("<b>3D</b>"),
