@@ -1,4 +1,4 @@
-// Shinylive 0.9.1
+// Shinylive 0.9.0
 // Copyright 2024 Posit, PBC
 var __create = Object.create;
 var __defProp = Object.defineProperty;

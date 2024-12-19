@@ -1,9 +1,9 @@
-// Shinylive 0.9.1
+// Shinylive 0.9.0
 // Copyright 2024 Posit, PBC
 import {
   __commonJS,
   __toESM
-} from "./chunk-O5P2LFOG.js";
+} from "./chunk-YYZJYZVZ.js";
 
 // node_modules/lz-string/libs/lz-string.js
 var require_lz_string = __commonJS({
@@ -3291,11 +3291,7 @@ var FILE_EXTENSIONS = {
   css: "css",
   csv: "csv",
   r: "r",
-  sql: "sql",
-  sass: "sass",
-  scss: "sass",
-  yaml: "yaml",
-  yml: "yaml"
+  sql: "sql"
 };
 function isApplePlatform() {
   return /(Mac|iPhone|iPod|iPad)/i.test(navigator.userAgent);
