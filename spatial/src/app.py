@@ -35,8 +35,6 @@ def server(input, output, session):
 	# Information regarding example files.
 	Info = {
 		"visium_hne_adata.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
-		"seqfish.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
-		"imc.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
 	}
 
 	InitializeConfig(config, input)
@@ -572,8 +570,6 @@ app_ui = ui.page_fluid(
 			FileSelection(
 				examples={
 					"visium_hne_adata.h5ad": "Example 1",
-					"seqfish.h5ad": "Example 2",
-					"imc.h5ad": "Example 3",
 				},
 				types=[".h5", ".png", ".csv", ".json", ".h5ad", ".jpg", ".tif"],
 				multiple=True,
