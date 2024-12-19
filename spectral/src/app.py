@@ -113,36 +113,50 @@ def server(input, output, session):
 		ui.update_select(id="ID", selected=[first], choices=list(ids))
 
 
-	def GetData(): return Table.data_view() if Valid() else Data()
+	def GetData(): 
+		# return Table.data_view() if Valid() else Data()
+		return Data()
 
 
 	@output
 	@render.data_frame
-	# def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
 	def Table(): 
 		Valid.set(True)
-		if type(Data()) == "pymzml.run.Reader":
-			# turn pymzml.run.Reader object into a dataframe
-			for spectrum in Data():
-				if spectrum.ms_level:
-					spectrum_dict = {
-						"ID": spectrum.ID,
-						"MS Level": spectrum.ms_level,
-					}
-			df = DataFrame()
-			print(f"Data: {df}")
-			return render.DataGrid(df, editable=True)
-		else:
-			return render.DataGrid(Data(), editable=True)
+		print(f"TYPE: {type(Data())}")
+		table_data = []
+		# turn pymzml.run.Reader object into a dataframe
+		for spectrum in Data():
+			if spectrum.ms_level:
+				polarity = None
+				if spectrum["negative scan"]:
+					polarity = "negative"
+				elif spectrum["positive scan"]:
+					polarity = "positive"
+
+				spectrum_dict = {
+					"ID": spectrum.ID,
+					"MS Level": spectrum.ms_level,
+					"RT (minutes)": spectrum.scan_time_in_minutes(),
+					"Polarity": polarity,
+					"Raw Peaks": len(spectrum.peaks("raw")),
+					"Centroided Peaks": len(spectrum.peaks("centroided")),
+					"Reprofiled Peaks": len(spectrum.peaks("reprofiled")),
+					"Highest Intensity": spectrum.highest_peaks(1)[0],
+					"Extreme Values (mz)": spectrum.extreme_values("mz"),
+					#"Total Ion Current": spectrum.tic,
+				}
+				table_data.append(spectrum_dict)
+		df = DataFrame(table_data)
+		return render.DataGrid(df, editable=False)
 
 
-	@Table.set_patch_fn
-	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		if config.Type() == "Integer": value = int(patch["value"])
-		elif config.Type() == "Float": value = float(patch["value"])
-		else: value = patch["value"]
-		DataCache.Invalidate(File(input))
-		return value
+	# @Table.set_patch_fn
+	# def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+	# 	if config.Type() == "Integer": value = int(patch["value"])
+	# 	elif config.Type() == "Float": value = float(patch["value"])
+	# 	else: value = patch["value"]
+	# 	DataCache.Invalidate(File(input))
+	# 	return value
 
 
 	def GenerateSimilarity():
