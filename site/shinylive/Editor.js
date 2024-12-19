@@ -1,4 +1,4 @@
-// Shinylive 0.9.0
+// Shinylive 0.9.1
 // Copyright 2024 Posit, PBC
 import {
   Icon,
@@ -13,7 +13,7 @@ import {
   require_jsx_runtime,
   require_react,
   stringToUint8Array
-} from "./chunk-ASVBLSKJ.js";
+} from "./chunk-PHWSSKUM.js";
 import {
   __commonJS,
   __esm,
@@ -23,7 +23,7 @@ import {
   __publicField,
   __toCommonJS,
   __toESM
-} from "./chunk-YYZJYZVZ.js";
+} from "./chunk-O5P2LFOG.js";
 
 // node_modules/events/events.js
 var require_events = __commonJS({
@@ -3610,13 +3610,13 @@ var init_main = __esm({
       Position2.is = is;
     })(Position || (Position = {}));
     (function(Range4) {
-      function create(one, two, three, four) {
-        if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
-          return { start: Position.create(one, two), end: Position.create(three, four) };
+      function create(one, two, three2, four) {
+        if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three2) && Is.uinteger(four)) {
+          return { start: Position.create(one, two), end: Position.create(three2, four) };
         } else if (Position.is(one) && Position.is(two)) {
           return { start: one, end: two };
         } else {
-          throw new Error(`Range#create called with invalid arguments[${one}, ${two}, ${three}, ${four}]`);
+          throw new Error(`Range#create called with invalid arguments[${one}, ${two}, ${three2}, ${four}]`);
         }
       }
       Range4.create = create;
@@ -5547,7 +5547,7 @@ var require_protocol_notebook = __commonJS({
         return Is2.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.executionOrder) && (candidate.success === void 0 || Is2.boolean(candidate.success));
       }
       ExecutionSummary2.is = is;
-      function equals(one, other) {
+      function equals2(one, other) {
         if (one === other) {
           return true;
         }
@@ -5556,7 +5556,7 @@ var require_protocol_notebook = __commonJS({
         }
         return one.executionOrder === other.executionOrder && one.success === other.success;
       }
-      ExecutionSummary2.equals = equals;
+      ExecutionSummary2.equals = equals2;
     })(ExecutionSummary || (exports.ExecutionSummary = ExecutionSummary = {}));
     var NotebookCell;
     (function(NotebookCell2) {
@@ -19318,12 +19318,12 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
       for (let t3 of this.manager.tooltipViews)
         t3.dom.style.position = "absolute";
     }
-    let { editor, space: space4, scaleX, scaleY } = measured;
+    let { editor, space: space5, scaleX, scaleY } = measured;
     let others = [];
     for (let i2 = 0; i2 < this.manager.tooltips.length; i2++) {
       let tooltip = this.manager.tooltips[i2], tView = this.manager.tooltipViews[i2], { dom } = tView;
       let pos = measured.pos[i2], size = measured.size[i2];
-      if (!pos || pos.bottom <= Math.max(editor.top, space4.top) || pos.top >= Math.min(editor.bottom, space4.bottom) || pos.right < Math.max(editor.left, space4.left) - 0.1 || pos.left > Math.min(editor.right, space4.right) + 0.1) {
+      if (!pos || pos.bottom <= Math.max(editor.top, space5.top) || pos.top >= Math.min(editor.bottom, space5.bottom) || pos.right < Math.max(editor.left, space5.left) - 0.1 || pos.left > Math.min(editor.right, space5.right) + 0.1) {
         dom.style.top = Outside;
         continue;
       }
@@ -19331,11 +19331,11 @@ var tooltipPlugin = /* @__PURE__ */ ViewPlugin.fromClass(class {
       let arrowHeight = arrow ? 7 : 0;
       let width = size.right - size.left, height = (_a3 = knownHeight.get(tView)) !== null && _a3 !== void 0 ? _a3 : size.bottom - size.top;
       let offset = tView.offset || noOffset, ltr = this.view.textDirection == Direction.LTR;
-      let left = size.width > space4.right - space4.left ? ltr ? space4.left : space4.right - size.width : ltr ? Math.min(pos.left - (arrow ? 14 : 0) + offset.x, space4.right - width) : Math.max(space4.left, pos.left - width + (arrow ? 14 : 0) - offset.x);
+      let left = size.width > space5.right - space5.left ? ltr ? space5.left : space5.right - size.width : ltr ? Math.min(pos.left - (arrow ? 14 : 0) + offset.x, space5.right - width) : Math.max(space5.left, pos.left - width + (arrow ? 14 : 0) - offset.x);
       let above = this.above[i2];
-      if (!tooltip.strictSide && (above ? pos.top - (size.bottom - size.top) - offset.y < space4.top : pos.bottom + (size.bottom - size.top) + offset.y > space4.bottom) && above == space4.bottom - pos.bottom > pos.top - space4.top)
+      if (!tooltip.strictSide && (above ? pos.top - (size.bottom - size.top) - offset.y < space5.top : pos.bottom + (size.bottom - size.top) + offset.y > space5.bottom) && above == space5.bottom - pos.bottom > pos.top - space5.top)
         above = this.above[i2] = !above;
-      let spaceVert = (above ? pos.top - space4.top : space4.bottom - pos.bottom) - arrowHeight;
+      let spaceVert = (above ? pos.top - space5.top : space5.bottom - pos.bottom) - arrowHeight;
       if (spaceVert < height && tView.resize !== false) {
         if (spaceVert < this.view.defaultLineHeight) {
           dom.style.top = Outside;
@@ -19485,10 +19485,10 @@ var HoverTooltipHost = class _HoverTooltipHost {
     }
     this.mounted = true;
   }
-  positioned(space4) {
+  positioned(space5) {
     for (let hostedView of this.manager.tooltipViews) {
       if (hostedView.positioned)
-        hostedView.positioned(space4);
+        hostedView.positioned(space5);
     }
   }
   update(update) {
@@ -22160,10 +22160,10 @@ NodeProp.contextHash = new NodeProp({ perNode: true });
 NodeProp.lookAhead = new NodeProp({ perNode: true });
 NodeProp.mounted = new NodeProp({ perNode: true });
 var MountedTree = class {
-  constructor(tree, overlay, parser7) {
+  constructor(tree, overlay, parser10) {
     this.tree = tree;
     this.overlay = overlay;
-    this.parser = parser7;
+    this.parser = parser10;
   }
   /**
   @internal
@@ -23770,8 +23770,8 @@ function parseMixed(nest) {
   return (parse, input, fragments, ranges) => new MixedParse(parse, nest, input, fragments, ranges);
 }
 var InnerParse = class {
-  constructor(parser7, parse, overlay, target, from) {
-    this.parser = parser7;
+  constructor(parser10, parse, overlay, target, from) {
+    this.parser = parser10;
     this.parse = parse;
     this.overlay = overlay;
     this.target = target;
@@ -23783,8 +23783,8 @@ function checkRanges(ranges) {
     throw new RangeError("Invalid inner parse ranges given: " + JSON.stringify(ranges));
 }
 var ActiveOverlay = class {
-  constructor(parser7, predicate, mounts, index, start, target, prev) {
-    this.parser = parser7;
+  constructor(parser10, predicate, mounts, index, start, target, prev) {
+    this.parser = parser10;
     this.predicate = predicate;
     this.mounts = mounts;
     this.index = index;
@@ -24029,14 +24029,14 @@ var FragmentCursor = class {
       this.inner = new StructureCursor(frag.tree, -frag.offset);
     }
   }
-  findMounts(pos, parser7) {
+  findMounts(pos, parser10) {
     var _a3;
     let result = [];
     if (this.inner) {
       this.inner.cursor.moveTo(pos, 1);
       for (let pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
         let mount = (_a3 = pos2.tree) === null || _a3 === void 0 ? void 0 : _a3.prop(NodeProp.mounted);
-        if (mount && mount.parser == parser7) {
+        if (mount && mount.parser == parser10) {
           for (let i2 = this.fragI; i2 < this.fragments.length; i2++) {
             let frag = this.fragments[i2];
             if (frag.from >= pos2.to)
@@ -24844,14 +24844,14 @@ var Language = class {
   configure your parser to [attach](https://codemirror.net/6/docs/ref/#language.languageDataProp) it
   to the language's outer syntax node.
   */
-  constructor(data, parser7, extraExtensions = [], name2 = "") {
+  constructor(data, parser10, extraExtensions = [], name2 = "") {
     this.data = data;
     this.name = name2;
     if (!EditorState.prototype.hasOwnProperty("tree"))
       Object.defineProperty(EditorState.prototype, "tree", { get() {
         return syntaxTree(this);
       } });
-    this.parser = parser7;
+    this.parser = parser10;
     this.extension = [
       language.of(this),
       EditorState.languageData.of((state, pos, side) => {
@@ -24938,9 +24938,9 @@ function topNodeAt(state, pos, side) {
   return tree;
 }
 var LRLanguage = class _LRLanguage extends Language {
-  constructor(data, parser7, name2) {
-    super(data, parser7, [], name2);
-    this.parser = parser7;
+  constructor(data, parser10, name2) {
+    super(data, parser10, [], name2);
+    this.parser = parser10;
   }
   /**
   Define a language from a parser.
@@ -25001,8 +25001,8 @@ var DocInput = class {
 };
 var currentContext = null;
 var ParseContext = class _ParseContext {
-  constructor(parser7, state, fragments = [], tree, treeLen, viewport, skipped, scheduleOn) {
-    this.parser = parser7;
+  constructor(parser10, state, fragments = [], tree, treeLen, viewport, skipped, scheduleOn) {
+    this.parser = parser10;
     this.state = state;
     this.fragments = fragments;
     this.tree = tree;
@@ -25016,8 +25016,8 @@ var ParseContext = class _ParseContext {
   /**
   @internal
   */
-  static create(parser7, state, viewport) {
-    return new _ParseContext(parser7, state, [], Tree.empty, 0, viewport, [], null);
+  static create(parser10, state, viewport) {
+    return new _ParseContext(parser10, state, [], Tree.empty, 0, viewport, [], null);
   }
   startParse() {
     return this.parser.startParse(new DocInput(this.state.doc), this.fragments);
@@ -25165,7 +25165,7 @@ var ParseContext = class _ParseContext {
     return new class extends Parser {
       createParse(input, fragments, ranges) {
         let from = ranges[0].from, to = ranges[ranges.length - 1].to;
-        let parser7 = {
+        let parser10 = {
           parsedPos: from,
           advance() {
             let cx = currentContext;
@@ -25182,7 +25182,7 @@ var ParseContext = class _ParseContext {
           stopAt() {
           }
         };
-        return parser7;
+        return parser10;
       }
     }();
   }
@@ -25605,8 +25605,8 @@ function delimitedIndent({ closing: closing2, align = true, units = 1 }) {
   return (context) => delimitedStrategy(context, align, units, closing2);
 }
 function delimitedStrategy(context, align, units, closing2, closedAt) {
-  let after = context.textAfter, space4 = after.match(/^\s*/)[0].length;
-  let closed = closing2 && after.slice(space4, space4 + closing2.length) == closing2 || closedAt == context.pos + space4;
+  let after = context.textAfter, space5 = after.match(/^\s*/)[0].length;
+  let closed = closing2 && after.slice(space5, space5 + closing2.length) == closing2 || closedAt == context.pos + space5;
   let aligned = align ? bracketedAligned(context) : null;
   if (aligned)
     return closed ? context.column(aligned.from) : context.column(aligned.to);
@@ -25639,11 +25639,11 @@ function indentOnInput() {
       if (line2.from == last)
         continue;
       last = line2.from;
-      let indent2 = getIndentation(state, line2.from);
-      if (indent2 == null)
+      let indent3 = getIndentation(state, line2.from);
+      if (indent3 == null)
         continue;
       let cur2 = /^\s*/.exec(line2.text)[0];
-      let norm = indentString(state, indent2);
+      let norm = indentString(state, indent3);
       if (cur2 != norm)
         changes.push({ from: line2.from, to: line2.from + cur2.length, insert: norm });
     }
@@ -26410,20 +26410,20 @@ function defaultCopyState(state) {
 }
 var IndentedFrom = /* @__PURE__ */ new WeakMap();
 var StreamLanguage = class _StreamLanguage extends Language {
-  constructor(parser7) {
-    let data = defineLanguageFacet(parser7.languageData);
-    let p2 = fullParser(parser7), self2;
+  constructor(parser10) {
+    let data = defineLanguageFacet(parser10.languageData);
+    let p2 = fullParser(parser10), self2;
     let impl = new class extends Parser {
       createParse(input, fragments, ranges) {
         return new Parse(self2, input, fragments, ranges);
       }
     }();
-    super(data, impl, [indentService.of((cx, pos) => this.getIndent(cx, pos))], parser7.name);
+    super(data, impl, [indentService.of((cx, pos) => this.getIndent(cx, pos))], parser10.name);
     this.topNode = docID(data);
     self2 = this;
     this.streamParser = p2;
     this.stateAfter = new NodeProp({ perNode: true });
-    this.tokenTable = parser7.tokenTable ? new TokenTable(p2.tokenTable) : defaultTokenTable;
+    this.tokenTable = parser10.tokenTable ? new TokenTable(p2.tokenTable) : defaultTokenTable;
   }
   /**
   Define a stream language.
@@ -26457,8 +26457,8 @@ var StreamLanguage = class _StreamLanguage extends Language {
     while (statePos < pos) {
       let line2 = cx.state.doc.lineAt(statePos), end = Math.min(pos, line2.to);
       if (line2.length) {
-        let indentation2 = overrideIndentation ? overrideIndentation(line2.from) : -1;
-        let stream = new StringStream(line2.text, cx.state.tabSize, cx.unit, indentation2 < 0 ? void 0 : indentation2);
+        let indentation4 = overrideIndentation ? overrideIndentation(line2.from) : -1;
+        let stream = new StringStream(line2.text, cx.state.tabSize, cx.unit, indentation4 < 0 ? void 0 : indentation4);
         while (stream.pos < end - line2.from)
           readToken(this.streamParser.token, stream, state);
       } else {
@@ -27032,26 +27032,26 @@ var completionConfig = /* @__PURE__ */ Facet.define({
 function joinClass(a2, b3) {
   return a2 ? b3 ? a2 + " " + b3 : a2 : b3;
 }
-function defaultPositionInfo(view, list, option, info, space4, tooltip) {
+function defaultPositionInfo(view, list, option, info, space5, tooltip) {
   let rtl = view.textDirection == Direction.RTL, left = rtl, narrow = false;
   let side = "top", offset, maxWidth;
-  let spaceLeft = list.left - space4.left, spaceRight = space4.right - list.right;
+  let spaceLeft = list.left - space5.left, spaceRight = space5.right - list.right;
   let infoWidth = info.right - info.left, infoHeight = info.bottom - info.top;
   if (left && spaceLeft < Math.min(infoWidth, spaceRight))
     left = false;
   else if (!left && spaceRight < Math.min(infoWidth, spaceLeft))
     left = true;
   if (infoWidth <= (left ? spaceLeft : spaceRight)) {
-    offset = Math.max(space4.top, Math.min(option.top, space4.bottom - infoHeight)) - list.top;
+    offset = Math.max(space5.top, Math.min(option.top, space5.bottom - infoHeight)) - list.top;
     maxWidth = Math.min(400, left ? spaceLeft : spaceRight);
   } else {
     narrow = true;
     maxWidth = Math.min(
       400,
-      (rtl ? list.right : space4.right - list.left) - 30
+      (rtl ? list.right : space5.right - list.left) - 30
       /* Info.Margin */
     );
-    let spaceBelow = space4.bottom - list.bottom;
+    let spaceBelow = space5.bottom - list.bottom;
     if (spaceBelow >= infoHeight || spaceBelow > list.top) {
       offset = option.bottom - list.top;
     } else {
@@ -27205,8 +27205,8 @@ var CompletionTooltip = class {
       this.currentClass = cls;
     }
   }
-  positioned(space4) {
-    this.space = space4;
+  positioned(space5) {
+    this.space = space5;
     if (this.info)
       this.view.requestMeasure(this.placeInfoReq);
   }
@@ -27276,14 +27276,14 @@ var CompletionTooltip = class {
     let listRect = this.dom.getBoundingClientRect();
     let infoRect = this.info.getBoundingClientRect();
     let selRect = sel.getBoundingClientRect();
-    let space4 = this.space;
-    if (!space4) {
+    let space5 = this.space;
+    if (!space5) {
       let win = this.dom.ownerDocument.defaultView || window;
-      space4 = { left: 0, top: 0, right: win.innerWidth, bottom: win.innerHeight };
+      space5 = { left: 0, top: 0, right: win.innerWidth, bottom: win.innerHeight };
     }
-    if (selRect.top > Math.min(space4.bottom, listRect.bottom) - 10 || selRect.bottom < Math.max(space4.top, listRect.top) + 10)
+    if (selRect.top > Math.min(space5.bottom, listRect.bottom) - 10 || selRect.bottom < Math.max(space5.top, listRect.top) + 10)
       return null;
-    return this.view.state.facet(completionConfig).positionInfo(this.view, listRect, selRect, infoRect, space4, this.dom);
+    return this.view.state.facet(completionConfig).positionInfo(this.view, listRect, selRect, infoRect, space5, this.dom);
   }
   placeInfo(pos) {
     if (this.info) {
@@ -28020,11 +28020,11 @@ var Snippet = class _Snippet {
     let lineObj = state.doc.lineAt(pos), baseIndent = /^\s*/.exec(lineObj.text)[0];
     for (let line of this.lines) {
       if (text.length) {
-        let indent2 = baseIndent, tabs = /^\t*/.exec(line)[0].length;
+        let indent3 = baseIndent, tabs = /^\t*/.exec(line)[0].length;
         for (let i2 = 0; i2 < tabs; i2++)
-          indent2 += state.facet(indentUnit);
-        lineStart.push(pos + indent2.length - tabs);
-        line = indent2 + line.slice(tabs);
+          indent3 += state.facet(indentUnit);
+        lineStart.push(pos + indent3.length - tabs);
+        line = indent3 + line.slice(tabs);
       }
       text.push(line);
       pos += line.length + 1;
@@ -28535,17 +28535,17 @@ function changeBlockComment(option, state, ranges = state.selection.ranges) {
   let tokens2 = ranges.map((r2) => getConfig(state, r2.from).block);
   if (!tokens2.every((c2) => c2))
     return null;
-  let comments = ranges.map((r2, i2) => findBlockComment(state, tokens2[i2], r2.from, r2.to));
-  if (option != 2 && !comments.every((c2) => c2)) {
+  let comments2 = ranges.map((r2, i2) => findBlockComment(state, tokens2[i2], r2.from, r2.to));
+  if (option != 2 && !comments2.every((c2) => c2)) {
     return { changes: state.changes(ranges.map((range, i2) => {
-      if (comments[i2])
+      if (comments2[i2])
         return [];
       return [{ from: range.from, insert: tokens2[i2].open + " " }, { from: range.to, insert: " " + tokens2[i2].close }];
     })) };
-  } else if (option != 1 && comments.some((c2) => c2)) {
+  } else if (option != 1 && comments2.some((c2) => c2)) {
     let changes = [];
-    for (let i2 = 0, comment2; i2 < comments.length; i2++)
-      if (comment2 = comments[i2]) {
+    for (let i2 = 0, comment2; i2 < comments2.length; i2++)
+      if (comment2 = comments2[i2]) {
         let token = tokens2[i2], { open, close } = comment2;
         changes.push({ from: open.pos - token.open.length, to: open.pos + open.margin }, { from: close.pos - close.margin, to: close.pos + token.close.length });
       }
@@ -28565,12 +28565,12 @@ function changeLineComment(option, state, ranges = state.selection.ranges) {
         let token = getConfig(state, line.from).line;
         if (!token)
           continue;
-        let indent2 = /^\s*/.exec(line.text)[0].length;
-        let empty2 = indent2 == line.length;
-        let comment2 = line.text.slice(indent2, indent2 + token.length) == token ? indent2 : -1;
-        if (indent2 < line.text.length && indent2 < minIndent)
-          minIndent = indent2;
-        lines.push({ line, comment: comment2, token, indent: indent2, empty: empty2, single: false });
+        let indent3 = /^\s*/.exec(line.text)[0].length;
+        let empty2 = indent3 == line.length;
+        let comment2 = line.text.slice(indent3, indent3 + token.length) == token ? indent3 : -1;
+        if (indent3 < line.text.length && indent3 < minIndent)
+          minIndent = indent3;
+        lines.push({ line, comment: comment2, token, indent: indent3, empty: empty2, single: false });
       }
       pos = line.to + 1;
     }
@@ -28584,9 +28584,9 @@ function changeLineComment(option, state, ranges = state.selection.ranges) {
   }
   if (option != 2 && lines.some((l3) => l3.comment < 0 && (!l3.empty || l3.single))) {
     let changes = [];
-    for (let { line, token, indent: indent2, empty: empty2, single } of lines)
+    for (let { line, token, indent: indent3, empty: empty2, single } of lines)
       if (single || !empty2)
-        changes.push({ from: line.from + indent2, insert: token + " " });
+        changes.push({ from: line.from + indent3, insert: token + " " });
     let changeSet = state.changes(changes);
     return { changes: changeSet, selection: state.selection.map(changeSet, 1) };
   } else if (option != 1 && lines.some((l3) => l3.comment >= 0)) {
@@ -28987,9 +28987,9 @@ function moveByLineBoundary(view, start, forward) {
   if (moved.head == start.head && moved.head != (forward ? line.to : line.from))
     moved = view.moveToLineBoundary(start, forward, false);
   if (!forward && moved.head == line.from && line.length) {
-    let space4 = /^\s*/.exec(view.state.sliceDoc(line.from, Math.min(line.from + 100, line.to)))[0].length;
-    if (space4 && start.head != line.from + space4)
-      moved = EditorSelection.cursor(line.from + space4);
+    let space5 = /^\s*/.exec(view.state.sliceDoc(line.from, Math.min(line.from + 100, line.to)))[0].length;
+    if (space5 && start.head != line.from + space5)
+      moved = EditorSelection.cursor(line.from + space5);
   }
   return moved;
 }
@@ -29317,16 +29317,16 @@ function newlineAndIndent(atEof) {
       if (atEof)
         from = to = (to <= line.to ? line : state.doc.lineAt(to)).to;
       let cx = new IndentContext(state, { simulateBreak: from, simulateDoubleBreak: !!explode });
-      let indent2 = getIndentation(cx, from);
-      if (indent2 == null)
-        indent2 = /^\s*/.exec(state.doc.lineAt(from).text)[0].length;
+      let indent3 = getIndentation(cx, from);
+      if (indent3 == null)
+        indent3 = /^\s*/.exec(state.doc.lineAt(from).text)[0].length;
       while (to < line.to && /\s/.test(line.text[to - line.from]))
         to++;
       if (explode)
         ({ from, to } = explode);
       else if (from > line.from && from < line.from + 100 && !/\S/.test(line.text.slice(0, from)))
         from = line.from;
-      let insert2 = ["", indentString(state, indent2)];
+      let insert2 = ["", indentString(state, indent3)];
       if (explode)
         insert2.push(indentString(state, cx.lineIndent(line.from, -1)));
       return {
@@ -29366,15 +29366,15 @@ var indentSelection = ({ state, dispatch }) => {
     return found == null ? -1 : found;
   } });
   let changes = changeBySelectedLine(state, (line, changes2, range) => {
-    let indent2 = getIndentation(context, line.from);
-    if (indent2 == null)
+    let indent3 = getIndentation(context, line.from);
+    if (indent3 == null)
       return;
     if (!/\S/.test(line.text))
-      indent2 = 0;
+      indent3 = 0;
     let cur2 = /^\s*/.exec(line.text)[0];
-    let norm = indentString(state, indent2);
+    let norm = indentString(state, indent3);
     if (cur2 != norm || range.from < line.from + cur2.length) {
-      updated[line.from] = indent2;
+      updated[line.from] = indent3;
       changes2.push({ from: line.from, to: line.from + cur2.length, insert: norm });
     }
   });
@@ -29394,14 +29394,14 @@ var indentLess = ({ state, dispatch }) => {
   if (state.readOnly)
     return false;
   dispatch(state.update(changeBySelectedLine(state, (line, changes) => {
-    let space4 = /^\s*/.exec(line.text)[0];
-    if (!space4)
+    let space5 = /^\s*/.exec(line.text)[0];
+    if (!space5)
       return;
-    let col = countColumn(space4, state.tabSize), keep = 0;
+    let col = countColumn(space5, state.tabSize), keep = 0;
     let insert2 = indentString(state, Math.max(0, col - getIndentUnit(state)));
-    while (keep < space4.length && keep < insert2.length && space4.charCodeAt(keep) == insert2.charCodeAt(keep))
+    while (keep < space5.length && keep < insert2.length && space5.charCodeAt(keep) == insert2.charCodeAt(keep))
       keep++;
-    changes.push({ from: line.from + keep, to: line.from + space4.length, insert: insert2.slice(keep) });
+    changes.push({ from: line.from + keep, to: line.from + space5.length, insert: insert2.slice(keep) });
   }), { userEvent: "delete.dedent" }));
   return true;
 };
@@ -29526,14 +29526,17 @@ var Stack = class _Stack {
   reduce(action) {
     var _a3;
     let depth = action >> 19, type = action & 65535;
-    let { parser: parser7 } = this.p;
-    let dPrec = parser7.dynamicPrecedence(type);
+    let { parser: parser10 } = this.p;
+    let lookaheadRecord = this.reducePos < this.pos - 25;
+    if (lookaheadRecord)
+      this.setLookAhead(this.pos);
+    let dPrec = parser10.dynamicPrecedence(type);
     if (dPrec)
       this.score += dPrec;
     if (depth == 0) {
-      this.pushState(parser7.getGoto(this.state, type, true), this.reducePos);
-      if (type < parser7.minRepeatTerm)
-        this.storeNode(type, this.reducePos, this.reducePos, 4, true);
+      this.pushState(parser10.getGoto(this.state, type, true), this.reducePos);
+      if (type < parser10.minRepeatTerm)
+        this.storeNode(type, this.reducePos, this.reducePos, lookaheadRecord ? 8 : 4, true);
       this.reduceContext(type, this.reducePos);
       return;
     }
@@ -29550,8 +29553,8 @@ var Stack = class _Stack {
       }
     }
     let bufferBase = base2 ? this.stack[base2 - 1] : 0, count = this.bufferBase + this.buffer.length - bufferBase;
-    if (type < parser7.minRepeatTerm || action & 131072) {
-      let pos = parser7.stateFlag(
+    if (type < parser10.minRepeatTerm || action & 131072) {
+      let pos = parser10.stateFlag(
         this.state,
         1
         /* StateFlag.Skipped */
@@ -29562,7 +29565,7 @@ var Stack = class _Stack {
       this.state = this.stack[base2];
     } else {
       let baseStateID = this.stack[base2 - 3];
-      this.state = parser7.getGoto(baseStateID, type, true);
+      this.state = parser10.getGoto(baseStateID, type, true);
     }
     while (this.stack.length > base2)
       this.stack.pop();
@@ -29572,7 +29575,7 @@ var Stack = class _Stack {
   /**
   @internal
   */
-  storeNode(term, start, end, size = 4, isReduce = false) {
+  storeNode(term, start, end, size = 4, mustSink = false) {
     if (term == 0 && (!this.stack.length || this.stack[this.stack.length - 1] < this.buffer.length + this.bufferBase)) {
       let cur2 = this, top2 = this.buffer.length;
       if (top2 == 0 && cur2.parent) {
@@ -29588,20 +29591,29 @@ var Stack = class _Stack {
         }
       }
     }
-    if (!isReduce || this.pos == end) {
+    if (!mustSink || this.pos == end) {
       this.buffer.push(term, start, end, size);
     } else {
       let index = this.buffer.length;
-      if (index > 0 && this.buffer[index - 4] != 0)
-        while (index > 0 && this.buffer[index - 2] > end) {
-          this.buffer[index] = this.buffer[index - 4];
-          this.buffer[index + 1] = this.buffer[index - 3];
-          this.buffer[index + 2] = this.buffer[index - 2];
-          this.buffer[index + 3] = this.buffer[index - 1];
-          index -= 4;
-          if (size > 4)
-            size -= 4;
+      if (index > 0 && this.buffer[index - 4] != 0) {
+        let mustMove = false;
+        for (let scan = index; scan > 0 && this.buffer[scan - 2] > end; scan -= 4) {
+          if (this.buffer[scan - 1] >= 0) {
+            mustMove = true;
+            break;
+          }
         }
+        if (mustMove)
+          while (index > 0 && this.buffer[index - 2] > end) {
+            this.buffer[index] = this.buffer[index - 4];
+            this.buffer[index + 1] = this.buffer[index - 3];
+            this.buffer[index + 2] = this.buffer[index - 2];
+            this.buffer[index + 3] = this.buffer[index - 1];
+            index -= 4;
+            if (size > 4)
+              size -= 4;
+          }
+      }
       this.buffer[index] = term;
       this.buffer[index + 1] = start;
       this.buffer[index + 2] = end;
@@ -29616,10 +29628,10 @@ var Stack = class _Stack {
     if (action & 131072) {
       this.pushState(action & 65535, this.pos);
     } else if ((action & 262144) == 0) {
-      let nextState = action, { parser: parser7 } = this.p;
-      if (end > this.pos || type <= parser7.maxNode) {
+      let nextState = action, { parser: parser10 } = this.p;
+      if (end > this.pos || type <= parser10.maxNode) {
         this.pos = end;
-        if (!parser7.stateFlag(
+        if (!parser10.stateFlag(
           nextState,
           1
           /* StateFlag.Skipped */
@@ -29628,7 +29640,7 @@ var Stack = class _Stack {
       }
       this.pushState(nextState, start);
       this.shiftContext(type, start);
-      if (type <= parser7.maxNode)
+      if (type <= parser10.maxNode)
         this.buffer.push(type, start, end, 4);
     } else {
       this.pos = end;
@@ -29762,18 +29774,18 @@ var Stack = class _Stack {
   @internal
   */
   forceReduce() {
-    let { parser: parser7 } = this.p;
-    let reduce = parser7.stateSlot(
+    let { parser: parser10 } = this.p;
+    let reduce = parser10.stateSlot(
       this.state,
       5
       /* ParseState.ForcedReduce */
     );
     if ((reduce & 65536) == 0)
       return false;
-    if (!parser7.validAction(this.state, reduce)) {
+    if (!parser10.validAction(this.state, reduce)) {
       let depth = reduce >> 19, term = reduce & 65535;
       let target = this.stack.length - depth * 3;
-      if (target < 0 || parser7.getGoto(this.stack[target], term, false) < 0) {
+      if (target < 0 || parser10.getGoto(this.stack[target], term, false) < 0) {
         let backup = this.findForcedReduction();
         if (backup == null)
           return false;
@@ -29792,19 +29804,19 @@ var Stack = class _Stack {
   isn't a valid action. @internal
   */
   findForcedReduction() {
-    let { parser: parser7 } = this.p, seen = [];
+    let { parser: parser10 } = this.p, seen = [];
     let explore = (state, depth) => {
       if (seen.includes(state))
         return;
       seen.push(state);
-      return parser7.allActions(state, (action) => {
+      return parser10.allActions(state, (action) => {
         if (action & (262144 | 131072))
           ;
         else if (action & 65536) {
           let rDepth = (action >> 19) - depth;
           if (rDepth > 1) {
             let term = action & 65535, target = this.stack.length - rDepth * 3;
-            if (target >= 0 && parser7.getGoto(this.stack[target], term, false) >= 0)
+            if (target >= 0 && parser10.getGoto(this.stack[target], term, false) >= 0)
               return rDepth << 19 | 65536 | term;
           }
         } else {
@@ -29840,12 +29852,12 @@ var Stack = class _Stack {
   get deadEnd() {
     if (this.stack.length != 3)
       return false;
-    let { parser: parser7 } = this.p;
-    return parser7.data[parser7.stateSlot(
+    let { parser: parser10 } = this.p;
+    return parser10.data[parser10.stateSlot(
       this.state,
       1
       /* ParseState.Actions */
-    )] == 65535 && !parser7.stateSlot(
+    )] == 65535 && !parser10.stateSlot(
       this.state,
       4
       /* ParseState.DefaultReduce */
@@ -30152,6 +30164,13 @@ var InputStream = class {
     this.token.value = token;
     this.token.end = end;
   }
+  /**
+  Accept a token ending at a specific given position.
+  */
+  acceptTokenTo(token, endPos) {
+    this.token.value = token;
+    this.token.end = endPos;
+  }
   getChunk() {
     if (this.pos >= this.chunk2Pos && this.pos < this.chunk2Pos + this.chunk2.length) {
       let { chunk, chunkPos } = this;
@@ -30260,8 +30279,8 @@ var TokenGroup = class {
     this.id = id2;
   }
   token(input, stack) {
-    let { parser: parser7 } = stack.p;
-    readToken2(this.data, input, stack, this.id, parser7.data, parser7.tokenPrecTable);
+    let { parser: parser10 } = stack.p;
+    readToken2(this.data, input, stack, this.id, parser10.data, parser10.tokenPrecTable);
   }
 };
 TokenGroup.prototype.contextual = TokenGroup.prototype.fallback = TokenGroup.prototype.extend = false;
@@ -30367,11 +30386,11 @@ function cutAt(tree, pos, side) {
           return side < 0 ? Math.max(0, Math.min(
             cursor.to - 1,
             pos - 25
-            /* Safety.Margin */
+            /* Lookahead.Margin */
           )) : Math.min(tree.length, Math.max(
             cursor.from + 1,
             pos + 25
-            /* Safety.Margin */
+            /* Lookahead.Margin */
           ));
         if (side < 0 ? cursor.prevSibling() : cursor.nextSibling())
           break;
@@ -30463,18 +30482,18 @@ var FragmentCursor2 = class {
   }
 };
 var TokenCache = class {
-  constructor(parser7, stream) {
+  constructor(parser10, stream) {
     this.stream = stream;
     this.tokens = [];
     this.mainToken = null;
     this.actions = [];
-    this.tokens = parser7.tokenizers.map((_2) => new CachedToken());
+    this.tokens = parser10.tokenizers.map((_2) => new CachedToken());
   }
   getActions(stack) {
     let actionIndex = 0;
     let main = null;
-    let { parser: parser7 } = stack.p, { tokenizers } = parser7;
-    let mask = parser7.stateSlot(
+    let { parser: parser10 } = stack.p, { tokenizers } = parser10;
+    let mask = parser10.stateSlot(
       stack.state,
       3
       /* ParseState.TokenizerMask */
@@ -30532,10 +30551,10 @@ var TokenCache = class {
     let start = this.stream.clipPos(stack.pos);
     tokenizer.token(this.stream.reset(start, token), stack);
     if (token.value > -1) {
-      let { parser: parser7 } = stack.p;
-      for (let i2 = 0; i2 < parser7.specialized.length; i2++)
-        if (parser7.specialized[i2] == token.value) {
-          let result = parser7.specializers[i2](this.stream.read(token.start, token.end), stack);
+      let { parser: parser10 } = stack.p;
+      for (let i2 = 0; i2 < parser10.specialized.length; i2++)
+        if (parser10.specialized[i2] == token.value) {
+          let result = parser10.specializers[i2](this.stream.read(token.start, token.end), stack);
           if (result >= 0 && stack.p.parser.dialect.allows(result >> 1)) {
             if ((result & 1) == 0)
               token.value = result >> 1;
@@ -30559,9 +30578,9 @@ var TokenCache = class {
     return index;
   }
   addActions(stack, token, end, index) {
-    let { state } = stack, { parser: parser7 } = stack.p, { data } = parser7;
+    let { state } = stack, { parser: parser10 } = stack.p, { data } = parser10;
     for (let set = 0; set < 2; set++) {
-      for (let i2 = parser7.stateSlot(
+      for (let i2 = parser10.stateSlot(
         state,
         set ? 2 : 1
         /* ParseState.Actions */
@@ -30583,8 +30602,8 @@ var TokenCache = class {
   }
 };
 var Parse2 = class {
-  constructor(parser7, input, fragments, ranges) {
-    this.parser = parser7;
+  constructor(parser10, input, fragments, ranges) {
+    this.parser = parser10;
     this.input = input;
     this.ranges = ranges;
     this.recovering = 0;
@@ -30596,11 +30615,11 @@ var Parse2 = class {
     this.lastBigReductionSize = 0;
     this.bigReductionCount = 0;
     this.stream = new InputStream(input, ranges);
-    this.tokens = new TokenCache(parser7, this.stream);
-    this.topTerm = parser7.top[1];
+    this.tokens = new TokenCache(parser10, this.stream);
+    this.topTerm = parser10.top[1];
     let { from } = ranges[0];
-    this.stacks = [Stack.start(this, parser7.top[0], from)];
-    this.fragments = fragments.length && this.stream.end - from > parser7.bufferLength * 4 ? new FragmentCursor2(fragments, parser7.nodeSet) : null;
+    this.stacks = [Stack.start(this, parser10.top[0], from)];
+    this.fragments = fragments.length && this.stream.end - from > parser10.bufferLength * 4 ? new FragmentCursor2(fragments, parser10.nodeSet) : null;
   }
   get parsedPos() {
     return this.minStackPos;
@@ -30712,18 +30731,18 @@ var Parse2 = class {
   // given, stacks split off by ambiguous operations will be pushed to
   // `split`, or added to `stacks` if they move `pos` forward.
   advanceStack(stack, stacks, split) {
-    let start = stack.pos, { parser: parser7 } = this;
+    let start = stack.pos, { parser: parser10 } = this;
     let base2 = verbose ? this.stackID(stack) + " -> " : "";
     if (this.stoppedAt != null && start > this.stoppedAt)
       return stack.forceReduce() ? stack : null;
     if (this.fragments) {
       let strictCx = stack.curContext && stack.curContext.tracker.strict, cxHash = strictCx ? stack.curContext.hash : 0;
       for (let cached = this.fragments.nodeAt(start); cached; ) {
-        let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser7.getGoto(stack.state, cached.type.id) : -1;
+        let match = this.parser.nodeSet.types[cached.type.id] == cached.type ? parser10.getGoto(stack.state, cached.type.id) : -1;
         if (match > -1 && cached.length && (!strictCx || (cached.prop(NodeProp.contextHash) || 0) == cxHash)) {
           stack.useNode(cached, match);
           if (verbose)
-            console.log(base2 + this.stackID(stack) + ` (via reuse of ${parser7.getName(cached.type.id)})`);
+            console.log(base2 + this.stackID(stack) + ` (via reuse of ${parser10.getName(cached.type.id)})`);
           return true;
         }
         if (!(cached instanceof Tree) || cached.children.length == 0 || cached.positions[0] > 0)
@@ -30735,7 +30754,7 @@ var Parse2 = class {
           break;
       }
     }
-    let defaultReduce = parser7.stateSlot(
+    let defaultReduce = parser10.stateSlot(
       stack.state,
       4
       /* ParseState.DefaultReduce */
@@ -30743,7 +30762,7 @@ var Parse2 = class {
     if (defaultReduce > 0) {
       stack.reduce(defaultReduce);
       if (verbose)
-        console.log(base2 + this.stackID(stack) + ` (via always-reduce ${parser7.getName(
+        console.log(base2 + this.stackID(stack) + ` (via always-reduce ${parser10.getName(
           defaultReduce & 65535
           /* Action.ValueMask */
         )})`);
@@ -30761,10 +30780,10 @@ var Parse2 = class {
       let main = this.tokens.mainToken;
       localStack.apply(action, term, main ? main.start : localStack.pos, end);
       if (verbose)
-        console.log(base2 + this.stackID(localStack) + ` (via ${(action & 65536) == 0 ? "shift" : `reduce of ${parser7.getName(
+        console.log(base2 + this.stackID(localStack) + ` (via ${(action & 65536) == 0 ? "shift" : `reduce of ${parser10.getName(
           action & 65535
           /* Action.ValueMask */
-        )}`} for ${parser7.getName(term)} @ ${start}${localStack == stack ? "" : ", split"})`);
+        )}`} for ${parser10.getName(term)} @ ${start}${localStack == stack ? "" : ", split"})`);
       if (last)
         return true;
       else if (localStack.pos > start)
@@ -32100,10 +32119,10 @@ function isVarArg(node, doc2) {
     node = node.parent || node;
   if (node.name != "ArgList")
     return false;
-  let callee2 = (_a3 = node.parent) === null || _a3 === void 0 ? void 0 : _a3.firstChild;
-  if ((callee2 === null || callee2 === void 0 ? void 0 : callee2.name) != "Callee")
+  let callee3 = (_a3 = node.parent) === null || _a3 === void 0 ? void 0 : _a3.firstChild;
+  if ((callee3 === null || callee3 === void 0 ? void 0 : callee3.name) != "Callee")
     return false;
-  return doc2.sliceString(callee2.from, callee2.to) == "var";
+  return doc2.sliceString(callee3.from, callee3.to) == "var";
 }
 var VariablesByNode = /* @__PURE__ */ new NodeWeakMap();
 var declSelector = ["Declaration"];
@@ -33850,13 +33869,13 @@ var newlines = new ExternalTokenizer((input, stack) => {
     if (isLineBreak(input.next))
       input.acceptToken(newlineBracketed, 1);
   } else if (((prev = input.peek(-1)) < 0 || isLineBreak(prev)) && stack.canShift(blankLineStart)) {
-    let spaces2 = 0;
+    let spaces3 = 0;
     while (input.next == space3 || input.next == tab) {
       input.advance();
-      spaces2++;
+      spaces3++;
     }
     if (input.next == newline3 || input.next == carriageReturn || input.next == hash2)
-      input.acceptToken(blankLineStart, -spaces2);
+      input.acceptToken(blankLineStart, -spaces3);
   } else if (isLineBreak(input.next)) {
     input.acceptToken(newline$1, 1);
   }
@@ -33892,10 +33911,10 @@ function IndentLevel(parent, depth) {
   this.hash = (parent ? parent.hash + parent.hash << 8 : 0) + depth + (depth << 4);
 }
 var topIndent2 = new IndentLevel(null, 0);
-function countIndent(space4) {
+function countIndent(space5) {
   let depth = 0;
-  for (let i2 = 0; i2 < space4.length; i2++)
-    depth += space4.charCodeAt(i2) == tab ? 8 - depth % 8 : 1;
+  for (let i2 = 0; i2 < space5.length; i2++)
+    depth += space5.charCodeAt(i2) == tab ? 8 - depth % 8 : 1;
   return depth;
 }
 var trackIndent = new ContextTracker({
@@ -34421,9 +34440,373 @@ function python() {
   ]);
 }
 
+// node_modules/@lezer/sass/dist/index.js
+var indent2 = 154;
+var dedent2 = 155;
+var descendantOp2 = 156;
+var InterpolationEnd = 1;
+var InterpolationContinue = 2;
+var Unit2 = 3;
+var callee2 = 157;
+var identifier4 = 158;
+var VariableName2 = 4;
+var InterpolationStart = 5;
+var newline4 = 159;
+var blankLineStart2 = 160;
+var eof2 = 161;
+var whitespace = 162;
+var LineComment2 = 6;
+var Comment = 7;
+var IndentedMixin = 8;
+var IndentedInclude = 9;
+var Dialect_indented = 0;
+var space4 = [
+  9,
+  10,
+  11,
+  12,
+  13,
+  32,
+  133,
+  160,
+  5760,
+  8192,
+  8193,
+  8194,
+  8195,
+  8196,
+  8197,
+  8198,
+  8199,
+  8200,
+  8201,
+  8202,
+  8232,
+  8233,
+  8239,
+  8287,
+  12288
+];
+var colon2 = 58;
+var parenL2 = 40;
+var underscore2 = 95;
+var bracketL2 = 91;
+var dash3 = 45;
+var period2 = 46;
+var hash3 = 35;
+var percent2 = 37;
+var braceL = 123;
+var braceR2 = 125;
+var slash3 = 47;
+var asterisk = 42;
+var newlineChar = 10;
+var equals = 61;
+var plus2 = 43;
+var and = 38;
+function isAlpha2(ch) {
+  return ch >= 65 && ch <= 90 || ch >= 97 && ch <= 122 || ch >= 161;
+}
+function isDigit2(ch) {
+  return ch >= 48 && ch <= 57;
+}
+function startOfComment(input) {
+  let next;
+  return input.next == slash3 && ((next = input.peek(1)) == slash3 || next == asterisk);
+}
+var spaces2 = new ExternalTokenizer((input, stack) => {
+  if (stack.dialectEnabled(Dialect_indented)) {
+    let prev;
+    if (input.next < 0 && stack.canShift(eof2)) {
+      input.acceptToken(eof2);
+    } else if (((prev = input.peek(-1)) == newlineChar || prev < 0) && stack.canShift(blankLineStart2)) {
+      let spaces3 = 0;
+      while (input.next != newlineChar && space4.includes(input.next)) {
+        input.advance();
+        spaces3++;
+      }
+      if (input.next == newlineChar || startOfComment(input))
+        input.acceptToken(blankLineStart2, -spaces3);
+      else if (spaces3)
+        input.acceptToken(whitespace);
+    } else if (input.next == newlineChar) {
+      input.acceptToken(newline4, 1);
+    } else if (space4.includes(input.next)) {
+      input.advance();
+      while (input.next != newlineChar && space4.includes(input.next))
+        input.advance();
+      input.acceptToken(whitespace);
+    }
+  } else {
+    let length = 0;
+    while (space4.includes(input.next)) {
+      input.advance();
+      length++;
+    }
+    if (length)
+      input.acceptToken(whitespace);
+  }
+}, { contextual: true });
+var comments = new ExternalTokenizer((input, stack) => {
+  if (!startOfComment(input))
+    return;
+  input.advance();
+  if (stack.dialectEnabled(Dialect_indented)) {
+    let indentedComment = -1;
+    for (let off = 1; ; off++) {
+      let prev = input.peek(-off - 1);
+      if (prev == newlineChar || prev < 0) {
+        indentedComment = off + 1;
+        break;
+      } else if (!space4.includes(prev)) {
+        break;
+      }
+    }
+    if (indentedComment > -1) {
+      let block2 = input.next == asterisk, end = 0;
+      input.advance();
+      while (input.next >= 0) {
+        if (input.next == newlineChar) {
+          input.advance();
+          let indented = 0;
+          while (input.next != newlineChar && space4.includes(input.next)) {
+            indented++;
+            input.advance();
+          }
+          if (indented < indentedComment) {
+            end = -indented - 1;
+            break;
+          }
+        } else if (block2 && input.next == asterisk && input.peek(1) == slash3) {
+          end = 2;
+          break;
+        } else {
+          input.advance();
+        }
+      }
+      input.acceptToken(block2 ? Comment : LineComment2, end);
+      return;
+    }
+  }
+  if (input.next == slash3) {
+    while (input.next != newlineChar && input.next >= 0)
+      input.advance();
+    input.acceptToken(LineComment2);
+  } else {
+    input.advance();
+    while (input.next >= 0) {
+      let { next } = input;
+      input.advance();
+      if (next == asterisk && input.next == slash3) {
+        input.advance();
+        break;
+      }
+    }
+    input.acceptToken(Comment);
+  }
+});
+var indentedMixins = new ExternalTokenizer((input, stack) => {
+  if ((input.next == plus2 || input.next == equals) && stack.dialectEnabled(Dialect_indented))
+    input.acceptToken(input.next == equals ? IndentedMixin : IndentedInclude, 1);
+});
+var indentation2 = new ExternalTokenizer((input, stack) => {
+  if (!stack.dialectEnabled(Dialect_indented))
+    return;
+  let cDepth = stack.context.depth;
+  if (input.next < 0 && cDepth) {
+    input.acceptToken(dedent2);
+    return;
+  }
+  let prev = input.peek(-1);
+  if (prev == newlineChar) {
+    let depth = 0;
+    while (input.next != newlineChar && space4.includes(input.next)) {
+      input.advance();
+      depth++;
+    }
+    if (depth != cDepth && input.next != newlineChar && !startOfComment(input)) {
+      if (depth < cDepth)
+        input.acceptToken(dedent2, -depth);
+      else
+        input.acceptToken(indent2);
+    }
+  }
+});
+var identifiers2 = new ExternalTokenizer((input, stack) => {
+  for (let inside2 = false, dashes = 0, i2 = 0; ; i2++) {
+    let { next } = input;
+    if (isAlpha2(next) || next == dash3 || next == underscore2 || inside2 && isDigit2(next)) {
+      if (!inside2 && (next != dash3 || i2 > 0))
+        inside2 = true;
+      if (dashes === i2 && next == dash3)
+        dashes++;
+      input.advance();
+    } else if (next == hash3 && input.peek(1) == braceL) {
+      input.acceptToken(InterpolationStart, 2);
+      break;
+    } else {
+      if (inside2)
+        input.acceptToken(next == parenL2 ? callee2 : dashes == 2 && stack.canShift(VariableName2) ? VariableName2 : identifier4);
+      break;
+    }
+  }
+});
+var interpolationEnd = new ExternalTokenizer((input) => {
+  if (input.next == braceR2) {
+    input.advance();
+    while (isAlpha2(input.next) || input.next == dash3 || input.next == underscore2 || isDigit2(input.next))
+      input.advance();
+    if (input.next == hash3 && input.peek(1) == braceL)
+      input.acceptToken(InterpolationContinue, 2);
+    else
+      input.acceptToken(InterpolationEnd);
+  }
+});
+var descendant2 = new ExternalTokenizer((input) => {
+  if (space4.includes(input.peek(-1))) {
+    let { next } = input;
+    if (isAlpha2(next) || next == underscore2 || next == hash3 || next == period2 || next == bracketL2 || next == colon2 || next == dash3 || next == and)
+      input.acceptToken(descendantOp2);
+  }
+});
+var unitToken2 = new ExternalTokenizer((input) => {
+  if (!space4.includes(input.peek(-1))) {
+    let { next } = input;
+    if (next == percent2) {
+      input.advance();
+      input.acceptToken(Unit2);
+    }
+    if (isAlpha2(next)) {
+      do {
+        input.advance();
+      } while (isAlpha2(input.next));
+      input.acceptToken(Unit2);
+    }
+  }
+});
+function IndentLevel2(parent, depth) {
+  this.parent = parent;
+  this.depth = depth;
+  this.hash = (parent ? parent.hash + parent.hash << 8 : 0) + depth + (depth << 4);
+}
+var topIndent3 = new IndentLevel2(null, 0);
+var trackIndent2 = new ContextTracker({
+  start: topIndent3,
+  shift(context, term, stack, input) {
+    if (term == indent2)
+      return new IndentLevel2(context, stack.pos - input.pos);
+    if (term == dedent2)
+      return context.parent;
+    return context;
+  },
+  hash(context) {
+    return context.hash;
+  }
+});
+var cssHighlighting2 = styleTags({
+  "AtKeyword import charset namespace keyframes media supports include mixin use forward extend at-root": tags.definitionKeyword,
+  "Keyword selector": tags.keyword,
+  "ControlKeyword": tags.controlKeyword,
+  NamespaceName: tags.namespace,
+  KeyframeName: tags.labelName,
+  TagName: tags.tagName,
+  "ClassName Suffix": tags.className,
+  PseudoClassName: tags.constant(tags.className),
+  IdName: tags.labelName,
+  "FeatureName PropertyName": tags.propertyName,
+  AttributeName: tags.attributeName,
+  NumberLiteral: tags.number,
+  KeywordQuery: tags.keyword,
+  UnaryQueryOp: tags.operatorKeyword,
+  "CallTag ValueName": tags.atom,
+  VariableName: tags.variableName,
+  SassVariableName: tags.special(tags.variableName),
+  Callee: tags.operatorKeyword,
+  Unit: tags.unit,
+  "UniversalSelector NestingSelector IndentedMixin IndentedInclude": tags.definitionOperator,
+  MatchOp: tags.compareOperator,
+  "ChildOp SiblingOp, LogicOp": tags.logicOperator,
+  BinOp: tags.arithmeticOperator,
+  "Important Global Default": tags.modifier,
+  Comment: tags.blockComment,
+  LineComment: tags.lineComment,
+  ColorLiteral: tags.color,
+  "ParenthesizedContent StringLiteral": tags.string,
+  "InterpolationStart InterpolationContinue InterpolationEnd": tags.meta,
+  ': "..."': tags.punctuation,
+  "PseudoOp #": tags.derefOperator,
+  "; ,": tags.separator,
+  "( )": tags.paren,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace
+});
+var spec_identifier4 = { __proto__: null, not: 62, only: 62, using: 179, as: 189, with: 193, without: 193, hide: 207, show: 207, from: 230, to: 232, if: 245, through: 251, in: 257 };
+var spec_callee2 = { __proto__: null, url: 80, "url-prefix": 80, domain: 80, regexp: 80, lang: 94, "nth-child": 94, "nth-last-child": 94, "nth-of-type": 94, "nth-last-of-type": 94, dir: 94, "host-context": 94, selector: 172 };
+var spec_AtKeyword2 = { __proto__: null, "@import": 156, "@include": 176, "@mixin": 182, "@function": 182, "@use": 186, "@extend": 196, "@at-root": 200, "@forward": 204, "@media": 210, "@charset": 214, "@namespace": 218, "@keyframes": 224, "@supports": 236, "@if": 240, "@else": 242, "@for": 248, "@each": 254, "@while": 260, "@debug": 264, "@warn": 264, "@error": 264, "@return": 264 };
+var parser5 = LRParser.deserialize({
+  version: 14,
+  states: "L|Q`Q+tOOO#fQ+tOOP#mOpOOOOQ#U'#Ch'#ChO#rQ(pO'#CjOOQ#U'#Ci'#CiO%_Q)QO'#FxO%rQ.jO'#CnO&jQ#dO'#DWO'aQ(pO'#CgO'hQ)OO'#DYO'sQ#dO'#DaO'xQ#dO'#DeO'}Q#dO'#DnOOQ#U'#Fx'#FxO(SQ(pO'#FxO(ZQ(nO'#DrO%rQ.jO'#DzO%rQ.jO'#EVO%rQ.jO'#EYO%rQ.jO'#E[O(`Q)OO'#EaO)QQ)OO'#EcO%rQ.jO'#EeO)_Q)OO'#EhO%rQ.jO'#EjO)yQ)OO'#ElO*UQ#dO'#EoO*ZQ)OO'#EuO*oQ)OO'#FVOOQ&Z'#Fw'#FwOOQ&Y'#FY'#FYO*yQ(nO'#FYQ`Q+tOOO%rQ.jO'#EwO+UQ(nO'#E{O+ZQ)OO'#FOO%rQ.jO'#FRO%rQ.jO'#FTOOQ&Z'#Fa'#FaO+cQ+uO'#GRO+pQ(oO'#GRQOQ#SOOP,RO#SO'#FvPOOO)CAk)CAkOOQ#U'#Cm'#CmOOQ#U,59W,59WOOQ#i'#Cp'#CpO%rQ.jO'#CsO,aQ.wO'#CuO.|Q.^O,59YO%rQ.jO'#CzOOQ#S'#DO'#DOO/_Q(nO'#DTOOQ#i'#Fz'#FzO/dQ(nO'#C}OOQ#U'#DX'#DXOOQ#U,59r,59rO&jQ#dO,59rO/iQ)OO,59tO'sQ#dO,59{O'xQ#dO,5:PO(`Q)OO,5:TO(`Q)OO,5:VO(`Q)OO,5:WO(`Q)OO'#F`O/tQ(nO,59RO0PQ+tO'#DpO0WQ#TO'#DpOOQ&Z,59R,59ROOQ#U'#D['#D[OOQ#S'#D_'#D_OOQ#U,59t,59tO0]Q(nO,59tO0bQ(nO,59tOOQ#U'#Dc'#DcOOQ#U,59{,59{OOQ#S'#Dg'#DgO0gQ9`O,5:POOQ#U'#Do'#DoOOQ#U,5:Y,5:YO1gQ.jO,5:^O1qQ.jO,5:fO2jQ.jO,5:qO2wQ.YO,5:tO3YQ.jO,5:vOOQ#U'#Cj'#CjO4RQ(pO,5:{O4`Q(pO,5:}OOQ&Z,5:},5:}O4gQ)OO,5:}O4lQ.jO,5;POOQ#S'#D}'#D}O5[Q)OO'#ESO5cQ(nO'#GTO*ZQ)OO'#ERO5wQ(nO'#ETOOQ#S'#GU'#GUO/wQ(nO,5;SO3`Q.YO,5;UOOQ#d'#En'#EnO*yQ(nO,5;WO5|Q)OO,5;WOOQ#S'#Eq'#EqO6UQ(nO,5;ZO6ZQ(nO,5;aO6fQ(nO,5;qOOQ&Z'#GV'#GVOOQ&Y,5;t,5;tOOQ&Y-E9W-E9WO2wQ.YO,5;cO6tQ)OO,5;gO6yQ)OO'#GXO7RQ)OO,5;jO2wQ.YO,5;mO3`Q.YO,5;oOOQ&Z-E9_-E9_O7WQ(oO,5<mOOQ&Z'#GS'#GSO7iQ+uO'#FdO7WQ(oO,5<mPOO#S'#FX'#FXP7|O#SO,5<bPOOO,5<b,5<bO8[Q.YO,59_OOQ#i,59a,59aO%rQ.jO,59cO%rQ.jO,59hO%rQ.jO'#F]O8jQ#WO1G.tOOQ#k1G.t1G.tO8rQ.oO,59fO;[Q! lO,59oO<XQ.jO'#DPOOQ#i,59i,59iOOQ#U1G/^1G/^OOQ#U1G/`1G/`O0]Q(nO1G/`O0bQ(nO1G/`OOQ#U1G/g1G/gO<cQ9`O1G/kO<|Q(pO1G/oO=pQ(pO1G/qO>dQ(pO1G/rO?WQ(pO,5;zOOQ#S-E9^-E9^OOQ&Z1G.m1G.mO?eQ(nO,5:[O?jQ+uO,5:[O?qQ)OO'#D`O?xQ.jO'#D^OOQ#U1G/k1G/kO%rQ.jO1G/kO@tQ.jO'#DtOAOQ.kO1G/xOOQ#T1G/x1G/xO*yQ(nO1G0QOA{Q+uO'#GVOOQ&Z1G0]1G0]O/dQ(nO1G0]OOQ&Z1G0`1G0`OOQ&Z1G0b1G0bO/dQ(nO1G0bODeQ)OO1G0bOOQ&Z1G0g1G0gOOQ&Z1G0i1G0iODmQ)OO1G0iODrQ(nO1G0iODwQ)OO1G0kOOQ&Z1G0k1G0kOEVQ.jO'#FfOEgQ#dO1G0kOElQ(nO'#D}OEwQ(nO,5:jOE|Q(nO,5:nO*ZQ)OO,5:lOFUQ)OO'#FeOFiQ(nO,5<oOFzQ(nO,5:mO(`Q)OO,5:oOOQ&Z1G0n1G0nOOQ&Z1G0p1G0pOOQ&Z1G0r1G0rO*yQ(nO1G0rOGcQ)OO'#ErOOQ&Z1G0u1G0uOOQ&Z1G0{1G0{OOQ&Z1G1]1G1]OGqQ+uO1G0}O%rQ.jO1G1ROJZQ)OO'#FjOJfQ)OO,5<sO%rQ.jO1G1UOOQ&Z1G1X1G1XOOQ&Z1G1Z1G1ZOJnQ(oO1G2XOKPQ+uO,5<OOOQ#T,5<O,5<OOOQ#T-E9b-E9bPOO#S-E9V-E9VPOOO1G1|1G1|OOQ#i1G.y1G.yOKdQ.oO1G.}OOQ#i1G/S1G/SOM|Q.^O,5;wOOQ#W-E9Z-E9ZOOQ#k7+$`7+$`ON_Q(nO1G/ZONdQ.jO'#FZO! nQ.jO'#F}O!#VQ.jO'#FzO!#^Q(nO,59kOOQ#U7+$z7+$zOOQ#U7+%V7+%VO%rQ.jO7+%VOOQ&Z1G/v1G/vO!#cQ#TO1G/vO!#hQ(pO'#GPO!#rQ(nO,59zO!#wQ.jO'#GOO!$RQ(nO,59xO!$WQ.YO7+%VO!$fQ.YO'#FzO!$wQ(nO,5:`OOQ#T,5:`,5:`O!%PQ.kO'#FcO%rQ.jO'#FcO!&pQ.kO7+%dOOQ#T7+%d7+%dOOQ&Z7+%l7+%lO6fQ(nO7+%wO*yQ(nO7+%|OOQ#d'#E_'#E_O!'dQ)OO7+%|O!'rQ(nO7+&TO*ZQ)OO7+&TOOQ#d-E9d-E9dOOQ&Z7+&V7+&VO!'wQ.jO'#GWOOQ#d,5<Q,5<QODhQ(nO7+&VO%rQ.jO1G0UOOQ#S1G0Y1G0YOOQ#S1G0W1G0WO!(cQ(nO,5<POOQ#S-E9c-E9cO!(wQ(pO1G0ZOOQ&Z7+&^7+&^O!)OQ(vO'#CuO/wQ(nO'#FhO!)ZQ)OO,5;^OOQ&Z,5;^,5;^O!)iQ+uO7+&iO!,RQ)OO7+&iO!,^Q.jO7+&mOOQ#d,5<U,5<UOOQ#d-E9h-E9hO2wQ.YO7+&pOOQ#T1G1j1G1jOOQ#i7+$u7+$uOOQ#d-E9X-E9XO!,oQ.jO'#F[O!,|Q(nO,5<iO!,|Q(nO,5<iO%rQ.jO,5<iOOQ#i1G/V1G/VO!-UQ.YO<<HqOOQ&Z7+%b7+%bO!-dQ)OO'#F_O!-nQ(nO,5<kOOQ#U1G/f1G/fO!-vQ.jO'#F^O!.QQ(nO,5<jOOQ#U1G/d1G/dOOQ#U<<Hq<<HqO0oQ.jO,5;|O!.YQ(nO'#FbOOQ#S-E9`-E9`OOQ#T1G/z1G/zO!._Q.kO,5;}OOQ#e-E9a-E9aOOQ#T<<IO<<IOOOQ&Z<<Ic<<IcOOQ&Z<<Ih<<IhO/dQ(nO<<IhO*ZQ)OO<<IoO!0OQ(nO<<IoO!0WQ.jO'#FgO!0kQ)OO,5<rODwQ)OO<<IqO!0|Q.jO7+%pOOQ#S7+%u7+%uOOQ#d,5<S,5<SOOQ#d-E9f-E9fOOQ&Z1G0x1G0xOOQ&Z-E9g-E9gO!,RQ)OO<<JTO%rQ.jO,5<TOOQ&Z<<JT<<JTO%rQ.jO<<JXOOQ&Z<<J[<<J[O!1TQ.jO,5;vO!1bQ.jO,5;vOOQ#S-E9Y-E9YO!1iQ(nO1G2TO!1qQ.jO1G2TOOQ#UAN>]AN>]O!1{Q(pO,5;yOOQ#S-E9]-E9]O!2VQ.jO,5;xOOQ#S-E9[-E9[O!2aQ.YO1G1hO!2uQ(nO1G1hO*yQ(nOAN?SO!3QQ(nOAN?ZO/wQ(nOAN?ZO!3YQ.jO,5<ROOQ#d-E9e-E9eODwQ)OOAN?]OOQ&ZAN?]AN?]OOQ#S<<I[<<I[P!3tQ)OO'#FiOOQ&ZAN?oAN?oO2wQ.YO1G1oO2wQ.YOAN?sOOQ#S1G1b1G1bO%rQ.jO1G1bO!3yQ(nO7+'oOOQ#S7+'S7+'SOOQ&ZG24nG24nO/wQ(nOG24uOOQ&ZG24uG24uOOQ&ZG24wG24wOOQ&Z7+'Z7+'ZOOQ&ZG25_G25_O!4RQ.jO7+&|OOQ&ZLD*aLD*a",
+  stateData: "!4c~O$hOSVOSUOS$fQQ~OS`OTVOWcOXbO_UOc`OtYO}YO!UZO!Y[O!omO!paO!zbO!}cO#PdO#UeO#WfO#YgO#]hO#_iO#ajO#dkO#jlO#lrO#psO#stO#vuO#xvO$dSO$mRO$pWO$t]O~O$_$uP~P`O$f{O~Ot^Xt!gXv^X}^X!U^X!Y^X!^^X!a^X!e^X$b^X$e^X$p^X~Ot$lXv$lX}$lX!U$lX!Y$lX!^$lX!a$lX!e$lX$b$lX$e$lX$p$lX~O$d}O!l$lX$g$lXf$lXe$lX~P$jOS!WOTVO_!WOc!WOf!QOh!WOj!WOo!TOx!VO$c!UO$d!PO$o!RO~O$d!YO~Ot!]O}!]O!U!^O!Y!_O!^!`O!a!bO!e!eO$b!aO$e!fO$p![O~Ov!cO~P&oO!P!lO$c!iO$d!hO~O$d!mO~O$d!oO~O$d!qO~Ot!sO~P$jOt!sO~OTVO_UOtYO}YO!UZO!Y[O$d!xO$mRO$pWO$t]O~Of!|O!e!eO$e!fO~P(`OTVOc#TOf#POo#RO!x#SO$d#OO!e$wP$e$wP~Oj#XOx!VO$d#WO~O$d#ZO~OTVOc#TOf#POo#RO!x#SO$d#OO~O!l$wP$g$wP~P)_O!l#_O$e#_O$g#_O~Oc#cO~Oc#dO#t${P~O$_$uX!m$uX$a$uX~P`O!l#jO$e#jO$_$uX!m$uX$a$uX~OU#mOV#mO$e#oO$h#mO~OR#qOPiXQiXliXmiX$piXTiXciXfiXoiX!liX!xiX$diX$eiX$giX!eiX!{iX#QiX#SiX#ZiXeiXSiX_iXhiXjiXviXxiX!iiX!jiX!kiX$ciX$oiX$_iXuiX!WiX#hiX#qiX!miX$aiX~OP#vOQ#tOl#rOm#rO$p#sO~Of#xO~Of#yO~O!P$OO$c!iO$d!hO~Ov!cO!e!eO$e!fO~O!m$uP~P`O$`$YO~Of$ZO~Of$[O~O!W$]O![$^O~OS!WOTVO_!WOc!WOf$_Oh!WOj!WOo!TOx!VO$c!UO$d!PO$o!RO~O!e!eO$e!fO~P0oOl#rOm#rO$p#sO!l$wP$e$wP$g$wP~P*ZOl#rOm#rO!l#_O$g#_O$p#sO~O!e!eO!{$eO$e$cO~P2XOl#rOm#rO!e!eO$e!fO$p#sO~O#Q$iO#S$hO$e#_O~P2XOt!]O}!]O!U!^O!Y!_O!^!`O!a!bO$b!aO$p![O~O!l#_O$e#_O$g#_O~P3gOf$lO~P&oO#S$mO~O#Q$qO#Z$pO$e#_O~P2XOTVOc#TOf#POo#RO!x#SO~O$d$rO~P4yOm$uOv$vO!e$wX$e$wX!l$wX$g$wX~Of$yO~Oj$}Ox!VO~O!e%OO~Om$uO!e!eO$e!fO~O!e!eO!l#_O$e$cO$g#_O~O#g%TO~Ov%UO#t${X~O#t%WO~O!l#jO$e#jO$_$ua!m$ua$a$ua~O!l$WX$_$WX$e$WX!m$WX$a$WX~P`OU#mOV#mO$e%`O$h#mO~Oe%aOl#rOm#rO$p#sO~OP%fOQ#tO~Ol#rOm#rO$p#sOPnaQnaTnacnafnaona!lna!xna$dna$ena$gna!ena!{na#Qna#Sna#ZnaenaSna_nahnajnavnaxna!ina!jna!kna$cna$ona$_nauna!Wna#hna#qna!mna$ana~Oj%gOy%gO~OS!WOTVO_!WOf!QOh!WOj!WOo!TOx!VO$c!UO$d!PO$o!RO~Oc%jOe$qP~P;dO!W%mO![%nO~Ot!]O}!]O!U!^O!Y!_O$p![O~Ov!]i!^!]i!a!]i!e!]i$b!]i$e!]i!l!]i$g!]if!]ie!]i~P<kOv!_i!^!_i!a!_i!e!_i$b!_i$e!_i!l!_i$g!_if!_ie!_i~P<kOv!`i!^!`i!a!`i!e!`i$b!`i$e!`i!l!`i$g!`if!`ie!`i~P<kOv$Sa!e$Sa$e$Sa~P3gO!m%oO~O$a$uP~P`Oe$sP~P(`Oe$rP~P%rOS!WOTVO_!WOc!WOf!QOh!WOo!TOx!VO$c!UO$d!PO$o!RO~Oe%xOj%vO~P@POl#rOm#rOv%zO!i%|O!j%|O!k%|O$p#sO!l!fi$e!fi$g!fi$_!fi!m!fi$a!fi~P%rO$`$YOS$yXT$yXW$yXX$yX_$yXc$yXt$yX}$yX!U$yX!Y$yX!o$yX!p$yX!z$yX!}$yX#P$yX#U$yX#W$yX#Y$yX#]$yX#_$yX#a$yX#d$yX#j$yX#l$yX#p$yX#s$yX#v$yX#x$yX$_$yX$d$yX$m$yX$p$yX$t$yX!m$yX!l$yX$e$yX$a$yX~O$d!PO$m&QO~O#S&SO~Ot&TO~O!l#_O#Z$pO$e#_O$g#_O~O!l$zP#Z$zP$e$zP$g$zP~P%rO$d!PO~Oe!qXm!qXt!sX~Ot&ZO~Oe&[Om$uO~Ov$XX!e$XX$e$XX!l$XX$g$XX~P*ZOv$vO!e$wa$e$wa!l$wa$g$wa~Om$uOv!ua!e!ua$e!ua!l!ua$g!uae!ua~O!m&eO#g&cO#h&cO$o&bO~O#m&gOS#kiT#kiW#kiX#ki_#kic#kit#ki}#ki!U#ki!Y#ki!o#ki!p#ki!z#ki!}#ki#P#ki#U#ki#W#ki#Y#ki#]#ki#_#ki#a#ki#d#ki#j#ki#l#ki#p#ki#s#ki#v#ki#x#ki$_#ki$d#ki$m#ki$p#ki$t#ki!m#ki!l#ki$e#ki$a#ki~Oc&iOv$^X#t$^X~Ov%UO#t${a~O!l#jO$e#jO$_$ui!m$ui$a$ui~O!l$Wa$_$Wa$e$Wa!m$Wa$a$Wa~P`O$p#sOPkiQkilkimkiTkickifkioki!lki!xki$dki$eki$gki!eki!{ki#Qki#Ski#ZkiekiSki_kihkijkivkixki!iki!jki!kki$cki$oki$_kiuki!Wki#hki#qki!mki$aki~Ol#rOm#rO$p#sOP$PaQ$Pa~Oe&mO~Ol#rOm#rO$p#sOS#}XT#}X_#}Xc#}Xe#}Xf#}Xh#}Xj#}Xo#}Xu#}Xv#}Xx#}X$c#}X$d#}X$o#}X~Ou&qOv&oOe$qX~P%rOS$nXT$nX_$nXc$nXe$nXf$nXh$nXj$nXl$nXm$nXo$nXu$nXv$nXx$nX$c$nX$d$nX$o$nX$p$nX~Ot&rO~P! {Oe&sO~O$a&uO~Ov&vOe$sX~P3gOe&xO~Ov&yOe$rX~P%rOe&{O~Ol#rOm#rO!W&|O$p#sO~Ot&}Oe$nXl$nXm$nX$p$nX~Oe'QOj'OO~Ol#rOm#rO$p#sOS$VXT$VX_$VXc$VXf$VXh$VXj$VXo$VXv$VXx$VX!i$VX!j$VX!k$VX!l$VX$c$VX$d$VX$e$VX$g$VX$o$VX$_$VX!m$VX$a$VX~Ov%zO!i'TO!j'TO!k'TO!l!fq$e!fq$g!fq$_!fq!m!fq$a!fq~P%rO!l#_O#S'WO$e#_O$g#_O~Ot'XO~Ol#rOm#rOv'ZO$p#sO!l$zX#Z$zX$e$zX$g$zX~Om$uOv$Xa!e$Xa$e$Xa!l$Xa$g$Xa~Oe'_O~P3gOR#qO!eiX$eiX~O!m'bO#g&cO#h&cO$o&bO~O#m'dOS#kqT#kqW#kqX#kq_#kqc#kqt#kq}#kq!U#kq!Y#kq!o#kq!p#kq!z#kq!}#kq#P#kq#U#kq#W#kq#Y#kq#]#kq#_#kq#a#kq#d#kq#j#kq#l#kq#p#kq#s#kq#v#kq#x#kq$_#kq$d#kq$m#kq$p#kq$t#kq!m#kq!l#kq$e#kq$a#kq~O!e!eO#n'eO$e!fO~Ol#rOm#rO#h'gO#q'gO$p#sO~Oc'jOe$OXv$OX~P;dOv&oOe$qa~Ol#rOm#rO!W'nO$p#sO~Oe$RXv$RX~P(`Ov&vOe$sa~Oe$QXv$QX~P%rOv&yOe$ra~Ot&}O~Ol#rOm#rO$p#sOS$VaT$Va_$Vac$Vaf$Vah$Vaj$Vao$Vav$Vax$Va!i$Va!j$Va!k$Va!l$Va$c$Va$d$Va$e$Va$g$Va$o$Va$_$Va!m$Va$a$Va~Oe'wOm$uO~Ov$ZX!l$ZX#Z$ZX$e$ZX$g$ZX~P%rOv'ZO!l$za#Z$za$e$za$g$za~Oe'|O~P%rOu(ROe$Oav$Oa~P%rOt(SO~P! {Ov&oOe$qi~Ov&oOe$qi~P%rOe$Rav$Ra~P3gOe$Qav$Qa~P%rOl#rOm#rOv(UO$p#sOe$Uij$Ui~Ov(UOe$Uij$Ui~Oe(WOm$uO~Ol#rOm#rO$p#sOv$Za!l$Za#Z$Za$e$Za$g$Za~O#n'eO~Ov&oOe$qq~Oe$Oqv$Oq~P%rO$o$pl!al~",
+  goto: "9{$|PPPPPPPPPPP$}%X%X%lP%X&P&SP'tPP(yP)xP(yPP(yP(y(y*{+zPPP,WPP%X-]%XP-cP-i-o-u%XP-{P%XP.RP%XP%X%XP%X.X.[P/m0P0ZPPPPP$}PP'h'h0a'h'h'h'hP$}PP$}P$}PP0dP$}P$}P$}PP$}P$}P$}P0j$}P0m0pPP$}P$}PPP$}PP$}PP$}P$}P$}P0s0y1P1o1}2T2Z2a2g2s2y3P3Z3a3k3q3w3}PPPPPPPPPPP4T4W4dP5ZPP7b7e7hP7k7t7z8T8o9u9xanOPqx!e#k$Y%[s^OPefqx!`!a!b!c!e#k$Y$Z$y%[&vsTOPefqx!`!a!b!c!e#k$Y$Z$y%[&vR!OUb^ef!`!a!b!c$Z$y&v`_OPqx!e#k$Y%[!x!WVabcdgiruv!Q!T!s#r#s#t#y$[$^$_$`$p%T%W%i%n%s%z%{&Z&o&r&y&}'Z'^'e'g'i'm'q(S(]e#Thlm!t#P#R$u$v&T'X!x!WVabcdgiruv!Q!T!s#r#s#t#y$[$^$_$`$p%T%W%i%n%s%z%{&Z&o&r&y&}'Z'^'e'g'i'm'q(S(]Q&R$iR&Y$q!y!WVabcdgiruv!Q!T!s#r#s#t#y$[$^$_$`$p%T%W%i%n%s%z%{&Z&o&r&y&}'Z'^'e'g'i'm'q(S(]!x!WVabcdgiruv!Q!T!s#r#s#t#y$[$^$_$`$p%T%W%i%n%s%z%{&Z&o&r&y&}'Z'^'e'g'i'm'q(S(]T&c%O&d!y!XVabcdgiruv!Q!T!s#r#s#t#y$[$^$_$`$p%T%W%i%n%s%z%{&Z&o&r&y&}'Z'^'e'g'i'm'q(S(]Q#z!XQ&O$eQ&P$hR'u'W!x!WVabcdgiruv!Q!T!s#r#s#t#y$[$^$_$`$p%T%W%i%n%s%z%{&Z&o&r&y&}'Z'^'e'g'i'm'q(S(]Q#XjR$}#YQ!ZWR#{![Q!jYR#|!]Q#|!lR%l$OQ!kYR#}!]Q#|!kR%l#}Q!nZR$P!^Q!p[R$Q!_R!r]Q!gXQ!{fQ$W!dQ$a!sQ$d!uQ$f!vQ$k!zQ$z#UQ%Q#]Q%R#^Q%S#bQ%X#fQ'U&OQ'`&cQ'f&gQ'h&kQ(O'dQ(X'wQ(Z(PQ([(QR(^(WSpOqUyP!e$YQ#ixQ%]#kR&l%[a`OPqx!e#k$Y%[Q$a!sR't&}R$s#PQ&R$iR']&YR#YjR#[kR%P#[Q#n{R%_#nQqOR#aqQ%i#yQ%s$[^&n%i%s'^'i'm'q(]Q'^&ZQ'i&oQ'm&rQ'q&yR(](SQ&p%iU'k&p'l(TQ'l&qR(T'mQ#u!SR%e#uQ&z%sR'r&zQ&w%qR'p&wQ!dXR$V!dUxP!e$YS#hx%[R%[#kQ%w$_R'P%wQ%{$`R'S%{Q#lyQ%Z#iT%^#l%ZQ$w#QR&_$wQ$n!}S&U$n'zR'z']Q'[&WR'y'[Q&d%OR'a&dQ&f%SR'c&fQ%V#dR&j%VR|QSoOq]wPx!e#k$Y%[`XOPqx!e#k$Y%[Q!yeQ!zfQ$R!`Q$S!aQ$T!bQ$U!cQ%q$ZQ&`$yR'o&vQ!SVQ!taQ!ubQ!vcQ!wdQ!}gQ#ViQ#brQ#fuQ#gvS#p!Q$_Q#w!TQ$`!sQ%b#rQ%c#sQ%d#tl%h#y$[%i%s&Z&o&r&y'^'i'm'q(S(]Q%u$^S%y$`%{Q&W$pQ&h%TQ&k%WQ&t%nQ'R%zQ's&}Q'x'ZQ(P'eR(Q'gR%k#yR%t$[R%r$ZQzPQ$X!eR%p$YX#ky#i#l%ZQ#UhQ#^mR$b!tU#Qhm!tQ#]lQ$t#PQ$x#RQ&]$uQ&^$vQ'Y&TR'v'XQ#`pQ$d!uQ$g!wQ$j!yQ$o!}Q${#VQ$|#XQ%R#^Q%Y#gQ%}$bQ&V$nQ&a$}Q'U&OS'V&P&RQ'{']Q(V'uR(Y'zR&X$pR#et",
+  nodeNames: "\u26A0 InterpolationEnd InterpolationContinue Unit VariableName InterpolationStart LineComment Comment IndentedMixin IndentedInclude StyleSheet RuleSet UniversalSelector TagSelector TagName NestingSelector SuffixedSelector Suffix Interpolation SassVariableName ValueName ) ( ParenthesizedValue ColorLiteral NumberLiteral StringLiteral BinaryExpression BinOp LogicOp UnaryExpression LogicOp NamespacedValue CallExpression Callee ArgList : ... , CallLiteral CallTag ParenthesizedContent ClassSelector ClassName PseudoClassSelector :: PseudoClassName PseudoClassName ArgList PseudoClassName ArgList IdSelector # IdName ] AttributeSelector [ AttributeName MatchOp ChildSelector ChildOp DescendantSelector SiblingSelector SiblingOp PlaceholderSelector ClassName Block { Declaration PropertyName Map Important Global Default ; } ImportStatement AtKeyword import KeywordQuery FeatureQuery FeatureName BinaryQuery UnaryQuery ParenthesizedQuery SelectorQuery selector IncludeStatement include Keyword MixinStatement mixin UseStatement use Keyword Star Keyword ExtendStatement extend RootStatement at-root ForwardStatement forward Keyword MediaStatement media CharsetStatement charset NamespaceStatement namespace NamespaceName KeyframesStatement keyframes KeyframeName KeyframeList Keyword Keyword SupportsStatement supports IfStatement ControlKeyword ControlKeyword Keyword ForStatement ControlKeyword Keyword EachStatement ControlKeyword Keyword WhileStatement ControlKeyword OutputStatement ControlKeyword AtRule Styles",
+  maxTerm: 181,
+  context: trackIndent2,
+  nodeProps: [
+    ["openedBy", 1, "InterpolationStart", 5, "InterpolationEnd", 21, "(", 75, "{"],
+    ["isolate", -3, 6, 7, 26, ""],
+    ["closedBy", 22, ")", 67, "}"]
+  ],
+  propSources: [cssHighlighting2],
+  skippedNodes: [0, 6, 7, 135],
+  repeatNodeCount: 18,
+  tokenData: "!!p~RyOq#rqr$jrs0jst2^tu8{uv;hvw;{wx<^xy={yz>^z{>c{|>||}Co}!ODQ!O!PDo!P!QFY!Q![Fk![!]Gf!]!^Hb!^!_Hs!_!`I[!`!aIs!a!b#r!b!cJt!c!}#r!}#OL^#O#P#r#P#QLo#Q#RMQ#R#T#r#T#UMg#U#c#r#c#dNx#d#o#r#o#p! _#p#qMQ#q#r! p#r#s!!R#s;'S#r;'S;=`!!j<%lO#rW#uSOy$Rz;'S$R;'S;=`$d<%lO$RW$WSyWOy$Rz;'S$R;'S;=`$d<%lO$RW$gP;=`<%l$RY$m[Oy$Rz!_$R!_!`%c!`#W$R#W#X%v#X#Z$R#Z#[)Z#[#]$R#]#^,V#^;'S$R;'S;=`$d<%lO$RY%jSyWlQOy$Rz;'S$R;'S;=`$d<%lO$RY%{UyWOy$Rz#X$R#X#Y&_#Y;'S$R;'S;=`$d<%lO$RY&dUyWOy$Rz#Y$R#Y#Z&v#Z;'S$R;'S;=`$d<%lO$RY&{UyWOy$Rz#T$R#T#U'_#U;'S$R;'S;=`$d<%lO$RY'dUyWOy$Rz#i$R#i#j'v#j;'S$R;'S;=`$d<%lO$RY'{UyWOy$Rz#`$R#`#a(_#a;'S$R;'S;=`$d<%lO$RY(dUyWOy$Rz#h$R#h#i(v#i;'S$R;'S;=`$d<%lO$RY(}S!kQyWOy$Rz;'S$R;'S;=`$d<%lO$RY)`UyWOy$Rz#`$R#`#a)r#a;'S$R;'S;=`$d<%lO$RY)wUyWOy$Rz#c$R#c#d*Z#d;'S$R;'S;=`$d<%lO$RY*`UyWOy$Rz#U$R#U#V*r#V;'S$R;'S;=`$d<%lO$RY*wUyWOy$Rz#T$R#T#U+Z#U;'S$R;'S;=`$d<%lO$RY+`UyWOy$Rz#`$R#`#a+r#a;'S$R;'S;=`$d<%lO$RY+yS!jQyWOy$Rz;'S$R;'S;=`$d<%lO$RY,[UyWOy$Rz#a$R#a#b,n#b;'S$R;'S;=`$d<%lO$RY,sUyWOy$Rz#d$R#d#e-V#e;'S$R;'S;=`$d<%lO$RY-[UyWOy$Rz#c$R#c#d-n#d;'S$R;'S;=`$d<%lO$RY-sUyWOy$Rz#f$R#f#g.V#g;'S$R;'S;=`$d<%lO$RY.[UyWOy$Rz#h$R#h#i.n#i;'S$R;'S;=`$d<%lO$RY.sUyWOy$Rz#T$R#T#U/V#U;'S$R;'S;=`$d<%lO$RY/[UyWOy$Rz#b$R#b#c/n#c;'S$R;'S;=`$d<%lO$RY/sUyWOy$Rz#h$R#h#i0V#i;'S$R;'S;=`$d<%lO$RY0^S!iQyWOy$Rz;'S$R;'S;=`$d<%lO$R~0mWOY0jZr0jrs1Vs#O0j#O#P1[#P;'S0j;'S;=`2W<%lO0j~1[Oj~~1_RO;'S0j;'S;=`1h;=`O0j~1kXOY0jZr0jrs1Vs#O0j#O#P1[#P;'S0j;'S;=`2W;=`<%l0j<%lO0j~2ZP;=`<%l0jZ2cY!UPOy$Rz!Q$R!Q![3R![!c$R!c!i3R!i#T$R#T#Z3R#Z;'S$R;'S;=`$d<%lO$RY3WYyWOy$Rz!Q$R!Q![3v![!c$R!c!i3v!i#T$R#T#Z3v#Z;'S$R;'S;=`$d<%lO$RY3{YyWOy$Rz!Q$R!Q![4k![!c$R!c!i4k!i#T$R#T#Z4k#Z;'S$R;'S;=`$d<%lO$RY4rYhQyWOy$Rz!Q$R!Q![5b![!c$R!c!i5b!i#T$R#T#Z5b#Z;'S$R;'S;=`$d<%lO$RY5iYhQyWOy$Rz!Q$R!Q![6X![!c$R!c!i6X!i#T$R#T#Z6X#Z;'S$R;'S;=`$d<%lO$RY6^YyWOy$Rz!Q$R!Q![6|![!c$R!c!i6|!i#T$R#T#Z6|#Z;'S$R;'S;=`$d<%lO$RY7TYhQyWOy$Rz!Q$R!Q![7s![!c$R!c!i7s!i#T$R#T#Z7s#Z;'S$R;'S;=`$d<%lO$RY7xYyWOy$Rz!Q$R!Q![8h![!c$R!c!i8h!i#T$R#T#Z8h#Z;'S$R;'S;=`$d<%lO$RY8oShQyWOy$Rz;'S$R;'S;=`$d<%lO$R_9O`Oy$Rz}$R}!O:Q!O!Q$R!Q![:Q![!_$R!_!`;T!`!c$R!c!}:Q!}#R$R#R#S:Q#S#T$R#T#o:Q#o;'S$R;'S;=`$d<%lO$RZ:X^yWcROy$Rz}$R}!O:Q!O!Q$R!Q![:Q![!c$R!c!}:Q!}#R$R#R#S:Q#S#T$R#T#o:Q#o;'S$R;'S;=`$d<%lO$R[;[S![SyWOy$Rz;'S$R;'S;=`$d<%lO$RZ;oS$tPlQOy$Rz;'S$R;'S;=`$d<%lO$RZ<QS_ROy$Rz;'S$R;'S;=`$d<%lO$R~<aWOY<^Zw<^wx1Vx#O<^#O#P<y#P;'S<^;'S;=`=u<%lO<^~<|RO;'S<^;'S;=`=V;=`O<^~=YXOY<^Zw<^wx1Vx#O<^#O#P<y#P;'S<^;'S;=`=u;=`<%l<^<%lO<^~=xP;=`<%l<^Z>QSfROy$Rz;'S$R;'S;=`$d<%lO$R~>cOe~_>jU$mPlQOy$Rz!_$R!_!`;T!`;'S$R;'S;=`$d<%lO$RZ?TWlQ!aPOy$Rz!O$R!O!P?m!P!Q$R!Q![Br![;'S$R;'S;=`$d<%lO$RZ?rUyWOy$Rz!Q$R!Q![@U![;'S$R;'S;=`$d<%lO$RZ@]YyW$oROy$Rz!Q$R!Q![@U![!g$R!g!h@{!h#X$R#X#Y@{#Y;'S$R;'S;=`$d<%lO$RZAQYyWOy$Rz{$R{|Ap|}$R}!OAp!O!Q$R!Q![BX![;'S$R;'S;=`$d<%lO$RZAuUyWOy$Rz!Q$R!Q![BX![;'S$R;'S;=`$d<%lO$RZB`UyW$oROy$Rz!Q$R!Q![BX![;'S$R;'S;=`$d<%lO$RZBy[yW$oROy$Rz!O$R!O!P@U!P!Q$R!Q![Br![!g$R!g!h@{!h#X$R#X#Y@{#Y;'S$R;'S;=`$d<%lO$RZCtSvROy$Rz;'S$R;'S;=`$d<%lO$RZDVWlQOy$Rz!O$R!O!P?m!P!Q$R!Q![Br![;'S$R;'S;=`$d<%lO$RZDtW$pROy$Rz!O$R!O!PE^!P!Q$R!Q![@U![;'S$R;'S;=`$d<%lO$RYEcUyWOy$Rz!O$R!O!PEu!P;'S$R;'S;=`$d<%lO$RYE|SuQyWOy$Rz;'S$R;'S;=`$d<%lO$RYF_SlQOy$Rz;'S$R;'S;=`$d<%lO$RZFp[$oROy$Rz!O$R!O!P@U!P!Q$R!Q![Br![!g$R!g!h@{!h#X$R#X#Y@{#Y;'S$R;'S;=`$d<%lO$RZGkUtROy$Rz![$R![!]G}!];'S$R;'S;=`$d<%lO$RXHUS}PyWOy$Rz;'S$R;'S;=`$d<%lO$RZHgS!lROy$Rz;'S$R;'S;=`$d<%lO$RYHxUlQOy$Rz!_$R!_!`%c!`;'S$R;'S;=`$d<%lO$R^IaU![SOy$Rz!_$R!_!`%c!`;'S$R;'S;=`$d<%lO$RZIzV!^PlQOy$Rz!_$R!_!`%c!`!aJa!a;'S$R;'S;=`$d<%lO$RXJhS!^PyWOy$Rz;'S$R;'S;=`$d<%lO$RXJwWOy$Rz!c$R!c!}Ka!}#T$R#T#oKa#o;'S$R;'S;=`$d<%lO$RXKh[!oPyWOy$Rz}$R}!OKa!O!Q$R!Q![Ka![!c$R!c!}Ka!}#T$R#T#oKa#o;'S$R;'S;=`$d<%lO$RXLcS!YPOy$Rz;'S$R;'S;=`$d<%lO$R^LtS!WUOy$Rz;'S$R;'S;=`$d<%lO$R[MTUOy$Rz!_$R!_!`;T!`;'S$R;'S;=`$d<%lO$RZMjUOy$Rz#b$R#b#cM|#c;'S$R;'S;=`$d<%lO$RZNRUyWOy$Rz#W$R#W#XNe#X;'S$R;'S;=`$d<%lO$RZNlSmRyWOy$Rz;'S$R;'S;=`$d<%lO$RZN{UOy$Rz#f$R#f#gNe#g;'S$R;'S;=`$d<%lO$RZ! dS!eROy$Rz;'S$R;'S;=`$d<%lO$RZ! uS!mROy$Rz;'S$R;'S;=`$d<%lO$R]!!WU!aPOy$Rz!_$R!_!`;T!`;'S$R;'S;=`$d<%lO$RW!!mP;=`<%l#r",
+  tokenizers: [indentation2, descendant2, interpolationEnd, unitToken2, identifiers2, spaces2, comments, indentedMixins, 0, 1, 2, 3],
+  topRules: { "StyleSheet": [0, 10], "Styles": [1, 134] },
+  dialects: { indented: 0 },
+  specialized: [{ term: 158, get: (value) => spec_identifier4[value] || -1 }, { term: 157, get: (value) => spec_callee2[value] || -1 }, { term: 77, get: (value) => spec_AtKeyword2[value] || -1 }],
+  tokenPrec: 3003
+});
+
+// node_modules/@codemirror/lang-sass/dist/index.js
+var sassLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "sass",
+  parser: /* @__PURE__ */ parser5.configure({
+    props: [
+      /* @__PURE__ */ foldNodeProp.add({
+        Block: foldInside,
+        Comment(node, state) {
+          return { from: node.from + 2, to: state.sliceDoc(node.to - 2, node.to) == "*/" ? node.to - 2 : node.to };
+        }
+      }),
+      /* @__PURE__ */ indentNodeProp.add({
+        Declaration: /* @__PURE__ */ continuedIndent()
+      })
+    ]
+  }),
+  languageData: {
+    commentTokens: { block: { open: "/*", close: "*/" }, line: "//" },
+    indentOnInput: /^\s*\}$/,
+    wordChars: "$-"
+  }
+});
+var indentedSassLanguage = /* @__PURE__ */ sassLanguage.configure({
+  dialect: "indented",
+  props: [
+    /* @__PURE__ */ indentNodeProp.add({
+      "Block RuleSet": (cx) => cx.baseIndent + cx.unit
+    }),
+    /* @__PURE__ */ foldNodeProp.add({
+      Block: (node) => ({ from: node.from, to: node.to })
+    })
+  ]
+});
+var sassCompletionSource = /* @__PURE__ */ defineCSSCompletionSource((node) => node.name == "VariableName" || node.name == "SassVariableName");
+function sass(config2) {
+  return new LanguageSupport((config2 === null || config2 === void 0 ? void 0 : config2.indented) ? indentedSassLanguage : sassLanguage, sassLanguage.data.of({ autocomplete: sassCompletionSource }));
+}
+
 // node_modules/@codemirror/lang-sql/dist/index.js
-var whitespace = 36;
-var LineComment2 = 1;
+var whitespace2 = 36;
+var LineComment3 = 1;
 var BlockComment2 = 2;
 var String$1 = 3;
 var Number2 = 4;
@@ -34447,7 +34830,7 @@ var Type = 21;
 var Bits = 22;
 var Bytes = 23;
 var Builtin = 24;
-function isAlpha2(ch) {
+function isAlpha3(ch) {
   return ch >= 65 && ch <= 90 || ch >= 97 && ch <= 122 || ch >= 48 && ch <= 57;
 }
 function isHexDigit(ch) {
@@ -34501,7 +34884,7 @@ function readPLSQLQuotedLiteral(input, openDelim) {
 }
 function readWord(input, result) {
   for (; ; ) {
-    if (input.next != 95 && !isAlpha2(input.next))
+    if (input.next != 95 && !isAlpha3(input.next))
       break;
     if (result != null)
       result += String.fromCharCode(input.next);
@@ -34604,7 +34987,7 @@ function tokensFor(d2) {
     if (inString(next, Space)) {
       while (inString(input.next, Space))
         input.advance();
-      input.acceptToken(whitespace);
+      input.acceptToken(whitespace2);
     } else if (next == 36 && d2.doubleDollarQuotedStrings) {
       let tag = readWord(input, "");
       if (input.next == 36) {
@@ -34617,10 +35000,10 @@ function tokensFor(d2) {
       input.acceptToken(String$1);
     } else if (next == 35 && d2.hashComments || next == 47 && input.next == 47 && d2.slashComments) {
       eol(input);
-      input.acceptToken(LineComment2);
+      input.acceptToken(LineComment3);
     } else if (next == 45 && input.next == 45 && (!d2.spaceAfterDashes || input.peek(1) == 32)) {
       eol(input);
-      input.acceptToken(LineComment2);
+      input.acceptToken(LineComment3);
     } else if (next == 47 && input.next == 42) {
       input.advance();
       for (let depth = 1; ; ) {
@@ -34655,7 +35038,7 @@ function tokensFor(d2) {
           input.acceptToken(String$1);
           break;
         }
-        if (!isAlpha2(input.next))
+        if (!isAlpha3(input.next))
           break;
         input.advance();
       }
@@ -34722,7 +35105,7 @@ function tokensFor(d2) {
       input.acceptToken(QuotedIdentifier);
     } else if (next == 58 || next == 44) {
       input.acceptToken(Punctuation);
-    } else if (isAlpha2(next)) {
+    } else if (isAlpha3(next)) {
       let word = readWord(input, String.fromCharCode(next));
       input.acceptToken(input.next == 46 || input.peek(-word.length - 1) == 46 ? Identifier3 : (_a3 = d2.words[word.toLowerCase()]) !== null && _a3 !== void 0 ? _a3 : Identifier3);
     }
@@ -34956,7 +35339,7 @@ function completeKeywords(keywords4, upperCase) {
   }));
   return ifNotIn(["QuotedIdentifier", "SpecialVar", "String", "LineComment", "BlockComment", "."], completeFromList(completions));
 }
-var parser5 = /* @__PURE__ */ parser$1.configure({
+var parser6 = /* @__PURE__ */ parser$1.configure({
   props: [
     /* @__PURE__ */ indentNodeProp.add({
       Statement: /* @__PURE__ */ continuedIndent()
@@ -35011,7 +35394,7 @@ var SQLDialect = class _SQLDialect {
     let d2 = dialect(spec, spec.keywords, spec.types, spec.builtin);
     let language2 = LRLanguage.define({
       name: "sql",
-      parser: parser5.configure({
+      parser: parser6.configure({
         tokenizers: [{ from: tokens, to: tokensFor(d2) }]
       }),
       languageData: {
@@ -35108,6 +35491,464 @@ var PLSQL = /* @__PURE__ */ SQLDialect.define({
   doubleQuotedStrings: true,
   charSetCasts: true,
   plsqlQuotingMechanism: true
+});
+
+// node_modules/@lezer/yaml/dist/index.js
+var blockEnd = 63;
+var eof3 = 64;
+var DirectiveEnd = 1;
+var DocEnd = 2;
+var sequenceStartMark = 3;
+var sequenceContinueMark = 4;
+var explicitMapStartMark = 5;
+var explicitMapContinueMark = 6;
+var flowMapMark = 7;
+var mapStartMark = 65;
+var mapContinueMark = 66;
+var Literal = 8;
+var QuotedLiteral = 9;
+var Anchor = 10;
+var Alias = 11;
+var Tag2 = 12;
+var BlockLiteralContent = 13;
+var BracketL3 = 19;
+var FlowSequence = 20;
+var Colon = 29;
+var BraceL3 = 33;
+var FlowMapping = 34;
+var BlockLiteralHeader = 47;
+var type_Top = 0;
+var type_Seq = 1;
+var type_Map = 2;
+var type_Flow = 3;
+var type_Lit = 4;
+var Context = class {
+  constructor(parent, depth, type) {
+    this.parent = parent;
+    this.depth = depth;
+    this.type = type;
+    this.hash = (parent ? parent.hash + parent.hash << 8 : 0) + depth + (depth << 4) + type;
+  }
+};
+Context.top = new Context(null, -1, type_Top);
+function findColumn2(input, pos) {
+  for (let col = 0, p2 = pos - input.pos - 1; ; p2--, col++) {
+    let ch = input.peek(p2);
+    if (isBreakSpace(ch) || ch == -1)
+      return col;
+  }
+}
+function isNonBreakSpace(ch) {
+  return ch == 32 || ch == 9;
+}
+function isBreakSpace(ch) {
+  return ch == 10 || ch == 13;
+}
+function isSpace2(ch) {
+  return isNonBreakSpace(ch) || isBreakSpace(ch);
+}
+function isSep(ch) {
+  return ch < 0 || isSpace2(ch);
+}
+var indentation3 = new ContextTracker({
+  start: Context.top,
+  reduce(context, term) {
+    return context.type == type_Flow && (term == FlowSequence || term == FlowMapping) ? context.parent : context;
+  },
+  shift(context, term, stack, input) {
+    if (term == sequenceStartMark)
+      return new Context(context, findColumn2(input, input.pos), type_Seq);
+    if (term == mapStartMark || term == explicitMapStartMark)
+      return new Context(context, findColumn2(input, input.pos), type_Map);
+    if (term == blockEnd)
+      return context.parent;
+    if (term == BracketL3 || term == BraceL3)
+      return new Context(context, 0, type_Flow);
+    if (term == BlockLiteralContent && context.type == type_Lit)
+      return context.parent;
+    if (term == BlockLiteralHeader) {
+      let indent3 = /[1-9]/.exec(input.read(input.pos, stack.pos));
+      if (indent3)
+        return new Context(context, context.depth + +indent3[0], type_Lit);
+    }
+    return context;
+  },
+  hash(context) {
+    return context.hash;
+  }
+});
+function three(input, ch, off = 0) {
+  return input.peek(off) == ch && input.peek(off + 1) == ch && input.peek(off + 2) == ch && isSep(input.peek(off + 3));
+}
+var newlines2 = new ExternalTokenizer((input, stack) => {
+  if (input.next == -1 && stack.canShift(eof3))
+    return input.acceptToken(eof3);
+  let prev = input.peek(-1);
+  if ((isBreakSpace(prev) || prev < 0) && stack.context.type != type_Flow) {
+    if (three(
+      input,
+      45
+      /* '-' */
+    )) {
+      if (stack.canShift(blockEnd))
+        input.acceptToken(blockEnd);
+      else
+        return input.acceptToken(DirectiveEnd, 3);
+    }
+    if (three(
+      input,
+      46
+      /* '.' */
+    )) {
+      if (stack.canShift(blockEnd))
+        input.acceptToken(blockEnd);
+      else
+        return input.acceptToken(DocEnd, 3);
+    }
+    let depth = 0;
+    while (input.next == 32) {
+      depth++;
+      input.advance();
+    }
+    if ((depth < stack.context.depth || depth == stack.context.depth && stack.context.type == type_Seq && (input.next != 45 || !isSep(input.peek(1)))) && // Not blank
+    input.next != -1 && !isBreakSpace(input.next) && input.next != 35)
+      input.acceptToken(blockEnd, -depth);
+  }
+}, { contextual: true });
+var blockMark = new ExternalTokenizer((input, stack) => {
+  if (stack.context.type == type_Flow) {
+    if (input.next == 63) {
+      input.advance();
+      if (isSep(input.next))
+        input.acceptToken(flowMapMark);
+    }
+    return;
+  }
+  if (input.next == 45) {
+    input.advance();
+    if (isSep(input.next))
+      input.acceptToken(stack.context.type == type_Seq && stack.context.depth == findColumn2(input, input.pos - 1) ? sequenceContinueMark : sequenceStartMark);
+  } else if (input.next == 63) {
+    input.advance();
+    if (isSep(input.next))
+      input.acceptToken(stack.context.type == type_Map && stack.context.depth == findColumn2(input, input.pos - 1) ? explicitMapContinueMark : explicitMapStartMark);
+  } else {
+    let start = input.pos;
+    for (; ; ) {
+      if (isNonBreakSpace(input.next)) {
+        if (input.pos == start)
+          return;
+        input.advance();
+      } else if (input.next == 33) {
+        readTag(input);
+      } else if (input.next == 38) {
+        readAnchor(input);
+      } else if (input.next == 42) {
+        readAnchor(input);
+        break;
+      } else if (input.next == 39 || input.next == 34) {
+        if (readQuoted(input, true))
+          break;
+        return;
+      } else if (input.next == 91 || input.next == 123) {
+        if (!scanBrackets(input))
+          return;
+        break;
+      } else {
+        readPlain(input, true, false, 0);
+        break;
+      }
+    }
+    while (isNonBreakSpace(input.next))
+      input.advance();
+    if (input.next == 58) {
+      if (input.pos == start && stack.canShift(Colon))
+        return;
+      let after = input.peek(1);
+      if (isSep(after))
+        input.acceptTokenTo(stack.context.type == type_Map && stack.context.depth == findColumn2(input, start) ? mapContinueMark : mapStartMark, start);
+    }
+  }
+}, { contextual: true });
+function uriChar(ch) {
+  return ch > 32 && ch < 127 && ch != 34 && ch != 37 && ch != 44 && ch != 60 && ch != 62 && ch != 92 && ch != 94 && ch != 96 && ch != 123 && ch != 124 && ch != 125;
+}
+function hexChar(ch) {
+  return ch >= 48 && ch <= 57 || ch >= 97 && ch <= 102 || ch >= 65 && ch <= 70;
+}
+function readUriChar(input, quoted) {
+  if (input.next == 37) {
+    input.advance();
+    if (hexChar(input.next))
+      input.advance();
+    if (hexChar(input.next))
+      input.advance();
+    return true;
+  } else if (uriChar(input.next) || quoted && input.next == 44) {
+    input.advance();
+    return true;
+  }
+  return false;
+}
+function readTag(input) {
+  input.advance();
+  if (input.next == 60) {
+    input.advance();
+    for (; ; ) {
+      if (!readUriChar(input, true)) {
+        if (input.next == 62)
+          input.advance();
+        break;
+      }
+    }
+  } else {
+    while (readUriChar(input, false)) {
+    }
+  }
+}
+function readAnchor(input) {
+  input.advance();
+  while (!isSep(input.next) && charTag(input.tag) != "f")
+    input.advance();
+}
+function readQuoted(input, scan) {
+  let quote = input.next, lineBreak = false, start = input.pos;
+  input.advance();
+  for (; ; ) {
+    let ch = input.next;
+    if (ch < 0)
+      break;
+    input.advance();
+    if (ch == quote) {
+      if (ch == 39) {
+        if (input.next == 39)
+          input.advance();
+        else
+          break;
+      } else {
+        break;
+      }
+    } else if (ch == 92 && quote == 34) {
+      if (input.next >= 0)
+        input.advance();
+    } else if (isBreakSpace(ch)) {
+      if (scan)
+        return false;
+      lineBreak = true;
+    } else if (scan && input.pos >= start + 1024) {
+      return false;
+    }
+  }
+  return !lineBreak;
+}
+function scanBrackets(input) {
+  for (let stack = [], end = input.pos + 1024; ; ) {
+    if (input.next == 91 || input.next == 123) {
+      stack.push(input.next);
+      input.advance();
+    } else if (input.next == 39 || input.next == 34) {
+      if (!readQuoted(input, true))
+        return false;
+    } else if (input.next == 93 || input.next == 125) {
+      if (stack[stack.length - 1] != input.next - 2)
+        return false;
+      stack.pop();
+      input.advance();
+      if (!stack.length)
+        return true;
+    } else if (input.next < 0 || input.pos > end || isBreakSpace(input.next)) {
+      return false;
+    } else {
+      input.advance();
+    }
+  }
+}
+var charTable = "iiisiiissisfissssssssssssisssiiissssssssssssssssssssssssssfsfssissssssssssssssssssssssssssfif";
+function charTag(ch) {
+  if (ch < 33)
+    return "u";
+  if (ch > 125)
+    return "s";
+  return charTable[ch - 33];
+}
+function isSafe(ch, inFlow) {
+  let tag = charTag(ch);
+  return tag != "u" && !(inFlow && tag == "f");
+}
+function readPlain(input, scan, inFlow, indent3) {
+  if (charTag(input.next) == "s" || (input.next == 63 || input.next == 58 || input.next == 45) && isSafe(input.peek(1), inFlow)) {
+    input.advance();
+  } else {
+    return false;
+  }
+  let start = input.pos;
+  for (; ; ) {
+    let next = input.next, off = 0, lineIndent = indent3 + 1;
+    while (isSpace2(next)) {
+      if (isBreakSpace(next)) {
+        if (scan)
+          return false;
+        lineIndent = 0;
+      } else {
+        lineIndent++;
+      }
+      next = input.peek(++off);
+    }
+    let safe = next >= 0 && (next == 58 ? isSafe(input.peek(off + 1), inFlow) : next == 35 ? input.peek(off - 1) != 32 : isSafe(next, inFlow));
+    if (!safe || !inFlow && lineIndent <= indent3 || lineIndent == 0 && !inFlow && (three(input, 45, off) || three(input, 46, off)))
+      break;
+    if (scan && charTag(next) == "f")
+      return false;
+    for (let i2 = off; i2 >= 0; i2--)
+      input.advance();
+    if (scan && input.pos > start + 1024)
+      return false;
+  }
+  return true;
+}
+var literals = new ExternalTokenizer((input, stack) => {
+  if (input.next == 33) {
+    readTag(input);
+    input.acceptToken(Tag2);
+  } else if (input.next == 38 || input.next == 42) {
+    let token = input.next == 38 ? Anchor : Alias;
+    readAnchor(input);
+    input.acceptToken(token);
+  } else if (input.next == 39 || input.next == 34) {
+    readQuoted(input, false);
+    input.acceptToken(QuotedLiteral);
+  } else if (readPlain(input, false, stack.context.type == type_Flow, stack.context.depth)) {
+    input.acceptToken(Literal);
+  }
+});
+var blockLiteral = new ExternalTokenizer((input, stack) => {
+  let indent3 = stack.context.type == type_Lit ? stack.context.depth : -1, upto = input.pos;
+  scan:
+    for (; ; ) {
+      let depth = 0, next = input.next;
+      while (next == 32)
+        next = input.peek(++depth);
+      if (!depth && (three(input, 45, depth) || three(input, 46, depth)))
+        break;
+      if (!isBreakSpace(next)) {
+        if (indent3 < 0)
+          indent3 = Math.max(stack.context.depth + 1, depth);
+        if (depth < indent3)
+          break;
+      }
+      for (; ; ) {
+        if (input.next < 0)
+          break scan;
+        let isBreak = isBreakSpace(input.next);
+        input.advance();
+        if (isBreak)
+          continue scan;
+        upto = input.pos;
+      }
+    }
+  input.acceptTokenTo(BlockLiteralContent, upto);
+});
+var yamlHighlighting = styleTags({
+  DirectiveName: tags.keyword,
+  DirectiveContent: tags.attributeValue,
+  "DirectiveEnd DocEnd": tags.meta,
+  QuotedLiteral: tags.string,
+  BlockLiteralHeader: tags.special(tags.string),
+  BlockLiteralContent: tags.content,
+  Literal: tags.content,
+  "Key/Literal Key/QuotedLiteral": tags.definition(tags.propertyName),
+  "Anchor Alias": tags.labelName,
+  Tag: tags.typeName,
+  Comment: tags.lineComment,
+  ": , -": tags.separator,
+  "?": tags.punctuation,
+  "[ ]": tags.squareBracket,
+  "{ }": tags.brace
+});
+var parser7 = LRParser.deserialize({
+  version: 14,
+  states: "5lQ!ZQgOOO#PQfO'#CpO#uQfO'#DOOOQR'#Dv'#DvO$qQgO'#DRO%gQdO'#DUO%nQgO'#DUO&ROaO'#D[OOQR'#Du'#DuO&{QgO'#D^O'rQgO'#D`OOQR'#Dt'#DtO(iOqO'#DbOOQP'#Dj'#DjO(zQaO'#CmO)YQgO'#CmOOQP'#Cm'#CmQ)jQaOOQ)uQgOOQ]QgOOO*PQdO'#CrO*nQdO'#CtOOQO'#Dw'#DwO+]Q`O'#CxO+hQdO'#CwO+rQ`O'#CwOOQO'#Cv'#CvO+wQdO'#CvOOQO'#Cq'#CqO,UQ`O,59[O,^QfO,59[OOQR,59[,59[OOQO'#Cx'#CxO,eQ`O'#DPO,pQdO'#DPOOQO'#Dx'#DxO,zQdO'#DxO-XQ`O,59jO-aQfO,59jOOQR,59j,59jOOQR'#DS'#DSO-hQcO,59mO-sQgO'#DVO.TQ`O'#DVO.YQcO,59pOOQR'#DX'#DXO#|QfO'#DWO.hQcO'#DWOOQR,59v,59vO.yOWO,59vO/OOaO,59vO/WOaO,59vO/cQgO'#D_OOQR,59x,59xO0VQgO'#DaOOQR,59z,59zOOQP,59|,59|O0yOaO,59|O1ROaO,59|O1aOqO,59|OOQP-E7h-E7hO1oQgO,59XOOQP,59X,59XO2PQaO'#DeO2_QgO'#DeO2oQgO'#DkOOQP'#Dk'#DkQ)jQaOOO3PQdO'#CsOOQO,59^,59^O3kQdO'#CuOOQO,59`,59`OOQO,59c,59cO4VQdO,59cO4aQdO'#CzO4kQ`O'#CzOOQO,59b,59bOOQU,5:Q,5:QOOQR1G.v1G.vO4pQ`O1G.vOOQU-E7d-E7dO4xQdO,59kOOQO,59k,59kO5SQdO'#DQO5^Q`O'#DQOOQO,5:d,5:dOOQU,5:R,5:ROOQR1G/U1G/UO5cQ`O1G/UOOQU-E7e-E7eO5kQgO'#DhO5xQcO1G/XOOQR1G/X1G/XOOQR,59q,59qO6TQgO,59qO6eQdO'#DiO6lQgO'#DiO7PQcO1G/[OOQR1G/[1G/[OOQR,59r,59rO#|QfO,59rOOQR1G/b1G/bO7_OWO1G/bO7dOaO1G/bOOQR,59y,59yOOQR,59{,59{OOQP1G/h1G/hO7lOaO1G/hO7tOaO1G/hO8POaO1G/hOOQP1G.s1G.sO8_QgO,5:POOQP,5:P,5:POOQP,5:V,5:VOOQP-E7i-E7iOOQO,59_,59_OOQO,59a,59aOOQO1G.}1G.}OOQO,59f,59fO8oQdO,59fOOQR7+$b7+$bP,XQ`O'#DfOOQO1G/V1G/VOOQO,59l,59lO8yQdO,59lOOQR7+$p7+$pP9TQ`O'#DgOOQR'#DT'#DTOOQR,5:S,5:SOOQR-E7f-E7fOOQR7+$s7+$sOOQR1G/]1G/]O9YQgO'#DYO9jQ`O'#DYOOQR,5:T,5:TO#|QfO'#DZO9oQcO'#DZOOQR-E7g-E7gOOQR7+$v7+$vOOQR1G/^1G/^OOQR7+$|7+$|O:QOWO7+$|OOQP7+%S7+%SO:VOaO7+%SO:_OaO7+%SOOQP1G/k1G/kOOQO1G/Q1G/QOOQO1G/W1G/WOOQR,59t,59tO:jQgO,59tOOQR,59u,59uO#|QfO,59uOOQR<<Hh<<HhOOQP<<Hn<<HnO:zOaO<<HnOOQR1G/`1G/`OOQR1G/a1G/aOOQPAN>YAN>Y",
+  stateData: ";S~O!fOS!gOS^OS~OP_OQbORSOTUOWROXROYYOZZO[XOcPOqQO!PVO!V[O!cTO~O`cO~P]OVkOWROXROYeOZfO[dOcPOmhOqQO~OboO~P!bOVtOWROXROYeOZfO[dOcPOmrOqQO~OpwO~P#WORSOTUOWROXROYYOZZO[XOcPOqQO!PVO!cTO~OSvP!avP!bvP~P#|OWROXROYeOZfO[dOcPOqQO~OmzO~P%OOm!OOUzP!azP!bzP!dzP~P#|O^!SO!b!QO!f!TO!g!RO~ORSOTUOWROXROcPOqQO!PVO!cTO~OY!UOP!QXQ!QX!V!QX!`!QXS!QX!a!QX!b!QXU!QXm!QX!d!QX~P&aO[!WOP!SXQ!SX!V!SX!`!SXS!SX!a!SX!b!SXU!SXm!SX!d!SX~P&aO^!ZO!W![O!b!YO!f!]O!g!YO~OP!_O!V[OQaX!`aX~OPaXQaX!VaX!`aX~P#|OP!bOQ!cO!V[O~OP_O!V[O~P#|OWROXROY!fOcPOqQObfXmfXofXpfX~OWROXRO[!hOcPOqQObhXmhXohXphX~ObeXmlXoeX~ObkXokX~P%OOm!kO~Om!lObnPonP~P%OOb!pOo!oO~Ob!pO~P!bOm!sOosXpsX~OosXpsX~P%OOm!uOotPptP~P%OOo!xOp!yO~Op!yO~P#WOS!|O!a#OO!b#OO~OUyX!ayX!byX!dyX~P#|Om#QO~OU#SO!a#UO!b#UO!d#RO~Om#WOUzX!azX!bzX!dzX~O]#XO~O!b#XO!g#YO~O^#ZO!b#XO!g#YO~OP!RXQ!RX!V!RX!`!RXS!RX!a!RX!b!RXU!RXm!RX!d!RX~P&aOP!TXQ!TX!V!TX!`!TXS!TX!a!TX!b!TXU!TXm!TX!d!TX~P&aO!b#^O!g#^O~O^#_O!b#^O!f#`O!g#^O~O^#_O!W#aO!b#^O!g#^O~OPaaQaa!Vaa!`aa~P#|OP#cO!V[OQ!XX!`!XX~OP!XXQ!XX!V!XX!`!XX~P#|OP_O!V[OQ!_X!`!_X~P#|OWROXROcPOqQObgXmgXogXpgX~OWROXROcPOqQObiXmiXoiXpiX~Obkaoka~P%OObnXonX~P%OOm#kO~Ob#lOo!oO~Oosapsa~P%OOotXptX~P%OOm#pO~Oo!xOp#qO~OSwP!awP!bwP~P#|OS!|O!a#vO!b#vO~OUya!aya!bya!dya~P#|Om#xO~P%OOm#{OU}P!a}P!b}P!d}P~P#|OU#SO!a$OO!b$OO!d#RO~O]$QO~O!b$QO!g$RO~O!b$SO!g$SO~O^$TO!b$SO!g$SO~O^$TO!b$SO!f$UO!g$SO~OP!XaQ!Xa!V!Xa!`!Xa~P#|Obnaona~P%OOotapta~P%OOo!xO~OU|X!a|X!b|X!d|X~P#|Om$ZO~Om$]OU}X!a}X!b}X!d}X~O]$^O~O!b$_O!g$_O~O^$`O!b$_O!g$_O~OU|a!a|a!b|a!d|a~P#|O!b$cO!g$cO~O",
+  goto: ",]!mPPPPPPPPPPPPPPPPP!nPP!v#v#|$`#|$c$f$j$nP%VPPP!v%Y%^%a%{&O%a&R&U&X&_&b%aP&e&{&e'O'RPP']'a'g'm's'y(XPPPPPPPP(_)e*X+c,VUaObcR#e!c!{ROPQSTUXY_bcdehknrtvz!O!U!W!_!b!c!f!h!k!l!s!u!|#Q#R#S#W#c#k#p#x#{$Z$]QmPR!qnqfPQThknrtv!k!l!s!u#R#k#pR!gdR!ieTlPnTjPnSiPnSqQvQ{TQ!mkQ!trQ!vtR#y#RR!nkTsQvR!wt!RWOSUXY_bcz!O!U!W!_!b!c!|#Q#S#W#c#x#{$Z$]RySR#t!|R|TR|UQ!PUR#|#SR#z#RR#z#SyZOSU_bcz!O!_!b!c!|#Q#S#W#c#x#{$Z$]R!VXR!XYa]O^abc!a!c!eT!da!eQnPR!rnQvQR!{vQ!}yR#u!}Q#T|R#}#TW^Obc!cS!^^!aT!aa!eQ!eaR#f!eW`Obc!cQxSS}U#SQ!`_Q#PzQ#V!OQ#b!_Q#d!bQ#s!|Q#w#QQ$P#WQ$V#cQ$Y#xQ$[#{Q$a$ZR$b$]xZOSU_bcz!O!_!b!c!|#Q#S#W#c#x#{$Z$]Q!VXQ!XYQ#[!UR#]!W!QWOSUXY_bcz!O!U!W!_!b!c!|#Q#S#W#c#x#{$Z$]pfPQThknrtv!k!l!s!u#R#k#pQ!gdQ!ieQ#g!fR#h!hSgPn^pQTkrtv#RQ!jhQ#i!kQ#j!lQ#n!sQ#o!uQ$W#kR$X#pQuQR!zv",
+  nodeNames: "\u26A0 DirectiveEnd DocEnd - - ? ? ? Literal QuotedLiteral Anchor Alias Tag BlockLiteralContent Comment Stream BOM Document ] [ FlowSequence Item Tagged Anchored Anchored Tagged FlowMapping Pair Key : Pair , } { FlowMapping Pair Pair BlockSequence Item Item BlockMapping Pair Pair Key Pair Pair BlockLiteral BlockLiteralHeader Tagged Anchored Anchored Tagged Directive DirectiveName DirectiveContent Document",
+  maxTerm: 74,
+  context: indentation3,
+  nodeProps: [
+    ["isolate", -3, 8, 9, 14, ""],
+    ["openedBy", 18, "[", 32, "{"],
+    ["closedBy", 19, "]", 33, "}"]
+  ],
+  propSources: [yamlHighlighting],
+  skippedNodes: [0],
+  repeatNodeCount: 6,
+  tokenData: "-Y~RnOX#PXY$QYZ$]Z]#P]^$]^p#Ppq$Qqs#Pst$btu#Puv$yv|#P|}&e}![#P![!]'O!]!`#P!`!a'i!a!}#P!}#O*g#O#P#P#P#Q+Q#Q#o#P#o#p+k#p#q'i#q#r,U#r;'S#P;'S;=`#z<%l?HT#P?HT?HU,o?HUO#PQ#UU!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PQ#kTOY#PZs#Pt;'S#P;'S;=`#z<%lO#PQ#}P;=`<%l#P~$VQ!f~XY$Qpq$Q~$bO!g~~$gS^~OY$bZ;'S$b;'S;=`$s<%lO$b~$vP;=`<%l$bR%OX!WQOX%kXY#PZ]%k]^#P^p%kpq#hq;'S%k;'S;=`&_<%lO%kR%rX!WQ!VPOX%kXY#PZ]%k]^#P^p%kpq#hq;'S%k;'S;=`&_<%lO%kR&bP;=`<%l%kR&lUoP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR'VUmP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR'p[!PP!WQOY#PZp#Ppq#hq{#P{|(f|}#P}!O(f!O!R#P!R![)p![;'S#P;'S;=`#z<%lO#PR(mW!PP!WQOY#PZp#Ppq#hq!R#P!R![)V![;'S#P;'S;=`#z<%lO#PR)^U!PP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR)wY!PP!WQOY#PZp#Ppq#hq{#P{|)V|}#P}!O)V!O;'S#P;'S;=`#z<%lO#PR*nUcP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR+XUbP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR+rUqP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR,]UpP!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#PR,vU`P!WQOY#PZp#Ppq#hq;'S#P;'S;=`#z<%lO#P",
+  tokenizers: [newlines2, blockMark, literals, blockLiteral, 0, 1],
+  topRules: { "Stream": [0, 15] },
+  tokenPrec: 0
+});
+
+// node_modules/@codemirror/lang-yaml/dist/index.js
+var parser8 = /* @__PURE__ */ LRParser.deserialize({
+  version: 14,
+  states: "!vOQOPOOO]OPO'#C_OhOPO'#C^OOOO'#Cc'#CcOpOPO'#CaQOOOOOO{OPOOOOOO'#Cb'#CbO!WOPO'#C`O!`OPO,58xOOOO-E6a-E6aOOOO-E6`-E6`OOOO'#C_'#C_OOOO1G.d1G.d",
+  stateData: "!h~OXPOYROWTP~OWVXXRXYRX~OYVOXSP~OXROYROWTX~OXROYROWTP~OYVOXSX~OX[O~OXY~",
+  goto: "vWPPX[beioRUOQQOR]XRXQTTOUQWQRZWSSOURYS",
+  nodeNames: "\u26A0 Document Frontmatter DashLine FrontmatterContent Body",
+  maxTerm: 10,
+  skippedNodes: [0],
+  repeatNodeCount: 2,
+  tokenData: "$z~RXOYnYZ!^Z]n]^!^^}n}!O!i!O;'Sn;'S;=`!c<%lOn~qXOYnYZ!^Z]n]^!^^;'Sn;'S;=`!c<%l~n~On~~!^~!cOY~~!fP;=`<%ln~!lZOYnYZ!^Z]n]^!^^}n}!O#_!O;'Sn;'S;=`!c<%l~n~On~~!^~#bZOYnYZ!^Z]n]^!^^}n}!O$T!O;'Sn;'S;=`!c<%l~n~On~~!^~$WXOYnYZ$sZ]n]^$s^;'Sn;'S;=`!c<%l~n~On~~$s~$zOX~Y~",
+  tokenizers: [0],
+  topRules: { "Document": [0, 1] },
+  tokenPrec: 67
+});
+var yamlLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "yaml",
+  parser: /* @__PURE__ */ parser7.configure({
+    props: [
+      /* @__PURE__ */ indentNodeProp.add({
+        Stream: (cx) => {
+          for (let before = cx.node.resolve(cx.pos, -1); before && before.to >= cx.pos; before = before.parent) {
+            if (before.name == "BlockLiteralContent" && before.from < before.to)
+              return cx.baseIndentFor(before);
+            if (before.name == "BlockLiteral")
+              return cx.baseIndentFor(before) + cx.unit;
+            if (before.name == "BlockSequence" || before.name == "BlockMapping")
+              return cx.column(before.from, 1);
+            if (before.name == "QuotedLiteral")
+              return null;
+            if (before.name == "Literal") {
+              let col = cx.column(before.from, 1);
+              if (col == cx.lineIndent(before.from, 1))
+                return col;
+              if (before.to > cx.pos)
+                return null;
+            }
+          }
+          return null;
+        },
+        FlowMapping: /* @__PURE__ */ delimitedIndent({ closing: "}" }),
+        FlowSequence: /* @__PURE__ */ delimitedIndent({ closing: "]" })
+      }),
+      /* @__PURE__ */ foldNodeProp.add({
+        "FlowMapping FlowSequence": foldInside,
+        "BlockSequence Pair BlockLiteral": (node, state) => ({ from: state.doc.lineAt(node.from).to, to: node.to })
+      })
+    ]
+  }),
+  languageData: {
+    commentTokens: { line: "#" },
+    indentOnInput: /^\s*[\]\}]$/
+  }
+});
+function yaml() {
+  return new LanguageSupport(yamlLanguage);
+}
+var frontmatterLanguage = /* @__PURE__ */ LRLanguage.define({
+  name: "yaml-frontmatter",
+  parser: /* @__PURE__ */ parser8.configure({
+    props: [/* @__PURE__ */ styleTags({ DashLine: tags.meta })]
+  })
 });
 
 // node_modules/@codemirror/legacy-modes/mode/r.js
@@ -36277,10 +37118,10 @@ function createLineDialog(view) {
     if (!match)
       return;
     let { state } = view, startLine = state.doc.lineAt(state.selection.main.head);
-    let [, sign, ln2, cl, percent2] = match;
+    let [, sign, ln2, cl, percent3] = match;
     let col = cl ? +cl.slice(1) : 0;
     let line2 = ln2 ? +ln2 : startLine.number;
-    if (ln2 && percent2) {
+    if (ln2 && percent3) {
       let pc = line2 / 100;
       if (sign)
         pc = pc * (sign == "-" ? -1 : 1) + startLine.number / state.doc.lines;
@@ -37113,6 +37954,8 @@ var LANG_EXTENSIONS = {
   html,
   css,
   sql,
+  sass,
+  yaml,
   r: () => StreamLanguage.define(r)
 };
 function getLanguageExtension(filetype) {
@@ -37687,7 +38530,7 @@ var Tokenizer = class {
   list(src) {
     let cap = this.rules.block.list.exec(src);
     if (cap) {
-      let raw, istask, ischecked, indent2, i2, blankLine, endsWithBlankLine, line, nextLine, rawLine, itemContents, endEarly;
+      let raw, istask, ischecked, indent3, i2, blankLine, endsWithBlankLine, line, nextLine, rawLine, itemContents, endEarly;
       let bull = cap[1].trim();
       const isordered = bull.length > 1;
       const list = {
@@ -37716,13 +38559,13 @@ var Tokenizer = class {
         line = cap[2].split("\n", 1)[0].replace(/^\t+/, (t3) => " ".repeat(3 * t3.length));
         nextLine = src.split("\n", 1)[0];
         if (this.options.pedantic) {
-          indent2 = 2;
+          indent3 = 2;
           itemContents = line.trimLeft();
         } else {
-          indent2 = cap[2].search(/[^ ]/);
-          indent2 = indent2 > 4 ? 1 : indent2;
-          itemContents = line.slice(indent2);
-          indent2 += cap[1].length;
+          indent3 = cap[2].search(/[^ ]/);
+          indent3 = indent3 > 4 ? 1 : indent3;
+          itemContents = line.slice(indent3);
+          indent3 += cap[1].length;
         }
         blankLine = false;
         if (!line && /^ *$/.test(nextLine)) {
@@ -37731,10 +38574,10 @@ var Tokenizer = class {
           endEarly = true;
         }
         if (!endEarly) {
-          const nextBulletRegex = new RegExp(`^ {0,${Math.min(3, indent2 - 1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`);
-          const hrRegex = new RegExp(`^ {0,${Math.min(3, indent2 - 1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`);
-          const fencesBeginRegex = new RegExp(`^ {0,${Math.min(3, indent2 - 1)}}(?:\`\`\`|~~~)`);
-          const headingBeginRegex = new RegExp(`^ {0,${Math.min(3, indent2 - 1)}}#`);
+          const nextBulletRegex = new RegExp(`^ {0,${Math.min(3, indent3 - 1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`);
+          const hrRegex = new RegExp(`^ {0,${Math.min(3, indent3 - 1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`);
+          const fencesBeginRegex = new RegExp(`^ {0,${Math.min(3, indent3 - 1)}}(?:\`\`\`|~~~)`);
+          const headingBeginRegex = new RegExp(`^ {0,${Math.min(3, indent3 - 1)}}#`);
           while (src) {
             rawLine = src.split("\n", 1)[0];
             nextLine = rawLine;
@@ -37753,8 +38596,8 @@ var Tokenizer = class {
             if (hrRegex.test(src)) {
               break;
             }
-            if (nextLine.search(/[^ ]/) >= indent2 || !nextLine.trim()) {
-              itemContents += "\n" + nextLine.slice(indent2);
+            if (nextLine.search(/[^ ]/) >= indent3 || !nextLine.trim()) {
+              itemContents += "\n" + nextLine.slice(indent3);
             } else {
               if (blankLine) {
                 break;
@@ -37778,7 +38621,7 @@ var Tokenizer = class {
             }
             raw += rawLine + "\n";
             src = src.substring(rawLine.length + 1);
-            line = nextLine.slice(indent2);
+            line = nextLine.slice(indent3);
           }
         }
         if (!list.loose) {
@@ -38960,15 +39803,15 @@ var Parser2 = class _Parser {
    * Static Parse Method
    */
   static parse(tokens2, options2) {
-    const parser7 = new _Parser(options2);
-    return parser7.parse(tokens2);
+    const parser10 = new _Parser(options2);
+    return parser10.parse(tokens2);
   }
   /**
    * Static Parse Inline Method
    */
   static parseInline(tokens2, options2) {
-    const parser7 = new _Parser(options2);
-    return parser7.parseInline(tokens2);
+    const parser10 = new _Parser(options2);
+    return parser10.parseInline(tokens2);
   }
   /**
    * Parse Loop
@@ -39383,7 +40226,7 @@ var Marked = class {
   }
 };
 _parseMarkdown = new WeakSet();
-parseMarkdown_fn = function(lexer2, parser7) {
+parseMarkdown_fn = function(lexer2, parser10) {
   return (src, opt, callback) => {
     if (typeof opt === "function") {
       callback = opt;
@@ -39420,7 +40263,7 @@ parseMarkdown_fn = function(lexer2, parser7) {
             if (opt.walkTokens) {
               this.walkTokens(tokens2, opt.walkTokens);
             }
-            out = parser7(tokens2, opt);
+            out = parser10(tokens2, opt);
             if (opt.hooks) {
               out = opt.hooks.postprocess(out);
             }
@@ -39464,7 +40307,7 @@ parseMarkdown_fn = function(lexer2, parser7) {
       return;
     }
     if (opt.async) {
-      return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src).then((src2) => lexer2(src2, opt)).then((tokens2) => opt.walkTokens ? Promise.all(this.walkTokens(tokens2, opt.walkTokens)).then(() => tokens2) : tokens2).then((tokens2) => parser7(tokens2, opt)).then((html2) => opt.hooks ? opt.hooks.postprocess(html2) : html2).catch(throwError);
+      return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src).then((src2) => lexer2(src2, opt)).then((tokens2) => opt.walkTokens ? Promise.all(this.walkTokens(tokens2, opt.walkTokens)).then(() => tokens2) : tokens2).then((tokens2) => parser10(tokens2, opt)).then((html2) => opt.hooks ? opt.hooks.postprocess(html2) : html2).catch(throwError);
     }
     try {
       if (opt.hooks) {
@@ -39474,7 +40317,7 @@ parseMarkdown_fn = function(lexer2, parser7) {
       if (opt.walkTokens) {
         this.walkTokens(tokens2, opt.walkTokens);
       }
-      let html2 = parser7(tokens2, opt);
+      let html2 = parser10(tokens2, opt);
       if (opt.hooks) {
         html2 = opt.hooks.postprocess(html2);
       }
@@ -39546,7 +40389,7 @@ var setOptions = marked.setOptions;
 var use = marked.use;
 var walkTokens = marked.walkTokens;
 var parseInline = marked.parseInline;
-var parser6 = Parser2.parse;
+var parser9 = Parser2.parse;
 var lexer = Lexer.lex;
 
 // src/Components/codeMirror/language-server/documentation.ts
@@ -40610,8 +41453,8 @@ function keyBindings({
 }
 async function updateBrowserUrlHash(fileContents) {
   const encodedFileContents = await fileContentsToUrlStringInWebWorker(fileContents);
-  const hash3 = "#code=" + encodedFileContents;
-  history.replaceState(null, "", hash3);
+  const hash4 = "#code=" + encodedFileContents;
+  history.replaceState(null, "", hash4);
 }
 export {
   Editor as default,

@@ -1,4 +1,4 @@
-// Shinylive 0.9.0
+// Shinylive 0.9.1
 // Copyright 2024 Posit, PBC
 import {
   FCJSONtoFC,
@@ -16,14 +16,14 @@ import {
   sleep,
   stringToUint8Array,
   uint8ArrayToString
-} from "./chunk-ASVBLSKJ.js";
+} from "./chunk-PHWSSKUM.js";
 import {
   __commonJS,
   __privateAdd,
   __privateMethod,
   __require,
   __toESM
-} from "./chunk-YYZJYZVZ.js";
+} from "./chunk-O5P2LFOG.js";
 
 // node_modules/scheduler/cjs/scheduler.development.js
 var require_scheduler_development = __commonJS({
@@ -32704,7 +32704,7 @@ var D;
 async function T2() {
   if (!g2 || (V2 = (await import("node:url")).default, H = await import("node:fs"), D = await import("node:fs/promises"), z = (await import("node:vm")).default, L2 = await import("node:path"), U2 = L2.sep, typeof O2 < "u"))
     return;
-  let e = H, t = await import("node:crypto"), i = await import("./browser-H5WX4RIP.js"), r = await import("node:child_process"), a2 = { fs: e, crypto: t, ws: i, child_process: r };
+  let e = H, t = await import("node:crypto"), i = await import("./browser-OYYBATHK.js"), r = await import("node:child_process"), a2 = { fs: e, crypto: t, ws: i, child_process: r };
   globalThis.require = function(n) {
     return a2[n];
   };
@@ -33667,6 +33667,7 @@ async def _install_requirements_from_dir(dir: str) -> None:
     import re
     import micropip
     import sys
+    import importlib.metadata
 
     files = os.listdir(dir)
     if "requirements.txt" not in files:
@@ -33676,6 +33677,8 @@ async def _install_requirements_from_dir(dir: str) -> None:
 
     for req in reqs:
         req = req.strip()
+        extras = set()
+
         if req == "" or req.startswith("#"):
             continue
         # If it's a URL, then it must be a wheel file.
@@ -33683,13 +33686,54 @@ async def _install_requirements_from_dir(dir: str) -> None:
             pkg_name = re.sub(r"^.+/(.*)-\\d.*$", r"\\1", req)
         else:
             # If we got here, it's a package specification.
+            # https://peps.python.org/pep-0508/#examples
             # Remove any trailing version info: "my-package (>= 1.0.0)" -> "my-package"
-            pkg_name = re.sub(r"([a-zA-Z0-9._-]+)(.*)", r"\\1", req).strip()
+            # or "shiny [theme] == 1.2.0" -> "shiny[theme]"
+            pkg_name = re.sub(r" \\[", "[", req)
+            pkg_name = re.sub(r"([a-zA-Z0-9._,\\[\\]-]+)(.*)", r"\\1", pkg_name).strip()
 
-        if pkg_name in micropip.list():
+            match_extras = re.match(r"([^\\[]+)(?:\\[(.*)\\])?", pkg_name)
+            if match_extras and match_extras.group(2):
+                pkg_name = match_extras.group(1)
+                extras.update({e.strip() for e in match_extras.group(2).split(",")})
+
+        if pkg_name not in micropip.list():
+            print(f"Installing {pkg_name} ...")
+            await micropip.install(pkg_name)
+
+        if len(extras) == 0:
             continue
-        print(f"Installing {req} ...")
-        await micropip.install(req)
+        else:
+            # Because micropip.install() doesn't install extras, we have to
+            # find the package requirements of each extra and install them
+            # if they aren't already installed.
+            dist = importlib.metadata.distribution(pkg_name)
+
+            provided_extras = set(dist.metadata.get_all("Provides-Extra") or [])
+            valid_extras = extras & provided_extras
+            invalid_extras = extras - valid_extras
+            if len(invalid_extras):
+                raise ValueError(
+                    f"Invalid extras for package {pkg_name}: {','.join(invalid_extras)}. "
+                    f"Found in '{req}' in requirements.txt."
+                )
+
+            pkg_reqs = dist.requires or []
+
+            for extra in valid_extras:
+                # Convert requires records  : 'libsass>=0.23.0; extra == "theme"'
+                # into just the package name: 'libsass'
+                extra_reqs = [
+                    r for r in pkg_reqs
+                    if f'extra == "{extra}"' in str(r)
+                    or f"extra == '{extra}'" in str(r)
+                ]
+
+                for extra_req in extra_reqs:
+                    extra_req_name = re.sub(r"([a-zA-Z0-9._,-]+)(.*)", r"\\1", extra_req).strip()
+                    if extra_req_name not in micropip.list():
+                        print(f"Installing {extra_req_name} for {pkg_name}[{extra}]")
+                        await micropip.install(extra_req_name)
 
 
 async def _load_packages_from_dir(dir: str) -> None:
