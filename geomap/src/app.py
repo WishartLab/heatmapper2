@@ -41,9 +41,9 @@ def server(input, output, session):
 	Info = {
 		"example1.txt": "Input type: txt<br>Contents: Data from a carbon monoxide emissions study conducted by Environment Canada. The three columns represent results from 1990, 2000, and 2013.<br>Source: Open Data Portal",
 		"example2.txt": "Input type: txt<br>Contents: Data adapted from New cases and age-standardized rate for primary cancer (based on the February 2014 CCR tabulation file), by cancer type and sex, Canada, provinces and territories. The columns represent new cancer cases (age-standardized rate per 100,000 population) from 2006 to 2010.<br>Source: Statistics Canada",
-		"example3.txt": "Input type: txt<br>Contents: Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.<br>Source: U.S. Centers for Disease Control and Prevention",
+		#"example3.txt": "Input type: txt<br>Contents: Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.<br>Source: U.S. Centers for Disease Control and Prevention",
 		"example6.csv": "Input type: csv<br>Contents: COVID 19 information reported by the Canadian Government.<br>Source: https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291",
-		"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "File type: csv<br>Contents: Global COVID 19 Statistics.<br>Source: Our World in Data"
+		#"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "File type: csv<br>Contents: Global COVID 19 Statistics.<br>Source: Our World in Data"
 	}
 
 	def HandleData(path, p=None):
@@ -343,9 +343,9 @@ app_ui = ui.page_fluid(
 				examples={
 				"example1.txt": "Example 1",
 				"example2.txt": "Example 2",
-				"example3.txt": "Example 3",
-				"example6.csv": "Example 4",
-				"https://heatmapper2.ca/geomap/example_input/owid-covid-data.csv": "Example 5"},
+				#"example3.txt": "Example 3",
+				"example6.csv": "Example 3"},
+				#"https://heatmapper2.ca/geomap/example_input/owid-covid-data.csv": "Example 5"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Geomap"
 			),
