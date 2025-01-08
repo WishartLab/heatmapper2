@@ -28,6 +28,12 @@ Raw = "https://raw.githubusercontent.com/wishartlab/heatmapper2/main"
 Server = "http://server.heatmapper2.ca"
 Port = 8000
 
+# Icon to display for tooltips
+question_circle_icon = ui.HTML(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-question-circle-fill mb-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247zm2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg>'
+)
+
+
 # Detect the running environment
 if "pyodide" in modules:
 	from pyodide.http import pyfetch
@@ -387,15 +393,15 @@ def NavBar():
 	return (
 		#ui.panel_title(title=None, window_title="Heatmapper"),  # added to app.py for each category to display page name
 		ui.navset_bar(
-			ui.nav_control(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer">Expression</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer">Pairwise</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["image"]}" target="_blank" rel="noopener noreferrer">Image</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["geomap"]}" target="_blank" rel="noopener noreferrer">Geomap</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer">Geocoordinate</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer">3D</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer">Spatial</a>')),
-			ui.nav_control(ui.HTML(f'<a href="{Sources["spectral"]}" target="_blank" rel="noopener noreferrer">Spectral</a>')),
-			ui.nav_control(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer">About</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["expression"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Expression</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["pairwise"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Pairwise</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["image"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Image</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["geomap"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Geomap</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["geocoordinate"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Geocoordinate</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["3d"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">3D</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["spatial"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Spatial</a>')),
+			ui.nav_control(ui.HTML(f'<a href="{Sources["spectral"]}" target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">Spectral</a>')),
+			ui.nav_control(ui.HTML('<a href=https://github.com/WishartLab/heatmapper2/wiki target="_blank" rel="noopener noreferrer" style="font-size: 12pt;">About</a>')),
 			ui.nav_spacer(),
 			ui.nav_control(ui.input_dark_mode(id="mode")),
 			title=ui.HTML(
@@ -531,7 +537,6 @@ class Config:
 		@note	keyword arguments passed to the Config object during initialization will overrule
 					arguments passed to this function. Duplicates are allowed.
 		"""
-
 		combined = self.kwargs
 
 		for key in kwargs.keys():
@@ -550,8 +555,30 @@ class Config:
 				element = Inlineify(ui_element, widths, gap, **combined)
 			else: element = ui_element(*args, **combined)
 
+			### OLD - tooltip when hover on element ###
+			# if "id" in combined and tooltip is not None:
+			# 	element = ui.tooltip(
+			# 		ui.div( 
+			# 			element,
+			# 			question_circle_icon,
+			# 			style="display: inline-flex; gap: 5px;"), 
+			# 		tooltip, 
+			# 		id=combined["id"]+"_tooltip")
+				
+			### NEW - longer tooltip when click on icon ###
 			if "id" in combined and tooltip is not None:
-				element = ui.tooltip(element, tooltip, id=combined["id"]+"_tooltip")
+				element = ui.div(
+					element,
+					ui.popover(
+						ui.span(
+							question_circle_icon,
+						),
+						tooltip,
+						placement="right",
+						id=combined["id"]+"_tooltip"
+					),
+					style="display: inline-flex; gap: 5px;",
+				)
 
 			# There doesn't seem any good way to remove the conditional panel spacing.
 			# Rather than having conditional configurations stick out due to inconsistent spacing
@@ -599,17 +626,26 @@ def Error(message, exception=None):
 def Msg(message): return ui.notification_show(ui=message, type="default", duration=15)
 
 
-def Update(): return ui.input_action_button(
+def Update(): return ui.div(
+	ui.input_action_button(
 		id="Update",
 		label=ui.layout_columns(
-			ui.panel_conditional("input.UpdateToggle", "Auto"),
-			"Update",
+			ui.panel_conditional("input.UpdateToggle", ""),
+			"Auto Update",
 			ui.input_switch(id="UpdateToggle", label=None, value=True),
 			col_widths=[1,9,1],
 			gap="1px",
 			height="1px", 	# Make it as small as possible
 		)
-	)
+	),
+	ui.popover(
+		ui.span(question_circle_icon,),
+		"When enabled, the heatmap visualization is automatically updated on each setting change. It is recommended to disable Auto Update for large, computationally expensive datasets. When disabled, the Auto Update button must be explicitly clicked to update the visualization.",
+		placement="right",
+		id="auto_update_tooltip"
+	),
+	style="display: inline-flex; gap: 5px;",
+)
 
 
 def File(input):
