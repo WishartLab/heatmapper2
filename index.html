@@ -9,6 +9,7 @@
 
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" />
 	<style>
+		
 		.border-img {
 			border: 0.2em solid rgb(223, 223, 223);
 			width: 100%;
@@ -48,7 +49,7 @@
 
 		.myTable {
 			table-layout: fixed;
-			border-spacing: 1em;
+			border-spacing: 15px;
 			width: 1024px;
 			/* virtual pixel width of many iPads */
 
@@ -116,21 +117,16 @@
 			vertical-align: top;
 		}
 
-		.notice-holder {
-			display: table-cell;
-			width: 67%;
-			text-align: center;
-		}
-
 		.notice {
 			display: inline-block;
 			vertical-align: middle;
 			width: 100%;
-			padding: 1.2em 1.5em 0.5em 1.5em;
+			padding: 15px 15px 7px 20px;
 			background-color: #eae0ff;
 			border-style: solid;
 			border-width: 2px;
 			border-color: #c9b1ff;
+			border-radius: 4px;
 		}
 	</style>
 
@@ -202,50 +198,58 @@
 
 	</nav>
 
-	<div class="myTable">
-		<h2 style="margin-left:0px; padding-left:2em;"><b>Welcome to Heatmapper!</b></h2>
 
-		<div class="notice-holder" style="width:67%; padding-left:3.2em; padding-right:3em;">
-			<div class="notice">
-				<p style="text-align:left;">
-					<b>Heatmapper has been re-written in Python!</b> This version brings new changes, including
-					WebAssembly support, speed improvements, and more features. The old, R-Based Heatmapper is
-					still available <a href=https://heatmapper.ca>here</a>. Checkout the <a
-						href=https://github.com/WishartLab/heatmapper2/wiki>Wiki</a> for more information!
+	<div class="myTable" style="padding-left: 30px; padding-right: 30px;">
+		<div class="myRow" style="display: flex; justify-content: space-between;">
+			<h2 style="padding-left: 10px;"><b>Welcome to Heatmapper2!</b></h2>
+			<div style="width:33%; border: 2px solid #a2c78f; border-radius: 4px; background-color: #deffce; padding-top:0.6em; padding-left:0.6em;">
+				<img src="https://github.com/wishartlab/heatmapper2/blob/working/site/cursor.png?raw=true"
+					style="width:48px; padding-left:0.2em; padding-right:0.8em; padding-top:0.1em; float:left;">
+
+				<p style="text-align:center;">
+					Click on the menu tabs above or <br>the buttons below to start making <br>your heatmap!
 				</p>
 			</div>
 		</div>
 
-		<div class="myRow" style="width:67%;">
-			<div class="myCol" style="display:table-cell; width:67%; padding-left:3em; padding-right:3em;">
-				<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/logo.png?raw=true"
-					class="logo" style="width:240px; padding-left:1em; padding-bottom:1em; float:right;">
+		<div class="myRow" style="display:flex; width:67%; padding-right:30px;">
+			<div style="width:100%; border: 2px solid #e50054; border-radius: 4px; background-color: #ff83b0; padding:0.6em;">
+				<p style="text-align:center; font-weight:bold;">
+				<b>NOTICE:</b> Heatmapper2 will be undergoing hardware maintenance from 18:00 08/01/2025 to 15:00 09/01/2025, GMT. Some services may be unavailable during this time.
+				</p>
+			</div>
+		</div>
 
-				<div
-					style="width:57%; border: 2px solid #002aff; background-color: #deffce; padding-top:0.6em; padding-left:0.6em; margin:0.25em; margin-bottom:1em;">
-					<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/arrow.png?raw=true"
-						style="width:48px; padding-left:0.2em; padding-right:0.8em; padding-top:0.1em; float:left;">
-
+		<div class="myRow" style="display: flex; margin-top: 15px;">
+			<div class="myCol" style="width: 67%; display:table-cell; padding-right: 30px;">
+				<div class="notice" style="margin-bottom: 20px;">
 					<p style="text-align:left;">
-						Click in the menu above or on the buttons below to start making your heat map!
+						<b>Heatmapper has been re-written in Python!</b> <br> This version brings new changes, including
+						WebAssembly support, speed improvements, and more features. The old, R-Based Heatmapper is
+						still available <a href=https://heatmapper.ca>here</a>. <br>Checkout the <a
+							href=https://github.com/WishartLab/heatmapper2/wiki>Wiki</a> for more information!
 					</p>
 				</div>
 
-				<p style="text-align:left; width:57%; padding-top:1em; padding-left:0.25em;">
-					Heatmapper is a freely available web server that allows users to interactively
+				<img src="https://github.com/WishartLab/heatmapper/blob/master/www/images/logo.png?raw=true"
+					class="logo" style="width:240px; padding-left:1em; padding-bottom:1em; float:right;">
+
+				<p style="text-align:left; width:57%; padding-top:1em;">
+					Heatmapper2 is a freely available web server that allows users to interactively
 					visualize their data through an easy-to-use graphical interface. 
-					<br>Heatmapper allows users to generate, cluster and visualize a
-					wide variety of heat maps for many different data types and applications.
-					<br>Heatmapper offers customization options for each heat map’s appearance and plotting parameters.
-					<br>Heatmapper also allows users to interact with data via a searchable/sortable/editable
+					<br>Heatmapper2 allows users to generate, cluster and visualize a
+					wide variety of heatmaps for many different data types and applications.
+					<br>Heatmapper2 offers customization options for each heatmap's appearance and plotting parameters.
+					<br>Heatmapper2 also allows users to interact with data via a searchable/sortable/editable
 					data table view.
 				</p>
-				<p style="text-align:left; width:100%; padding-top:1em; padding-left:0.25em;">
+				<p style="text-align:left; width:100%; padding-top:1em;">
 					<b><i>Hover over the images below for more information!</i></b>
 				</p>
 			</div>
 
-			<div class="myCol well" style="display:table-cell; width:33%;">
+			<div class="myCol" style="width:33%; 
+			border: 2px solid rgb(223, 223, 223); border-radius: 4px; margin: 0; padding-left: 15px; padding-right: 15px; padding-bottom: 15px; padding-top: 7px; vertical-align: top;">
 				<h4>Please cite:</h4>
 				<p>
 					Sasha Babicki, David Arndt, Ana Marcu, Yongjie Liang, Jason R. Grant,
@@ -253,10 +257,14 @@
 					<a href="http://www.ncbi.nlm.nih.gov/pubmed/27190236" target="_blank">
 						<i>Nucleic Acids Res.</i> 2016 May 17 (epub ahead of print). doi:10.1093/nar/gkw419</a>
 				</p>
+				<br>
+				<p>
+					Kyle Kernick, Robyn Woudstra, Mark Berjanskii, and David S. Wishart. Heatmapper2: web-enabled heatmapping made easy. <br>
+					<i>Submitted to Nucleic Acids Res.</i>
+				</p>
 
 				<br />
 				<h4>Funding</h4>
-
 				<p>
 					<a href="http://www.innovation.ca/" target="_blank">
 						<img src="https://github.com/wishartlab/heatmapper2/blob/main/site/cfi.png?raw=true"
@@ -265,7 +273,7 @@
 
 					<a href="http://genomealberta.ca" target="_blank">
 						<img src="https://github.com/wishartlab/heatmapper2/blob/main/site/galberta.png?raw=true"
-							style="width:118px; margin-left:0px; margin-right:20px; margin-top:10px;">
+							style="width:118px; margin-left:0px; margin-right:0px; margin-top:10px;">
 					</a>
 				</p>
 
@@ -274,7 +282,8 @@
 		</div>
 
 	</div>
-	<div class="myTable" style="display:table;">
+	
+	<div class="myTable" style="display:table; padding-left: 15px; padding-right: 15px;">
 
 		<div class="myRow">
 			<div class="well myCol">
