@@ -41,7 +41,7 @@ config = ConfigHandler({
 	"Max": Config(value=0),
 
 	# "Temporal", "Uniform", "Scaled"
-	"Features": Config(selected=["KDE"]),
+	"Features": Config(selected=None),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
