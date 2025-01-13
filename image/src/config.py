@@ -29,7 +29,7 @@ config = ConfigHandler({
 	"Elevation": Config(value=90),
 	"Rotation": Config(value=0),
 	"Zoom": Config(value=1),
-	"Slices": Config(value=True),
+	"Slices": Config(value=False),
 
 	# Any combination of "x", "y", "legend"
 	"Features": Config(selected=["legend"]),
