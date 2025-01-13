@@ -295,9 +295,18 @@ def server(input, output, session):
 
 
 			p.inc(message="Styling...")
+			# handle: if both radius and scale are included, radius overrides scale
+			if config.Radius() > 0:
+				var = "radius"
+				val = config.Radius()
+			else:
+				var = "scale"
+				if config.Scale() > 0:
+					val = config.Scale()
+				else:
+					val = 1
 			viewer.setStyle({config.PStyle().lower(): {
 				heatmap_property: heatname_name,
-				"arrows": "Arrows" in config.PFeatures(),
 				"style": "trace" if "Trace" in config.PFeatures() else "rectangle",
 				"thickness": config.Thickness(),
 				"tubes": "Tubes" in config.PFeatures(),
@@ -306,8 +315,9 @@ def server(input, output, session):
 				"dashedBonds": "Dashed Bonds" in config.PFeatures(),
 				"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
 				"singleBonds": "Single Bonds" in config.PFeatures(),
-				"radius": config.Radius(),
-				"scale": config.Scale(),
+				var: val,
+				# "scale": config.Scale(),
+				# "radius": config.Radius(),
 			}})
 			viewer.addSurface(config.SurfaceType(), {"opacity": config.SurfaceOpacity(), surface_property: surface_name})
 
@@ -364,7 +374,6 @@ def server(input, output, session):
 					opacity=opacity,
 					show_edges="Edges" in features,
 					lighting="Lighting" in features,
-					interpolate_before_map="Interpolation" in features,
 					smooth_shading="Smooth Shading" in features,
 				)
 
@@ -380,7 +389,6 @@ def server(input, output, session):
 					n_colors=colors,
 					show_edges="Edges" in features,
 					lighting="Lighting" in features,
-					interpolate_before_map="Interpolation" in features,
 					smooth_shading="Smooth Shading" in features,
 				)
 
@@ -448,23 +456,23 @@ def server(input, output, session):
 
 		if type(data) == str or input.SourceFile() == "ID":
 			elements += [
-				ui.HTML("<b>Heatmap</b>"),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the model"),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the heatmap"),
+				ui.HTML("<b>Model</b>"),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Model Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the <i>model</i>. 1.0 indicates full opacity, while lower values make the model more transparent."),
 				ui.HTML("<b>Surface</b>"),
-				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Scheme", choices=Schemes, tooltip="Define the coloring of the surface"),
-				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the surface"),
+				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Color Scheme", choices=Schemes, tooltip='Define the coloring of the surface drawn on top of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.'),
+				config.SurfaceOpacity.UI(ui.input_numeric, id="SurfaceOpacity", label="Surface Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the <i>surface</i> drawn on top of the model. 1.0 indicates full opacity, while lower values make the surface more transparent."),
 				ui.HTML("<b>Customization</b>"),
-				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0, tooltip="Select which model to use from the PDB file"),
-				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"], tooltip="Specify the rendering style"),
-				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"], tooltip="Specify the type of surface to draw on the model"),
-				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Thickness", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify strand thickness"),
-				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify strand width"),
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05, tooltip="Stick, Sphere, or Cross style only - specify sphere radius"),
-				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1, tooltip="Stick, Sphere, or Cross style only - specify a scalar to modify VDW radius"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, max=100, step=1, tooltip="Change the size of the viewer"),
+				config.Model.UI(ui.input_numeric, id="Model", label="Model #", min=0, tooltip="Select which model to use from the PDB file, if the PDB contains multiple models."),
+				config.PStyle.UI(ui.input_select, id="PStyle", label="Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"], tooltip=ui.HTML("Specify the rendering style of the model. <br>Cartoon visualizes secondary structures as ribbons, cylinders, arrows, and lines. <br>Stick depicts atoms as colored nodes and bonds as sticks. <br>Sphere depicts atoms as spheres. <br>Line depicts atoms and bonds as lines. <br>Cross depicts atoms as crosses.")),
+				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"], tooltip="Specify a surface to draw on top of the model. To see the surface, change the Surface Opacity above to be greater than 0. <br>VDW: van der Waals surface, each atom is surrounded by a sphere whose size is proportional to the van der Waals radius of that atom. <br>MS: Molecular surface, the outer boundary of the molecule, accessible by a probe sphere rolling over the VDW surface. <br>SAS: Solvent accessible surface, the boundary traced by the <i>centre</i> of a probe sphere rolling over the VDW surface. <br>SES: Solvent exposed surface, the outer boundary of a molecule where a solvent can come into contact with the molecule. This excludes parts of the surface that are shielded by other atoms."),
+				config.Thickness.UI(ui.input_numeric, id="Thickness", label="Thickness", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify the thickness of the visualized components. Lower values make components thinner, while higher values (to a maximum of 10) make components thicker."),
+				config.Width.UI(ui.input_numeric, id="Width", label="Width", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider."),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Radius", min=0, max=5, step=0.05, tooltip="Stick, Sphere, or Cross style only - Specify a fixed radius (in Angstroms) for atoms in the <i>model</i>. Lower values make atoms smaller, while higher values (to a maximum of 5) make atoms larger. This value overrides 'Scale'."),
+				config.Scale.UI(ui.input_numeric, id="Scale", label="Scale", min=0, max=10, step=1, tooltip="Stick, Sphere, or Cross style only - specify a scalar to modify the van der Waals radius of atoms in the <i>model</i>. If a 'Radius' is specified above, this value is ignored. Set 'Radius' to 0 to visualize 'Scale'."),
+				config.Size.UI(ui.input_numeric, id="Size", label="View Size", min=1, max=100, step=1, tooltip="Change the size of the viewer in your browser."),
 				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"], tooltip="Modify Stick style features (dashed bonds, show non-bonded, single bonds) or Cartoon style features (tubes, trace)"),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"], tooltip="Dashed Bonds (Stick Style) - draw bonds as dashed lines. <br>Show Non-Bonded (Stick Style) - display non-bonded atoms as spheres. <br>Single Bonds (Stick Style) - display all bonds as single bonds. <br>Tubes (Cartoon Style) - display alpha helices as simple cylinders. <br>Trace (Cartoon Style) - draw the model as a simple outline. This overrides the 'Tubes' feature."),
 			]
 
 		else:
@@ -472,13 +480,13 @@ def server(input, output, session):
 			if type(data) == DataFrame:
 				elements += [
 					ui.HTML("<b>Heatmap</b>"),
-					config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the heatmap, if it is generated from table input"),
-					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"], tooltip="Specify how to render the model"),
+					config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the heatmap more transparent."),
+					config.Style.UI(ui.input_select, id="Style", label="Style", choices=["Surface", "Wireframe", "Points"], tooltip="Specify how to render the model. Surface visualizes data as triangles on a surface. Wireframe displays a wireframe of the outer geometry. Points displays values as a collection of points."),
 					ui.HTML("<b>Colors</b>"),
-					config.Colors.UI(ui.input_numeric, id="Colors", label="Number", value=256, min=1, step=1, tooltip="Specify the number of colors to use, if the heatmap is generated from table input"),
-					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Specify a color scheme to use, if the heatmap is generated from table input"),
+					config.Colors.UI(ui.input_numeric, id="Colors", label="Number", value=256, min=1, step=1, tooltip="Specify the number of colors to use to visualize data."),
+					config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Specify a color scheme to use."),
 					ui.HTML("<b>Features</b>"),
-					config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Edges", "Lighting", "Interpolation", "Smooth Shading"], tooltip="Lighting may affect color accuracy. Lighting must be toggled on for smooth shading to be applied."),
+					config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices=["Edges", "Lighting", "Smooth Shading",], tooltip="Edges - display the wireframe edges on top of the surface visualization. Does not apply to Wireframe or Points. <br>Lighting - visualize the model with an external light source. Lighting may affect color accuracy. Lighting must be enabled for smooth shading to be applied. <br>Smooth Shading - smooth shadows on the surface of the model."),
 			]
 
 		return elements
@@ -499,9 +507,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}	   
+
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -534,11 +549,11 @@ app_ui = ui.page_fluid(
 
 				ui.output_ui(id="ConditionalElements"),
 
-				ui.download_button(id="DownloadHeatmap", label="Download"),
+				ui.download_button(id="DownloadHeatmap", label="Download HTML"),
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 
 		# Add the main interface tabs.
