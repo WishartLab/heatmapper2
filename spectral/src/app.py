@@ -122,8 +122,8 @@ def server(input, output, session):
 	@render.data_frame
 	def Table(): 
 		Valid.set(True)
-		print(f"TYPE: {type(Data())}")
 		table_data = []
+		# Data() is a pymzml.run.Reader object
 		# turn pymzml.run.Reader object into a dataframe
 		for spectrum in Data():
 			if spectrum.ms_level:
@@ -395,9 +395,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}	   
+
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -425,39 +432,44 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 
-				config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0], conditional="input.MainTab === 'SimilarityTab'"),
+				config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0], conditional="input.MainTab === 'SimilarityTab'", tooltip="Select the IDs of the spectra whose similarity you would like to plot."),
 
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps, tooltip="Select a color scheme for the heatmap."),
 
-				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip="Select a method for peak generation"),
+				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip=ui.HTML('Select a peak type from the input file to display. <br>Raw visualizes unprocessed data. <br>Centroided peaks have reduced noise. <br>Reprofiled peaks have been smoothed. <br><a href="https://academic.oup.com/bioinformatics/article/28/7/1052/209917" target="_blank">Read more here</a>.')),
 
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Calculate intermediate values between data points"),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother."),
 
-				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the interpolation size for generating contours (lower values improve computation time but decrease accuracy)"),
+				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Contour Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the size of the grid to display the spectra on. Specify the interpolation size for generating contours (lower values improve computation time but decrease accuracy)"),
 
 
 				ui.HTML("<b>3D</b>"),
-				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", step=1, min=1, tooltip="Change the view angle (horizontal)"),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", step=1, min=1, tooltip="Crop the view"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Control whether the plot is 2D or 3D. Any value other than 90 will display the plot in 3D, with the value specifying the elevation angle of the viewer in respect to the model. Change the angle back to 90 to display the plot in 2D."),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", step=1, min=1, tooltip="Change the angle of rotation of the viewer in respect to the model. For 3D plots only."),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", step=1, min=1, tooltip="Crop the view. For 3D plots only."),
 
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				# Customize what aspects of the heatmap are visible
 				ui.HTML("<b>Features</b>"),
-				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None,
-						choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}
+				config.Features.UI(
+					ui.input_checkbox_group, 
+					make_inline=False, 
+					id="Features", 
+					label=None,
+					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"},
+					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap.",
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download"),
+				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 
 		# Add the main interface tabs.
