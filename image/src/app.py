@@ -291,7 +291,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps, tooltip="Select a color scheme to use for the heatmap."),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps + ["Spring", "Summer", "Autumn", "Winter"], tooltip="Select a color scheme to use for the heatmap."),
 				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], tooltip="Select a algorithm used to generate the contours of the heatmap (convert the 2D data grid into smooth shapes). Default is MPL2014, while Threaded is best for large datasets."),
 				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1, tooltip="Specify the number of contour levels. A higher number of levels results in smoother transitions between values, but is more computationally expensive. "),
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background image more visible."),
