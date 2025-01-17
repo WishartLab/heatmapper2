@@ -39,6 +39,7 @@ def server(input, output, session):
 			"Description": "Input type: txt, jpg\nContents: Hypothetical example illustrating data overlaid on a satellite image. Input data are count or magnitude values within the overlaid grid sections."
 		}
 	}
+	
 
 	def HandleData(path, p=None):
 		"""
@@ -107,6 +108,35 @@ def server(input, output, session):
 		else: value = patch["value"]
 		DataCache.Invalidate(File(input))
 		return value
+	
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Image Heatmaps</h1>
+			Image heatmaps visualize an arbitrary input table over top of a user-supplied image. Upload a data file and an image file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			<br><br><h3>Format</h3>
+			<i>Input data can be formatted as follows:</i>
+				 <ul>
+				 <li>A precomputed 2D matrix of values, which will be displayed as-is as a heatmap. (See Ex 1: Map)</li>
+				 <li>X and Y columns indicating coordinates, with an associated value column.</li>
+				 </ul>
+			<i>Heatmapper2 supports the following image file formats:</i>
+				<ul>
+				<li>.bmp</li>
+				<li>.gif</li>
+				<li>.h5</li>
+				<li>.hdf</li>
+				<li>.ico</li>
+				<li>.jpeg</li>
+				<li>.tif</li>
+				<li>.tiff</li>
+				<li>.webp</li>
+				<li>.png</li>
+				<ul>
+			<br><h3>Interface</h3>
+			
+		""")
 
 
 	def GenerateHeatmap():
@@ -164,8 +194,11 @@ def server(input, output, session):
 						x, y = meshgrid(x, y)
 
 						if img is not None:
+							# normalize image
 							arr = array(img) / 255.0
 							ix, iy, _ = arr.shape
+							print(f"arr:\t{arr}")
+							print(f"arr.shape:\t{arr.shape}")
 
 							x_new, y_new = meshgrid(linspace(0, df.shape[0]-1, ix), linspace(0, df.shape[1]-1, iy))
 
@@ -251,9 +284,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}	   
+
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -269,7 +309,12 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], project="Image"),
+			FileSelection(
+				examples={
+					"example1.txt": "Ex 1: Map"
+				}, 
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], 
+				project="Image"),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File",
 				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"],
@@ -283,35 +328,40 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of axis labels"),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
-				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], tooltip="Select a contouring algorithm"),
-				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1, tooltip="Specify the number of contour levels"),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the contours"),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps + ["Spring", "Summer", "Autumn", "Winter"], tooltip="Select a color scheme to use for the heatmap."),
+				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], tooltip="Select a algorithm used to generate the contours of the heatmap (convert the 2D data grid into smooth shapes). Default is MPL2014, while Threaded is best for large datasets."),
+				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1, tooltip="Specify the number of contour levels. A higher number of levels results in smoother transitions between values, but is more computationally expensive. "),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background image more visible."),
 
 				ui.HTML("<b>3D</b>"),
-				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", tooltip="Change the view angle (horizontal)"),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1, tooltip="Crop the view"),
-				config.Slices.UI(ui.input_switch, id="Slices",	label="Slices", conditional="input.Elevation != 90", tooltip="Display slices of the heatmap on the XY, XZ, and YZ planes"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Control whether the plot is 2D or 3D. Any value other than 90 will display the plot in 3D, with the value specifying the elevation angle of the viewer in respect to the model. Change the angle back to 90 to display the plot in 2D."),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", tooltip="Change the angle of rotation of the viewer in respect to the model. For 3D plots only."),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1, tooltip="Crop the view. For 3D plots only."),
+				config.Slices.UI(ui.input_switch, id="Slices",	label="Slices", conditional="input.Elevation != 90", tooltip="Toggle on to display 2D projections of the heatmap on the XY, XZ, and YZ planes"),
 
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Quality.UI(ui.input_numeric, id="Quality", label="Quality", min=0.1, max=1.0, step=0.1, tooltip="Reduce the quality of the base image to speed up rendering"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
+				config.Quality.UI(ui.input_numeric, id="Quality", label="Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				# Customize what aspects of the heatmap are visible
 				ui.HTML("<b>Features</b>"),
-				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None,
-						choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}
+				config.Features.UI(
+					ui.input_checkbox_group, 
+					make_inline=False, 
+					id="Features", 
+					label=None,
+					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"},
+					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap."
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download"),
+				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 
 		# Add the main interface tabs.

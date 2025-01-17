@@ -211,6 +211,15 @@ def server(input, output, session):
 		return value
 
 
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Pairwise Heatmaps</h1>
+			Pairwise heatmaps display all pairwise distances between the points in a data set, or display correlations between all pairs of variables in a data set. Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+		""")
+
+
 	def GenerateMatrix(data, value):
 		'''
 		@param data: Pandas df
@@ -331,9 +340,13 @@ def server(input, output, session):
 			y = y.ravel()
 			width = depth = 1
 
-			if config.InterpolationLevels() != 1:
+			level = config.InterpolationLevels()
+			if level < 1:
+				level = 1
+			elif level > 10:
+				level = 10
+			if level != 1:
 				p.inc(message="Interpolating...")
-				level = config.InterpolationLevels()
 				length_new = df_height.shape[0] * level
 				space = linspace(0, length-1, length_new)
 				x_grid, y_grid = meshgrid(space, space)
@@ -440,9 +453,14 @@ def server(input, output, session):
 									else:
 										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
 
+					# catch invalid DPI values
+					if config.DPI() < 5:
+						dpi = 5
+					else:
+						dpi = config.DPI()
 
 					b = BytesIO()
-					fig.savefig(b, format="png", dpi=config.DPI(), bbox_inches="tight")
+					fig.savefig(b, format="png", dpi=dpi, bbox_inches="tight")
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
 
@@ -450,7 +468,7 @@ def server(input, output, session):
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)
 			temp.close()
-			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			img: types.ImgData = {"src": temp.name, "width": f"{config.Size()}px"}
 			return img
 
 
@@ -520,9 +538,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}	   
+
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -559,47 +584,48 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix",	choices=["Distance", "Correlation"], tooltip="Compare data based on distance or correlation"),
-
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1, tooltip="Change the text size of axis labels"),
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip="Calculate intermediate values between points"),
-				config.Chain.UI(ui.input_text, id="Chain", label="Chain", tooltip="Select the PDB chain to use"),
-				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1, tooltip="The length of K-Mer to use for FASTA files"),
+				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix",	choices=["Distance", "Correlation"], tooltip="Visualize either the distance or correlation between values. Based on the matrix type, you can further select a distance calculation method or correlation calculation method below."),
 				ui.output_ui("Method"),
 
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=20, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip="Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother."),
+				config.Chain.UI(ui.input_text, id="Chain", label="Chain", tooltip="This setting only applies if a PDB file is used. Select a chain within the PDB file to display."),
+				config.K.UI(ui.input_numeric, id="K", label="K-Mer", min=3, max=5, step=1, tooltip="This setting only applies if a FASTA file is used. Specify the length of K-Mer (3, 4, or 5) to use for alignment-free sequence comparison. The file is partitioned into K-Mers and a distance or correlation matrix is generated based on the counts of each K-Mer."),
+				
 				ui.HTML("<b>3D</b>"),
-				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation", "Cube"], conditional="input.Elevation != 90"),
+				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Height",	choices=["Distance", "Correlation", "Cube"], conditional="input.Elevation != 90", tooltip="Specify a metric to use for the height of the bars in a 3D plot. This metric can be different from the metric used for the color of the bars. The option 'Cube' displays matrices on the XY, XZ, and YZ planes, and requires an input data file with an X, Y, and Z column."),
 
-				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Change the view angle (vertical)"),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", step=1, min=1, tooltip="Change the view angle (horizontal)"),
-				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1, tooltip="Crop the view"),
-				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1, tooltip="Calculate intermediate values between points"),
-				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value"),
-				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars"),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Control whether the plot is 2D or 3D. Any value other than 90 will display the plot in 3D, with the value specifying the elevation angle of the viewer in respect to the model. Change the angle back to 90 to display the plot in 2D."),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", step=1, min=1, tooltip="Change the angle of rotation of the viewer in respect to the model. For 3D plots only."),
+				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1, tooltip="Crop the view. For 3D plots only."),
+				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1, max=10, tooltip="Specify a multiplier for the resolution of the 3D plot. For example, a value of 2 will interpolate the data from an NxM to a 2Nx2M, effectively quadrupling the resolution of each data point by interpolating it into 4. This results in a smoother looking plot, but can be computationally expensive for large datasets. The minimum value is 1 (default) and the maximum value is 10."),
+				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value. This removes negative values and prevents data from extending below the XY plane. For 3D plots only."),
+				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars in 3D plots."),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),
-					config.Custom.UI(ui.input_switch, make_inline=False, id="Custom", label="Custom"),
+					config.Custom.UI(ui.input_switch, make_inline=False, id="Custom", label="Custom", tooltip="Select colors to use in the heatmap, with the first color representing low values, and the last color representing high values. If the 'Custom' checkbox is enabled you may specify up to 12 colors. A minimum of two colors are needed."),
 					col_widths=[4,8]
 				),
 				ui.output_ui("Color"),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1, tooltip="Specify the number of color bins to use"),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group,
 					make_inline=False, id="Features", label=None,
 					choices={"x": "X Labels", "y": "Y Labels", "z": "Z-Labels", "label": "Data Labels", "legend": "Legend"},
+					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Data labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. Legend displays a colorbar legend on the heatmap.",
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download"),
+				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 
 		# Add the main interface tabs.

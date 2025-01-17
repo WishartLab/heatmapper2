@@ -219,6 +219,17 @@ def server(input, output, session):
 		else: value = patch["value"]
 		DataCache.Invalidate(File(input))
 		return value
+	
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Geomap</h1>
+			Geomap displays values based on geographical boundaries, such as country, state, or province. Upload a data file and specify a GeoJSON in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+				 
+			<br><br><h3>Format</h3>
+			Geomap requires a data file as well as a GeoJSON.
+		""")
 
 
 	def GenerateHeatmap():
@@ -321,9 +332,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}
+			   
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -369,32 +387,32 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns/Properties</b>"),
-				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[], tooltip="Select the column in your data that contains location names"),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], tooltip="Select a data column to plot"),
-				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[], tooltip="Select the GeoJSON property that corresponds to your location names"),
+				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[], tooltip="Specify a column in your data that contains location names. These location names must correspond to location names in the GeoJSON file. Click on the 'GeoJSON' tab in the main view area to see location names in the currently selected GeoJSON file."),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], tooltip="Specify a column containing the data to plot. If 'Temporal' is selected, this column is ignored if it does not have a corresponding column with time values."),
+				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[], tooltip="Select a property in the GeoJSON file that corresponds to the location names in your data. Click on the 'GeoJSON' tab in the main view area to see available properties in the currently selected GeoJSON file."),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time"),
-				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap"),
+				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time, which can be navigated with a time slider embedded into the map. Temporal data must have an explicit time column, or separate columns for each time period. "),
+				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
 
 				ui.HTML("<b>Colors</b>"),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, max=253, step=1, tooltip="Specify the number of color bins to use"),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, max=253, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
 				ui.HTML("<b>Range of Interest</b>"),
-				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Only display data points within a specified range of interest"),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Define a minimum and maximum bound (inclusive) for data. Select 'Remove' to ignore all values outside of the range. Select 'Round' to round values outside of the range to the maximum or minimum value."),
 				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True, tooltip="Remove data points outside the range of interest, or round them to the maximum or minimum value"),
 				ui.layout_columns(
-					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value"),
-					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value"),
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value in range of interest (inclusive)."),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value in range of interest (inclusive)."),
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download"),
+				ui.download_button(id="DownloadHeatmap", label="Download HTML"),
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 		MainTab(ui.nav_panel("GeoJSON", ui.output_data_frame("GeoJSON")), m_type=ui.output_ui),
 		height="86vh",

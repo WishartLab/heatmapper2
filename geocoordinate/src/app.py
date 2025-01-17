@@ -44,12 +44,10 @@ def server(input, output, session):
 
 	Info = {
 		"example1.txt": "Input type: txt<br>Contents: Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water.<br>Source: A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
-		"example2.txt": "Input type: txt<br>Contents: Bike thefts in Vancouver in 2011.<br>Source: Retrieved from a 2013 Vancouver Sun blog post by Chad Skelton.",
 		"example3.txt": "Input type: txt<br>Contents: The location of traffic signals in Toronto.<br>Source: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
-		"example1.csv": "Input type: csv<br>Contents: Random data",
 		"example21.csv": "Input type: csv<br>Contents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.<br>Source: https://www.nhc.noaa.gov/data/",
 		"example3.csv": "Input type: csv<br>Contents: Recorded mean temperature (F) in the USA in 2023 as measured by the EPA.<br>Source: https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
-		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anaomolies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
+		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anomalies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
 	}
 
 
@@ -298,6 +296,19 @@ def server(input, output, session):
 		return value
 
 
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Geocoordinate</h1>
+			Geocoordinate maps values onto geospatial coordinates (latitude and longitude). Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+				 
+			<br><br><h3>Format</h3>
+			Static heatmaps require a data file with a latitude, longitude, and value column.
+			Temporal data files must include an additional column with time values.
+		""")
+
+
 	def GenerateHeatmap():
 		with ui.Progress() as p:
 			p.inc(message="Loading input...")
@@ -337,7 +348,7 @@ def server(input, output, session):
 						elif config.ROI_Mode() == "Round": df.at[index, v_col] = u if value > u else l
 				df = df.drop(to_drop)
 				if len(df) == 0:
-					Error("No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!")
+					Error("No locations to display! Check your Range of Interest and ensure the Value column is properly set.")
 					return
 
 			if config.Interpolation() != 1:
@@ -390,6 +401,8 @@ def server(input, output, session):
 	def Heatmap():
 		try:
 			return GenerateHeatmap()
+		except KeyError:
+			pass
 		except Exception as e:
 			Error(f"Failed to generate heatmap", e)
 
@@ -433,9 +446,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}	   
+
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -453,13 +473,11 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={
-					"example1.txt": "Example 1",
-					"example2.txt": "Example 2",
-					"example3.txt": "Example 3",
-					"example1.csv": "Example 4",
-					"example21.csv": "Example 5",
-					"example3.csv": "Example 6",
-					"test.txt": "Example 7",
+					"example1.txt": "1: Cholera Deaths",
+					"example3.txt": "2: Traffic Signals",
+					"example21.csv": "3: Hurricanes",
+					"example3.csv": "4: Temperature",
+					"test.txt": "5: Temperature Anomalies",
 				},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".nc"],
 				project="Geocoordinate"
@@ -473,41 +491,42 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns</b>"),
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="Define a column to use as a time index for temporal heatmaps"),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="Color points uniformly, or color based on values in a column"),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="Optional: Specify a time column to plot data over time. If an explicit time column is specified, data can be visualized temporally with a media-player-like interface (play, pause, rewind, and frame speed options). If 'None' is selected, the heatmap will be static."),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="If a column from the input data is specified, values from that column will be associated with each latitude, longitude point, and the point will be colored based on its value. If 'Uniform' is selected, data points will be assigned a uniform value and colored uniformly on the map."),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display discrete vector points, or a smooth raster shape (does not apply to temporal heatmaps)"),
-				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"], tooltip="Select the shape of vector points"),
-				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Select a CartoDB (simple) or OSM (more detailed) background map"),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display data as discrete vector points, or a smooth raster shape (vector does not apply to temporal heatmaps). The intensity of raster points scales when the map is zoomed in or out. Vector points maintain a constant intensity regardless of zoom, but are more computationally expensive."),
+				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"], tooltip="Specify the shape of vector points. Rectangular points are useful for contiguous data (like temperature or rainfall), while circular points are useful for discrete data (like disease cases or wildlife sightings)."),
+				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
 
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5, tooltip="Specify the size of data points"),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5, tooltip="Specify how large each data point should be on the map."),
 
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01, tooltip="Specify the opacity of data points"),
-				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1, tooltip="Soften or harden the edges of raster shapes"),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
+				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1, tooltip="Specify how much neighbouring points bleed into one another. Higher values make the heatmap appear more homogeneous, while lower values emphasize individual points. This applies to raster heatmaps only."),
 
-				config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1, tooltip="Calculate intermediate values between points"),
+				# TODO: FIX INTERPOLATION
+				# config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1, tooltip="Calculate intermediate values between points. This can lead to artifacts if data is not contiguous. (METHOD? APPLIES TO VECTOR AND RASTER?)"),
 
 				ui.HTML("<b>Range of Interest</b>"),
-				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Only display data points within a specified range of interest"),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Define a minimum and maximum bound (inclusive) for data points. Select 'Remove' to ignore all data points outside of the range. Select 'Round' to round data points outside of the range to the maximum or minimum value. This setting is not applicable if 'Uniform' values are used."),
 				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True, tooltip="Remove data points outside the range of interest, or round them to the maximum or minimum value"),
 				ui.layout_columns(
-					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value"),
-					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value"),
+					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value in range of interest (inclusive)."),
+					config.Max.UI(ui.input_numeric, make_inline=False, id="Max", label=None, min=0, tooltip="Maximum displayed value in range of interest (inclusive)."),
 				),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
-					choices=["KDE"], selected=None, tooltip="Estimate the density of data points in an area"
+					choices=["KDE"], selected=None, tooltip="Visualize the distribution of data points, rather than their assigned value. Red indicates higher density areas while indigo indicates lower density areas. Density is calculated using Gaussian Kernal Density Estimation (KDE)."
 				),
 
 				# Add the download buttons.
-				ui.download_button("DownloadHeatmap", "Download")
+				ui.download_button("DownloadHeatmap", "Download HTML")
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 
 		MainTab(m_type=ui.output_ui),

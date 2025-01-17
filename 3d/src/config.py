@@ -24,8 +24,8 @@ config = ConfigHandler({
 	# "Surface", "Wireframe", "Points"
 	"Style": Config(selected="Surface"),
 
-	# Combination of "Edges", "Lighting", "Interpolation", "Smooth Shading"
-	"Features": Config(selected=["Lighting", "Interpolation", "Smooth Shading"]),
+	# Combination of "Edges", "Lighting", "Smooth Shading"
+	"Features": Config(selected=["Lighting", "Smooth Shading"]),
 
 	# "Cartoon", "Stick", "Sphere", "Line"
 	"PStyle": Config(selected="Cartoon"),
