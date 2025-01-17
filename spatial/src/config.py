@@ -20,7 +20,7 @@ config = ConfigHandler({
 	"Count": Config(),
 
 	# See shared.py for ColorMaps
-	"ColorMap": Config(selected="Viridis"),
+	"ColorMap": Config(selected="Autumn"),
 
 	# "Circle", "Square", "Hex"
 	"Shape": Config(selected="Hex"),
