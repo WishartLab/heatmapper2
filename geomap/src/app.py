@@ -219,6 +219,17 @@ def server(input, output, session):
 		else: value = patch["value"]
 		DataCache.Invalidate(File(input))
 		return value
+	
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Geomap</h1>
+			Geomap displays values based on geographical boundaries, such as country, state, or province. Upload a data file and specify a GeoJSON in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+				 
+			<br><br><h3>Format</h3>
+			Geomap requires a data file as well as a GeoJSON.
+		""")
 
 
 	def GenerateHeatmap():

@@ -211,6 +211,15 @@ def server(input, output, session):
 		return value
 
 
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Pairwise Heatmaps</h1>
+			Pairwise heatmaps display all pairwise distances between the points in a data set, or display correlations between all pairs of variables in a data set. Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+		""")
+
+
 	def GenerateMatrix(data, value):
 		'''
 		@param data: Pandas df

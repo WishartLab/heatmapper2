@@ -133,6 +133,15 @@ def server(input, output, session):
 		else: value = patch["value"]
 		DataCache.Invalidate(File(input))
 		return value
+	
+
+		# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>3D Heatmaps</h1>
+			3D heatmaps render PDB models, or display data or textures on a 3D model. Upload a data file or specify a PDB ID in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+		""")
 
 
 	def PDBViewer(source, p):

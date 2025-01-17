@@ -159,6 +159,15 @@ def server(input, output, session):
 	# 	return value
 
 
+		# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Spectral Heatmaps</h1>
+			Spectral heatmaps display Mass Spectrometry data in a 3D plot, or compute a similarity matrix between spectra. Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+		""")
+
+
 	def GenerateSimilarity():
 		"""
 		@brief Generate the Similarity matrix.

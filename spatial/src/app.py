@@ -22,7 +22,7 @@ from scanpy import pp, tl
 from pathlib import Path
 
 # Shared functions
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify, TableOptions, File
+from shared import Cache, MainTab, NavBar, File, FileSelection, Filter, ColumnType, InitializeConfig, ColorMaps, DistanceMethods, Update, Msg, Error, Inlineify, TableOptions, TooltipIcon
 
 try:
 	from user import config
@@ -207,7 +207,9 @@ def server(input, output, session):
 				if not DataCache.In(filtered):
 
 					bdata = adata.copy()
+					# keep cells that have at least min_counts RNA counts
 					pp.filter_cells(bdata, min_counts=cell)
+					# keep genes that are expressed in at least min_cells
 					pp.filter_genes(bdata , min_cells=gene)
 
 					if input.UploadType() == "Visium":
@@ -293,6 +295,15 @@ def server(input, output, session):
 		return value
 
 
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Spatial heatmaps</h1>
+			Spatial heatmaps display spatial molecular data, and visualize various related metrics. Upload your data files in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+		""")
+
+
 	def GenerateNanoString(adata, file, p):
 		id = config.Keys()
 		count = config.Count()
@@ -308,6 +319,7 @@ def server(input, output, session):
 		dpi = config.DPI()
 
 		p.inc(message="Plotting...")
+		# https://squidpy.readthedocs.io/en/stable/api/squidpy.pl.spatial_segment.html
 		pl.spatial_segment(
 			adata,
 			color=count,
@@ -325,7 +337,7 @@ def server(input, output, session):
 			wspace=spacing,
 			hspace=spacing,
 			save=file.name,
-			dpi=dpi
+			dpi=dpi,
 		)
 		img: types.ImgData = {"src": file.name, "height": f"{config.Size()}vh"}
 		return img
@@ -378,7 +390,7 @@ def server(input, output, session):
 			wspace=spacing,
 			hspace=spacing,
 			save=file.name,
-			dpi=dpi
+			dpi=dpi,
 		)
 		img: types.ImgData = {"src": file.name, "height": f"{config.Size()}vh"}
 		return img
@@ -522,7 +534,7 @@ def server(input, output, session):
 	def DownloadTable():
 		adata = Data()
 		if adata is None: return
-		temp = NamedTemporaryFile();
+		temp = NamedTemporaryFile()
 		adata.write(temp.name)
 		yield open(temp.name, "rb").read()
 
@@ -550,9 +562,16 @@ app_ui = ui.page_fluid(
 		.navbar-nav {
 			flex-wrap: nowrap !important;
 		}
+			   
 		.bslib-sidebar-layout {
 			margin-top: 10vh;  /* prevent content from being hidden under navbar */
 		}
+		.bslib-grid {
+			display: flex;
+			width: 100%;
+		    justify-content: space-between;
+		}	   
+
 		#MainTab {
 			position: sticky;  /* prevent tabs from scrolling */
 			top: 0;
@@ -589,33 +608,58 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Values below the minimum count will not be displayed"),
-				Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
-				Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
+				ui.div(
+					Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
+					ui.popover(
+						ui.span(TooltipIcon,),
+						"Only display genes that are expressed in at least this many cells. Values below the minimum gene count will not be displayed. A higher minimum gene count will likely exclude more genes, but speed up rendering.",
+						placement="right",
+						id="GeneCount_tooltip",
+					),
+					style="display: inline-flex; gap: 5px;",
+				),
+				ui.div(
+					Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
+					ui.popover(
+						ui.span(TooltipIcon,),
+						"Only display cells that have at least this many RNA counts. Values below the minimum cell count will not be displayed. A higher minimum cell count will likely exclude more values, but speed up rendering.",
+						placement="right",
+						id="CellCount_tooltip",
+					),
+					style="display: inline-flex; gap: 5px;",
+				),
 
 				ui.HTML("<b>Keys</b>"),
-				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True, tooltip="Select annotation keys (each key is plotted separately)"),
-				config.Count.UI(ui.input_select, id="Count", label="Count", choices=[], tooltip="Select count values to plot (NanoString)"),
+				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True, tooltip="Select annotation keys to plot. More than one key can be specified, with each key plotted separately and displayed next to each other. Start typing in the name of a key to search for it."),
+				config.Count.UI(ui.input_select, id="Count", label="Count", choices=[], tooltip="NanoString files only - Select count values to plot."),
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 				ui.HTML("<b>Heatmap</b>"),
-				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}, tooltip="Select a statistic to plot (Visium)"),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps, tooltip="Select a color scheme"),
+				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}, tooltip="Visium files only - Select a statistic to plot."),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps + ["Spring", "Summer", "Autumn", "Winter"], tooltip="Select a color scheme."),
 				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"], tooltip="Change the shape of each data point"),
-				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1, tooltip="Specify how many plots to display per row"),
-				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1, tooltip="Specify the spacing between plots"),
+				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1, tooltip="Specify how many plots to display side by side per row."),
+				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1, tooltip="Specify the spacing between plots."),
 
 				ui.HTML("<b>Opacity</b>"),
-				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the background image"),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data points"),
+				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the background image. 1.0 indicates full opacity, while lower values make the background image more transparent."),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data points. 1.0 indicates full opacity, while lower values make the background image more visible."),
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1),
+				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				ui.HTML("<b>Features</b>"),
-				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, 	choices=["Image", "Legend", "Frame"]),
+				config.Features.UI(
+					ui.input_checkbox_group, 
+					make_inline=False, 
+					id="Features", 
+					label=None, 	
+					choices=["Image", "Legend", "Frame"],
+					tooltip=ui.HTML("Image toggles the visibility of the background image. <br>Legend toggles the visibility of the sidebar color legend. <br>Frame toggles the visibility of a frame around the heatmap with x and y axis titles."),
+				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download"),
 			),
@@ -653,7 +697,7 @@ app_ui = ui.page_fluid(
 			),
 			padding="10px",
 			gap="20px",
-			width="250px",
+			width="300px",
 		),
 
 		# Add the main interface tabs.

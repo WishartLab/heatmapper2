@@ -39,6 +39,7 @@ def server(input, output, session):
 			"Description": "Input type: txt, jpg\nContents: Hypothetical example illustrating data overlaid on a satellite image. Input data are count or magnitude values within the overlaid grid sections."
 		}
 	}
+	
 
 	def HandleData(path, p=None):
 		"""
@@ -107,6 +108,35 @@ def server(input, output, session):
 		else: value = patch["value"]
 		DataCache.Invalidate(File(input))
 		return value
+	
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Image Heatmaps</h1>
+			Image heatmaps visualize an arbitrary input table over top of a user-supplied image. Upload a data file and an image file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			<br><br><h3>Format</h3>
+			<i>Input data can be formatted as follows:</i>
+				 <ul>
+				 <li>A precomputed 2D matrix of values, which will be displayed as-is as a heatmap. (See Ex 1: Map)</li>
+				 <li>X and Y columns indicating coordinates, with an associated value column.</li>
+				 </ul>
+			<i>Heatmapper2 supports the following image file formats:</i>
+				<ul>
+				<li>.bmp</li>
+				<li>.gif</li>
+				<li>.h5</li>
+				<li>.hdf</li>
+				<li>.ico</li>
+				<li>.jpeg</li>
+				<li>.tif</li>
+				<li>.tiff</li>
+				<li>.webp</li>
+				<li>.png</li>
+				<ul>
+			<br><h3>Interface</h3>
+			
+		""")
 
 
 	def GenerateHeatmap():
@@ -164,8 +194,11 @@ def server(input, output, session):
 						x, y = meshgrid(x, y)
 
 						if img is not None:
+							# normalize image
 							arr = array(img) / 255.0
 							ix, iy, _ = arr.shape
+							print(f"arr:\t{arr}")
+							print(f"arr.shape:\t{arr.shape}")
 
 							x_new, y_new = meshgrid(linspace(0, df.shape[0]-1, ix), linspace(0, df.shape[1]-1, iy))
 
@@ -276,7 +309,12 @@ app_ui = ui.page_fluid(
 	ui.layout_sidebar(
 		ui.sidebar(
 
-			FileSelection(examples={"example1.txt": "Example 1"}, types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], project="Image"),
+			FileSelection(
+				examples={
+					"example1.txt": "Ex 1: Map"
+				}, 
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], 
+				project="Image"),
 
 			ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("Image", "Choose your Image File",
 				accept=[".bmp", ".gif", ".h5", ".hdf", ".ico", ".jpeg", ".jpg", ".tif", ".tiff", ".webp", ".png"],

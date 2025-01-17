@@ -296,6 +296,19 @@ def server(input, output, session):
 		return value
 
 
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Geocoordinate</h1>
+			Geocoordinate maps values onto geospatial coordinates (latitude and longitude). Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+				 
+			<br><br><h3>Format</h3>
+			Static heatmaps require a data file with a latitude, longitude, and value column.
+			Temporal data files must include an additional column with time values.
+		""")
+
+
 	def GenerateHeatmap():
 		with ui.Progress() as p:
 			p.inc(message="Loading input...")

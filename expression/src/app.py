@@ -170,6 +170,18 @@ def server(input, output, session):
 		return value
 
 
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Expression Heatmaps</h1>
+			Expression heatmaps display data from data from transcriptomic (microarray or RNAseq), proteomic or metabolomic experiments. Data can be unclustered, or pre-clustered. Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+				 
+			<br><br><h3>Format</h3>
+			Expression requires a single data file.
+		""")
+
+
 	def Heatmap2D(df, ax_heatmap, p):
 		colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 		interpolation = config.Interpolation().lower()
