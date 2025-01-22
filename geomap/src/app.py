@@ -225,10 +225,48 @@ def server(input, output, session):
 	def Welcome():
 		return ui.HTML("""
 			<h1>Geomap</h1>
-			Geomap displays values based on geographical boundaries, such as country, state, or province. Upload a data file and specify a GeoJSON in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			Geomap displays values based on geographical boundaries, such as country, state, or province. Upload a data file and specify a GeoJSON in the sidebar to get started, or select 'Example' to check out a pre-loaded example. Navigate to the 'Heatmap' tab to see the heatmap, 'Table' to look at the input data, or 'GeoJSON' to see the geographical boundaries available in the currently selected GeoJSON file.
+			
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geomap.png" alt="Geomap"; style="max-width:500px;">
 				 
 			<br><br><h3>Format</h3>
 			Geomap requires a data file as well as a GeoJSON.
+			<br>
+			<i>Input data can be formatted as follows:</i>
+				 <ul>
+				 <li>A 'Name' column and 'Value' column(s), where names in the 'Name' column match available geographical boundaries in the currently selected GeoJSON. Select which value column to display using the 'Value' dropdown, if there is more than one.</li>
+				 <li><u>Temporal format 1:</u> A 'Name' column, 'Value' column(s), and a 'Time' column. Rows will be grouped by time and plotted linearly. Names in the 'Name' column should match available geographical boundaries in the currently selected GeoJSON. Select which value column to display using the 'Value' dropdown, if there is more than one. (See Example 3)</li>
+				 <li><u>Temporal format 2:</u> A 'Name' column, and multiple 'Time' columns, each containing the value of the associated name at that time (i.e. each row contains a name, and multiple values of that name at different time points). 'Time' column names are parsed such that all characters up to the first whitespace indicate the time (e.g. '1990 [emissions in kilotonnes]' becomes '1990'). See Example 2. </li>
+				 </ul>
+			<br>
+			<i>Geomap heatmaps can be generated from the following file formats:</i>
+			<table style="border-spacing: 100px";>
+			<tr>
+				<th>Table Files</th>
+				<th>GeoJSON Files</th>
+			</tr>
+			<tr>
+				<td style="padding-right:50px;">
+					<li>.csv</li>
+					<li>.dat</li>
+					<li>.odf</li>
+					<li>.tab</li>
+					<li>.tsv</li>
+					<li>.txt</li>
+					<li>.xls</li>
+					<li>.xlsx</li>
+				</td>
+				<td style="vertical-align:top;">
+					<li>standard .geojson files, see <a href="https://geojson.org/">geojson.org</a></li>
+				</td>
+			</tr>
+			</table>
+				 
+			<br><h3>Interface</h3>
+			Remember to select or upload a GeoJSON with boundaries that match the names in your data.
+		
+			<br>Click on the '?' icon beside sidebar options to read more about them.
 		""")
 
 
@@ -387,18 +425,18 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns/Properties</b>"),
-				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Key", choices=[], tooltip="Specify a column in your data that contains location names. These location names must correspond to location names in the GeoJSON file. Click on the 'GeoJSON' tab in the main view area to see location names in the currently selected GeoJSON file."),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], tooltip="Specify a column containing the data to plot. If 'Temporal' is selected, this column is ignored if it does not have a corresponding column with time values."),
+				config.KeyColumn.UI(ui.input_select, id="KeyColumn", label="Name Column", choices=[], tooltip="Specify a column in your data that contains location names. These location names must correspond to location names in the GeoJSON file. Click on the 'GeoJSON' tab in the main view area to see location names in the currently selected GeoJSON file."),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], tooltip="Specify a column containing the data to plot. If 'Temporal' is selected, this column is ignored if it does not have a corresponding column with time values."),
 				config.KeyProperty.UI(ui.input_select, id="KeyProperty", label="GeoJSON", choices=[], tooltip="Select a property in the GeoJSON file that corresponds to the location names in your data. Click on the 'GeoJSON' tab in the main view area to see available properties in the currently selected GeoJSON file."),
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time, which can be navigated with a time slider embedded into the map. Temporal data must have an explicit time column, or separate columns for each time period. "),
-				config.MapType.UI(ui.input_select, id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
+				config.MapType.UI(ui.input_select, id="MapType", label="Background Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
 
 				ui.HTML("<b>Colors</b>"),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, max=253, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="Color Bins", min=3, max=253, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors. This feature does not apply to temporal heatmaps."),
 
 				ui.HTML("<b>Range of Interest</b>"),
 				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Define a minimum and maximum bound (inclusive) for data. Select 'Remove' to ignore all values outside of the range. Select 'Round' to round values outside of the range to the maximum or minimum value."),

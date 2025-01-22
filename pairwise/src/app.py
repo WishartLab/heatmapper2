@@ -216,7 +216,27 @@ def server(input, output, session):
 	def Welcome():
 		return ui.HTML("""
 			<h1>Pairwise Heatmaps</h1>
-			Pairwise heatmaps display all pairwise distances between the points in a data set, or display correlations between all pairs of variables in a data set. Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			Pairwise heatmaps display pairwise distances between data points, or display correlations between pairs of data points. <br><br>
+			Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example. <br><br>
+			Navigate to the 'Heatmap' tab to see the heatmap, or 'Table' to look at the input data.
+				 
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Pairwise.png" alt="Image"; style="max-width:500px;">
+				 
+			<br><br><h3>Format</h3>
+			<i>Input data can be formatted in three different ways:</i><br>
+			<b>1 - PDB Files</b><br>
+			Upload a <b>.pdb</b> file to compute a matrix using coordinates between atoms. Use different atoms by specifying a different chain under 'Chain' in the sidebar (see example 'Ex5: PDB').<br><br>
+
+			<b>2 - FASTA Files</b><br>
+		    Upload a <b>.fasta</b> file. Heatmapper will parse the file and partition the sequence(s) into K-Mers. A distance or correlation matrix is generated based on the counts of each K-Mer. (see example 'Ex4: FASTA').<br><br>
+
+			<b>3 - Table Files</b><br>
+			Table files with a 'Name', 'X'', 'Y', and optional 'Z' column will be turned into a matrix, labelled with the 'Name' column. Including a 'Z' column allows the data to be displayed as a cube matrix (see example Ex6: CubeMatrix).<br>
+			Tables containing a precomputed matrix will be displayed as-is. Column names and a 'Name' column are optional (see example Ex:1 Matrix).
+			<br>
+			<br><h3>Interface</h3>
+			Click on the '?' icon beside sidebar options to read more about them.
 		""")
 
 

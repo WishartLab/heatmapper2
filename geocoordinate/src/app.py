@@ -180,7 +180,7 @@ def server(input, output, session):
 		values = df[v_col]
 
 		# Calculate kernel density estimation
-		if "KDE" in config.Features():
+		if "Color by Density" in config.Features():
 			stack = vstack([longitude, latitude])
 			kde = gaussian_kde(stack)
 			density = kde(stack)
@@ -301,11 +301,30 @@ def server(input, output, session):
 	def Welcome():
 		return ui.HTML("""
 			<h1>Geocoordinate</h1>
-			Geocoordinate maps values onto geospatial coordinates (latitude and longitude). Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			This heatmap maps values onto geospatial coordinates (latitude and longitude). Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example. Navigate to the 'Heatmap' tab to see the heatmap, or 'Table' to look at the input data.
+				 
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Geocoordinate.png" alt="Image"; style="max-width:500px;">
 				 
 			<br><br><h3>Format</h3>
-			Static heatmaps require a data file with a latitude, longitude, and value column.
-			Temporal data files must include an additional column with time values.
+			<i>Input data can be formatted as follows:</i>
+				<ul>
+				<li><u>Static Heatmaps</u> require 'Latitude' and 'Longitude' columns. An optional 'Value' column can be used to color data points based on value - a uniform value is applied if this column does not exist (see examples '1: Cholera Deaths' and '2: Traffic Signals').</li>
+				<li><u>Temporal Heatmaps</u> require 'Latitude' and 'Longitude' columns plus an additional 'Time' column. An optional 'Value' column can be used to color data points based on value - a uniform value is applied if this column does not exist (see examples '3: Hurricanes' and '4: Temperature').</li>
+				</ul>
+				 
+			<i>Geocoordinate heatmaps can be generated from the following file formats:</i>
+				<li>.csv</li>
+				<li>.dat</li>
+				<li>.odf</li>
+				<li>.tab</li>
+				<li>.tsv</li>
+				<li>.txt</li>
+				<li>.xls</li>
+				<li>.xlsx</li>
+			
+			<br><h3>Interface</h3>
+			Click on the '?' icon beside sidebar options to read more about them.
 		""")
 
 
@@ -495,11 +514,11 @@ app_ui = ui.page_fluid(
 				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="If a column from the input data is specified, values from that column will be associated with each latitude, longitude point, and the point will be colored based on its value. If 'Uniform' is selected, data points will be assigned a uniform value and colored uniformly on the map."),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render", choices=["Raster", "Vector"], tooltip="Display data as discrete vector points, or a smooth raster shape (vector does not apply to temporal heatmaps). The intensity of raster points scales when the map is zoomed in or out. Vector points maintain a constant intensity regardless of zoom, but are more computationally expensive."),
-				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Shape", choices=["Circle", "Rectangle"], tooltip="Specify the shape of vector points. Rectangular points are useful for contiguous data (like temperature or rainfall), while circular points are useful for discrete data (like disease cases or wildlife sightings)."),
-				config.MapType.UI(ui.input_select,id="MapType", label="Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
+				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render Mode", choices=["Raster", "Vector"], tooltip="Display data as discrete vector points, or a smooth raster shape (vector does not apply to temporal heatmaps). The intensity of raster points scales when the map is zoomed in or out. Vector points maintain a constant intensity regardless of zoom, but are more computationally expensive."),
+				config.RenderShape.UI(ui.input_select, id="RenderShape", label="Vector Shape", choices=["Circle", "Rectangle"], tooltip="Specify the shape of vector points. Rectangular points are useful for contiguous data (like temperature or rainfall), while circular points are useful for discrete data (like disease cases or wildlife sightings)."),
+				config.MapType.UI(ui.input_select,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
 
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Size", min=5, tooltip="Specify how large each data point should be on the map."),
+				config.Radius.UI(ui.input_numeric, id="Radius", label="Data Point Size", min=5, tooltip="Specify how large each data point should be on the map."),
 
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.01, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
 				config.Blur.UI(ui.input_numeric, id="Blur", label="Blurring", min=1, max=30, step=1, tooltip="Specify how much neighbouring points bleed into one another. Higher values make the heatmap appear more homogeneous, while lower values emphasize individual points. This applies to raster heatmaps only."),
@@ -508,7 +527,7 @@ app_ui = ui.page_fluid(
 				# config.Interpolation.UI(ui.input_numeric, id="Interpolation", label="Inter", min=1, max=10, step=0.1, tooltip="Calculate intermediate values between points. This can lead to artifacts if data is not contiguous. (METHOD? APPLIES TO VECTOR AND RASTER?)"),
 
 				ui.HTML("<b>Range of Interest</b>"),
-				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable (Lower/Upper)", tooltip="Define a minimum and maximum bound (inclusive) for data points. Select 'Remove' to ignore all data points outside of the range. Select 'Round' to round data points outside of the range to the maximum or minimum value. This setting is not applicable if 'Uniform' values are used."),
+				config.ROI.UI(ui.input_checkbox, make_inline=False, id="ROI", label="Enable Range of Interest", tooltip="Define a minimum and maximum bound (inclusive) for data points. Select 'Remove' to ignore all data points outside of the range. Select 'Round' to round data points outside of the range to the maximum or minimum value. This setting is not applicable if 'Uniform' values are used."),
 				config.ROI_Mode.UI(ui.input_radio_buttons, make_inline=False, id="ROI_Mode", label=None, choices=["Remove", "Round"], inline=True, tooltip="Remove data points outside the range of interest, or round them to the maximum or minimum value"),
 				ui.layout_columns(
 					config.Min.UI(ui.input_numeric,make_inline=False, id="Min", label=None, min=0, tooltip="Minimum displayed value in range of interest (inclusive)."),
@@ -518,7 +537,7 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
 					ui.input_checkbox_group, id="Features", make_inline=False, label=None,
-					choices=["KDE"], selected=None, tooltip="Visualize the distribution of data points, rather than their assigned value. Red indicates higher density areas while indigo indicates lower density areas. Density is calculated using Gaussian Kernal Density Estimation (KDE)."
+					choices=["Color by Density"], selected=None, tooltip="Visualize the distribution of data points, rather than their assigned value. Red indicates higher density areas while indigo indicates lower density areas. Density is calculated using Gaussian Kernal Density Estimation (KDE)."
 				),
 
 				# Add the download buttons.
