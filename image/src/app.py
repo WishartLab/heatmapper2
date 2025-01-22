@@ -114,28 +114,53 @@ def server(input, output, session):
 	def Welcome():
 		return ui.HTML("""
 			<h1>Image Heatmaps</h1>
-			Image heatmaps visualize an arbitrary input table over top of a user-supplied image. Upload a data file and an image file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			Image heatmaps visualize data from an input table over a user-supplied image. <br>
+			Upload a data file and an image file in the sidebar to get started, or select 'Example' to check out a pre-loaded example. <br>
+			Navigate to the 'Heatmap' tab to see the heatmap, or 'Table' to look at the input data.
+			
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Image.png" alt="Image"; style="max-width:500px;">
+				 
 			<br><br><h3>Format</h3>
 			<i>Input data can be formatted as follows:</i>
 				 <ul>
 				 <li>A precomputed 2D matrix of values, which will be displayed as-is as a heatmap. (See Ex 1: Map)</li>
 				 <li>X and Y columns indicating coordinates, with an associated value column.</li>
 				 </ul>
-			<i>Heatmapper2 supports the following image file formats:</i>
-				<ul>
-				<li>.bmp</li>
-				<li>.gif</li>
-				<li>.h5</li>
-				<li>.hdf</li>
-				<li>.ico</li>
-				<li>.jpeg</li>
-				<li>.tif</li>
-				<li>.tiff</li>
-				<li>.webp</li>
-				<li>.png</li>
-				<ul>
+			<i>Image heatmaps can be generated from the following file formats:</i>
+			<table style="border-spacing: 100px";>
+			<tr>
+				<th>Image Files</th>
+				<th>Table Files</th>
+			</tr>
+			<tr>
+				<td style="padding-right:75px;">
+					<li>.bmp</li>
+					<li>.gif</li>
+					<li>.h5</li>
+					<li>.hdf</li>
+					<li>.ico</li>
+					<li>.jpeg</li>
+					<li>.tif</li>
+					<li>.tiff</li>
+					<li>.webp</li>
+					<li>.png</li>
+				</td>
+				<td style="vertical-align:top;">
+					<li>.csv</li>
+					<li>.dat</li>
+					<li>.odf</li>
+					<li>.tab</li>
+					<li>.tsv</li>
+					<li>.txt</li>
+					<li>.xls</li>
+					<li>.xlsx</li>
+				</td>
+			</tr>
+			</table>
+				
 			<br><h3>Interface</h3>
-			
+			Click on the '?' icon beside sidebar options to read more about them.
 		""")
 
 
@@ -328,11 +353,11 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Heatmap</b>"),
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
 				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps + ["Spring", "Summer", "Autumn", "Winter"], tooltip="Select a color scheme to use for the heatmap."),
-				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], tooltip="Select a algorithm used to generate the contours of the heatmap (convert the 2D data grid into smooth shapes). Default is MPL2014, while Threaded is best for large datasets."),
-				config.Levels.UI(ui.input_numeric, id="Levels", label="Levels", min=1, step=1, tooltip="Specify the number of contour levels. A higher number of levels results in smoother transitions between values, but is more computationally expensive. "),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background image more visible."),
+				config.Algorithm.UI(ui.input_select, id="Algorithm", label="Contour Algorithm", choices=["MPL2005", "MPL2014", "Serial", "Threaded"], tooltip="Select a algorithm used to generate the contours of the heatmap (convert the 2D data grid into smooth shapes). Default is MPL2014, while Threaded is best for large datasets."),
+				config.Levels.UI(ui.input_numeric, id="Levels", label="Contour Levels", min=1, step=1, tooltip="Specify the number of contour levels. A higher number of levels results in smoother transitions between values, but is more computationally expensive. "),
+				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background image more visible."),
 
 				ui.HTML("<b>3D</b>"),
 				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Control whether the plot is 2D or 3D. Any value other than 90 will display the plot in 3D, with the value specifying the elevation angle of the viewer in respect to the model. Change the angle back to 90 to display the plot in 2D."),
@@ -342,9 +367,9 @@ app_ui = ui.page_fluid(
 
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Quality.UI(ui.input_numeric, id="Quality", label="Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+				config.Quality.UI(ui.input_numeric, id="Quality", label="Image Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
+				config.Size.UI(ui.input_numeric, id="Size", label="Image Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				# Customize what aspects of the heatmap are visible
 				ui.HTML("<b>Features</b>"),

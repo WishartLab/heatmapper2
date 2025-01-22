@@ -135,12 +135,55 @@ def server(input, output, session):
 		return value
 	
 
-		# Info text in welcome tab
+	# Info text in welcome tab
 	@render.ui
 	def Welcome():
 		return ui.HTML("""
 			<h1>3D Heatmaps</h1>
-			3D heatmaps render PDB models, or display data or textures on a 3D model. Upload a data file or specify a PDB ID in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			3D heatmaps render PDB models, or display data or textures on a 3D model. 
+			<br><br>
+			Upload a data file or specify a PDB ID in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			<br><br>	 
+			Navigate to the 'Heatmap' tab to see the heatmap, or 'Table' to look at the input data.
+				 
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/3D.png" alt="Image"; style="max-width:500px;">
+				 
+			<br><br><h3>Format</h3>
+			<i>3D heatmaps can be created in two different ways:</i><br><br>
+			<b>1 - PDB</b><br>
+			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see Example 1).
+			<br><br>
+			<b>2 - Object Files</b><br>
+			Input an .obj file and either a table file or an image. If an image is used, it will be mapped onto the surface of the object (see Example 3).<br>
+			If a table file is used, values in a 'Value' column will be mapped to each face of the model. If a 'Name' column is provided, it should contain the numerical values of the faces, otherwise the values will be applied linearly (see Example 2).
+			<br><br>
+			<table style="border-spacing: 100px";>
+			<tr>
+				<th>Table Files</th>
+				<th>Image Files</th>
+			</tr>
+			<tr>
+				<td style="padding-right:75px;">
+					<li>.csv</li>
+					<li>.dat</li>
+					<li>.odf</li>
+					<li>.tab</li>
+					<li>.tsv</li>
+					<li>.txt</li>
+					<li>.xls</li>
+					<li>.xlsx</li>
+				</td>
+				<td style="vertical-align:top;">
+					<li>.jpg</li>
+					<li>.png</li>
+				</td>
+			</tr>
+			</table> 
+			<br><br>
+			<br><h3>Interface</h3>
+			Click on the '?' icon beside sidebar options to read more about them.
+			
 		""")
 
 

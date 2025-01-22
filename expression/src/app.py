@@ -175,10 +175,28 @@ def server(input, output, session):
 	def Welcome():
 		return ui.HTML("""
 			<h1>Expression Heatmaps</h1>
-			Expression heatmaps display data from data from transcriptomic (microarray or RNAseq), proteomic or metabolomic experiments. Data can be unclustered, or pre-clustered. Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example.
+			Expression heatmaps display data from data from transcriptomic (microarray or RNAseq), proteomic or metabolomic experiments. Data can be unclustered, or pre-clustered. Clustering can be performed by toggling on column or row dendrograms in the sidebar. <br>
+			Upload a data file in the sidebar to get started, or select 'Example' to check out a pre-loaded example. <br>
+			Navigate to the 'Heatmap' tab to see the heatmap, or 'Table' to look at the input data.
+			
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Expression.png" alt="Image"; style="max-width:500px;">
 				 
 			<br><br><h3>Format</h3>
-			Expression requires a single data file.
+			A Name column is required in the input table, which is used to generate axis labels. All other columns are plotted as data. If columns do not have names - or have repeating names - a unique namming scheme will be applied.
+				 
+			<i>Expression heatmaps can be generated from the following file formats:</i>
+				<li>.csv</li>
+				<li>.dat</li>
+				<li>.odf</li>
+				<li>.tab</li>
+				<li>.tsv</li>
+				<li>.txt</li>
+				<li>.xls</li>
+				<li>.xlsx</li>
+			
+			<br><h3>Interface</h3>
+			Click on the '?' icon beside sidebar options to read more about them.
 		""")
 
 
