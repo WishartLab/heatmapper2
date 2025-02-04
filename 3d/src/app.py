@@ -14,7 +14,7 @@
 
 from numpy.core.multiarray import MAXDIMS
 from shiny import App, reactive, render, ui
-from pandas import DataFrame
+from pandas import DataFrame, read_table
 from Bio.PDB import PDBParser, PDBIO
 from io import StringIO
 from numpy import mean
@@ -117,13 +117,26 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table():
-		df = Data()
-		try:
-			grid = render.DataGrid(Data(), editable=True)
-			Valid.set(True)
-			return grid
-		except TypeError:
-			Error("The provided input format cannot be rendered")
+		if isinstance(Data(), plotting.texture.Texture):
+			df = DataFrame({"Note": ["This heatmap is mapping an image file (.png or .jpg) onto the 3D surface. There is no table data to display."]})
+			return df
+		elif isinstance(Data(), str):
+			string = Data()
+			lines = string.split("\n")
+			output_lines = []
+			for line in lines:
+				if line.startswith("SEQRES"):
+					line = line.split()[1:]
+					output_lines.append(line)
+			df = DataFrame(output_lines, columns=[str(i) for i in range(len(output_lines[0]))])
+			return df
+		else:
+			try:
+				grid = render.DataGrid(Data(), editable=True)
+				Valid.set(True)
+				return grid
+			except TypeError:
+				Error("The provided input format cannot be rendered")
 
 
 	@Table.set_patch_fn
@@ -359,14 +372,14 @@ def server(input, output, session):
 					val = 1
 			viewer.setStyle({config.PStyle().lower(): {
 				heatmap_property: heatname_name,
-				"style": "trace" if "Trace" in config.PFeatures() else "rectangle",
+				"style": "trace" if "Trace (Cartoon Style)" in config.PFeatures() else "rectangle",
 				"thickness": config.Thickness(),
-				"tubes": "Tubes" in config.PFeatures(),
+				"tubes": "Tubes (Cartoon Style)" in config.PFeatures(),
 				"width": config.Width(),
 				"opacity": config.Opacity(),
-				"dashedBonds": "Dashed Bonds" in config.PFeatures(),
-				"showNonBonded": "Show Non-Bonded" in config.PFeatures(),
-				"singleBonds": "Single Bonds" in config.PFeatures(),
+				"dashedBonds": "Dashed Bonds (Stick Style)" in config.PFeatures(),
+				"showNonBonded": "Show Non-Bonded (Stick Style)" in config.PFeatures(),
+				"singleBonds": "Single Bonds (Stick Style)" in config.PFeatures(),
 				var: val,
 				# "scale": config.Scale(),
 				# "radius": config.Radius(),
@@ -392,7 +405,7 @@ def server(input, output, session):
 		@info Object will also need to be defined.
 		"""
 		if Pyodide:
-			Error(f"Cannot render objects in WebAssembly! Please use the Server version for this functionality.")
+			Error(f"Cannot render objects in WebAssembly! Please use the Server version (server.heatmapper2.ca/3d) for this functionality.")
 			return
 
 		# For Caching.
@@ -524,7 +537,7 @@ def server(input, output, session):
 				config.Scale.UI(ui.input_numeric, id="Scale", label="Atom Scale", min=0, max=10, step=1, tooltip="Stick, Sphere, or Cross style only - specify a scalar to modify the van der Waals radius of atoms in the <i>model</i>. If a 'Radius' is specified above, this value is ignored. Set 'Radius' to 0 to visualize 'Scale'."),
 				config.Size.UI(ui.input_numeric, id="Size", label="View Size", min=1, max=100, step=1, tooltip="Change the size of the viewer in your browser."),
 				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds", "Show Non-Bonded", "Single Bonds", "Tubes", "Trace"], tooltip="Dashed Bonds (Stick Style) - draw bonds as dashed lines. <br>Show Non-Bonded (Stick Style) - display non-bonded atoms as spheres. <br>Single Bonds (Stick Style) - display all bonds as single bonds. <br>Tubes (Cartoon Style) - display alpha helices as simple cylinders. <br>Trace (Cartoon Style) - draw the model as a simple outline. This overrides the 'Tubes' feature."),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds (Stick Style)", "Show Non-Bonded (Stick Style)", "Single Bonds (Stick Style)", "Tubes (Cartoon Style)", "Trace (Cartoon Style)"], tooltip=ui.HTML('''Dashed Bonds (Stick Style) - draw bonds as dashed lines. <br><br>Show Non-Bonded (Stick Style) - display non-bonded atoms as spheres (hidden otherwise). <br><br>Single Bonds (Stick Style) - display all bonds as single bonds. <br><br>Tubes (Cartoon Style) - display alpha helices as simple cylinders. <br><br>Trace (Cartoon Style) - draw the model as a simple outline. This overrides the 'Tubes' feature.''')),
 			]
 
 		else:
