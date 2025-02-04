@@ -385,7 +385,7 @@ def NavBar():
 		"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}/image",
 		"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}/geomap",
 		"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}/geocoordinate",
-		"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}/3d",
+		"3d": f"{Server}/3d",
 		"spatial": f"{Server}/spatial",
 		"spectral": f"{Server}/spectral",
 	}

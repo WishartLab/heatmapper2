@@ -641,7 +641,7 @@ app_ui = ui.page_fluid(
 
 				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Values below the minimum count will not be displayed"),
 				ui.div(
-					Inlineify(ui.input_numeric, id="GeneCount", label="Gene", min=0, value=400),
+					Inlineify(ui.input_numeric, id="GeneCount", label="Min Gene Count", min=0, value=400),
 					ui.popover(
 						ui.span(TooltipIcon,),
 						"Only display genes that are expressed in at least this many cells. Values below the minimum gene count will not be displayed. A higher minimum gene count will likely exclude more genes, but speed up rendering.",
@@ -651,7 +651,7 @@ app_ui = ui.page_fluid(
 					style="display: inline-flex; gap: 5px;",
 				),
 				ui.div(
-					Inlineify(ui.input_numeric, id="CellCount", label="Cell", min=0, value=100),
+					Inlineify(ui.input_numeric, id="CellCount", label="Min Cell Count", min=0, value=100),
 					ui.popover(
 						ui.span(TooltipIcon,),
 						"Only display cells that have at least this many RNA counts. Values below the minimum cell count will not be displayed. A higher minimum cell count will likely exclude more values, but speed up rendering.",
@@ -662,26 +662,26 @@ app_ui = ui.page_fluid(
 				),
 
 				ui.HTML("<b>Keys</b>"),
-				config.Keys.UI(ui.input_select, id="Keys", label="Keys", choices=[], selectize=True, multiple=True, tooltip="Select annotation keys to plot. More than one key can be specified, with each key plotted separately and displayed next to each other. Start typing in the name of a key to search for it."),
-				config.Count.UI(ui.input_select, id="Count", label="Count", choices=[], tooltip="NanoString files only - Select count values to plot."),
+				config.Keys.UI(ui.input_select, id="Keys", label="Annotation Keys", choices=[], selectize=True, multiple=True, tooltip=ui.HTML('Select annotation keys to plot. More than one key can be specified, with each key plotted separately and displayed next to each other. Start typing in the name of a key to search for it. <br>Read more <a href="https://squidpy.readthedocs.io/en/stable/api/squidpy.pl.spatial_scatter.html" target="_blank">here</a>.')),
+				config.Count.UI(ui.input_select, id="Count", label="Nanostring Count", choices=[], tooltip="NanoString files only - Select count values to plot."),
 			),
 
 			ui.panel_conditional(
 				"input.MainTab === 'HeatmapTab'",
 				ui.HTML("<b>Heatmap</b>"),
-				config.Statistic.UI(ui.input_select, id="Statistic", label="Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}, tooltip="Visium files only - Select a statistic to plot."),
-				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Map", choices=ColorMaps + ["Spring", "Summer", "Autumn", "Winter"], tooltip="Select a color scheme."),
-				config.Shape.UI(ui.input_select, id="Shape", label="Shape", choices=["Circle", "Square", "Hex"], tooltip="Change the shape of each data point"),
-				config.Columns.UI(ui.input_slider, id="Columns", label="Columns", min=1, max=10, step=1, tooltip="Specify how many plots to display side by side per row."),
-				config.Spacing.UI(ui.input_slider, id="Spacing", label="Spacing", min=0.0, max=1.0, step=0.1, tooltip="Specify the spacing between plots."),
+				config.Statistic.UI(ui.input_select, id="Statistic", label="Visium Statistic", choices={"moran": "Moran's I", "sepal": "Sepal", "geary": "Geary's C"}, tooltip=ui.HTML('''Visium files only - Select a statistic to plot. <br>Read more: <br><a href="https://en.wikipedia.org/wiki/Moran%27s_I" target="_blank">Moran\'s I</a> <br><a href="https://academic.oup.com/bioinformatics/article/37/17/2644/6168120?login=true" target="_blank">Sepal</a> <br><a href="https://en.wikipedia.org/wiki/Geary%27s_C" target="_blank">Geary's C</a>''')),
+				config.ColorMap.UI(ui.input_select, id="ColorMap", label="Color Map", choices=ColorMaps + ["Spring", "Summer", "Autumn", "Winter"], tooltip="Select a color scheme."),
+				config.Shape.UI(ui.input_select, id="Shape", label="Data Shape", choices=["Circle", "Square", "Hex"], tooltip="Change the shape of each data point"),
+				config.Columns.UI(ui.input_slider, id="Columns", label="# of Columns", min=1, max=10, step=1, tooltip="Specify how many plots to display side by side per row."),
+				config.Spacing.UI(ui.input_slider, id="Spacing", label="Column Spacing", min=0.0, max=1.0, step=0.1, tooltip="Specify the spacing between plots."),
 
 				ui.HTML("<b>Opacity</b>"),
-				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the background image. 1.0 indicates full opacity, while lower values make the background image more transparent."),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data points. 1.0 indicates full opacity, while lower values make the background image more visible."),
+				config.ImgOpacity.UI(ui.input_slider, id="ImgOpacity", label="Image Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the background image. 1.0 indicates full opacity, while lower values make the background image more transparent."),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Data Opacity", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the data points. 1.0 indicates full opacity, while lower values make the background image more visible."),
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(
