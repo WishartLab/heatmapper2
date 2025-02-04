@@ -610,7 +610,7 @@ app_ui = ui.page_fluid(
 				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Intrpl Method", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip=ui.HTML('Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother. <br>Read more <a href="https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html" target="_blank">here</a>.')),
 				config.Chain.UI(ui.input_text, id="Chain", label="PDB Chain", tooltip="This setting only applies if a PDB file is used. Select a chain within the PDB file to display."),
-				config.K.UI(ui.input_numeric, id="K", label="K-Mer Length", min=3, max=5, step=1, tooltip="This setting only applies if a FASTA file is used. Specify the length of K-Mer (3, 4, or 5) to use for alignment-free sequence comparison. The file is partitioned into K-Mers and a distance or correlation matrix is generated based on the counts of each K-Mer."),
+				config.K.UI(ui.input_slider, id="K", label="K-Mer Length", min=3, max=5, step=1, tooltip="This setting only applies if a FASTA file is used. Specify the length of K-Mer (3, 4, or 5) to use for alignment-free sequence comparison. The file is partitioned into K-Mers and a distance or correlation matrix is generated based on the counts of each K-Mer."),
 				
 				ui.HTML("<b>3D</b>"),
 				config.HeightMatrix.UI(ui.input_select, id="HeightMatrix",	label="Bar Height",	choices=["Distance", "Correlation", "Cube"], conditional="input.Elevation != 90", tooltip="Specify a metric to use for the height of the bars in a 3D plot. This metric can be different from the metric used for the color of the bars. The option 'Cube' displays matrices on the XY, XZ, and YZ planes, and requires an input data file with an X, Y, and Z column."),
@@ -620,7 +620,7 @@ app_ui = ui.page_fluid(
 				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=1, min=1, tooltip="Crop the view. For 3D plots only."),
 				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Intrpl Level", conditional="input.Elevation != 90", step=1, min=1, max=10, tooltip="Specify a multiplier for the resolution of the 3D plot. For example, a value of 2 will interpolate the data from an NxM to a 2Nx2M, effectively quadrupling the resolution of each data point by interpolating it into 4. This results in a smoother looking plot, but can be computationally expensive for large datasets. The minimum value is 1 (default) and the maximum value is 10."),
 				config.MinScale.UI(ui.input_switch, id="MinScale",	label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value. This removes negative values and prevents data from extending below the XY plane. For 3D plots only."),
-				config.Opacity.UI(ui.input_numeric, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars in 3D plots."),
+				config.Opacity.UI(ui.input_slider, id="Opacity",	label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars in 3D plots."),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),

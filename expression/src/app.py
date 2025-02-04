@@ -511,7 +511,7 @@ app_ui = ui.page_fluid(
 				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1,tooltip="Crop the view. For 3D plots only."),
 				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Intrpl Level", conditional="input.Elevation != 90", step=1, min=1, tooltip="Specify a multiplier for the resolution of the 3D plot. For example, a value of 2 will interpolate the data from an NxM to a 2Nx2M, effectively quadrupling the resolution of each data point by interpolating it into 4. This results in a smoother looking plot, but can be computationally expensive for large datasets."),
 				config.MinScale.UI(ui.input_switch, id="MinScale", label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value. This removes negative values and prevents data from extending below the XY plane. For 3D plots only."),
-				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars in 3D plots."),
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars in 3D plots."),
 
 				ui.layout_columns(
 					ui.HTML("<b>Colors</b>"),
