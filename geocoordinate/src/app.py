@@ -510,8 +510,8 @@ app_ui = ui.page_fluid(
 				Update(),
 
 				ui.HTML("<b>Columns</b>"),
-				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time", choices=[], multiple=False, tooltip="Optional: Specify a time column to plot data over time. If an explicit time column is specified, data can be visualized temporally with a media-player-like interface (play, pause, rewind, and frame speed options). If 'None' is selected, the heatmap will be static."),
-				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value", choices=[], multiple=False, tooltip="If a column from the input data is specified, values from that column will be associated with each latitude, longitude point, and the point will be colored based on its value. If 'Uniform' is selected, data points will be assigned a uniform value and colored uniformly on the map."),
+				config.TimeColumn.UI(ui.input_select, id="TimeColumn", label="Time Column", choices=[], multiple=False, tooltip="Optional: Specify a time column to plot data over time. If an explicit time column is specified, data can be visualized temporally with a media-player-like interface (play, pause, rewind, and frame speed options). If 'None' is selected, the heatmap will be static."),
+				config.ValueColumn.UI(ui.input_select, id="ValueColumn", label="Value Column", choices=[], multiple=False, tooltip="If a column from the input data is specified, values from that column will be associated with each latitude, longitude point, and the point will be colored based on its value. If 'Uniform' is selected, data points will be assigned a uniform value and colored uniformly on the map."),
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render Mode", choices=["Raster", "Vector"], tooltip="Display data as discrete vector points, or a smooth raster shape (vector does not apply to temporal heatmaps). The intensity of raster points scales when the map is zoomed in or out. Vector points maintain a constant intensity regardless of zoom, but are more computationally expensive."),

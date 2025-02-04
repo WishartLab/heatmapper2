@@ -487,29 +487,29 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Heatmap</b>"),
 
 				# The column that holds names for the data.
-				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Names", choices=[], multiple=False, tooltip="Select a column in your data to use for Y-axis labels. Common columns are 'NAME' or 'UNIQUD'. Labels can be toggled on/off in the 'Features' section at the bottom of this sidebar."),
+				config.NameColumn.UI(ui.input_select, id="NameColumn", label="Y-axis Label", choices=[], multiple=False, tooltip="Select a column in your data to use for Y-axis labels. Common columns are 'NAME' or 'UNIQID'. Labels can be toggled on/off in the 'Features' section at the bottom of this sidebar."),
 
 				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
-				config.ClusterMethod.UI(ui.input_select, id="ClusterMethod", label="Clustering", choices=ClusteringMethods, tooltip="Specify the clustering method used to group input data. To enable clustering by row, toggle on 'Row Dendrogram' in the 'Features' section at the bottom of this sidebar. To enable clustering by column, toggle on 'Column Dendrogram'. Disabling the dendrograms displays input data unclustered."),
+				config.ClusterMethod.UI(ui.input_select, id="ClusterMethod", label="Clustering Method", choices=ClusteringMethods, tooltip=ui.HTML('''Specify the clustering method used to group input data. To enable clustering by row, toggle on 'Row Dendrogram' in the 'Features' section at the bottom of this sidebar. To enable clustering by column, toggle on 'Column Dendrogram'. Disabling the dendrograms displays input data unclustered. <br><br>Read more <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html#scipy.cluster.hierarchy.linkage" target="_blank">here</a>''')),
 
 				# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.pdist.html#scipy.spatial.distance.pdist
-				config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance", choices=DistanceMethods, selected="Euclidean",
-				tooltip="Specify a method to calculate the distance between data points.",),
+				config.DistanceMethod.UI(ui.input_select, id="DistanceMethod", label="Distance Method", choices=DistanceMethods, selected="Euclidean",
+				tooltip=ui.HTML('Specify a method to calculate the distance between data points. <br>Read more <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html#scipy.cluster.hierarchy.linkage" target="_blank">here</a>',)),
 
 				# Customize the text size of the axes.
-				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
+				config.TextSize.UI(ui.input_numeric,id="TextSize", label="Text Size", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
 
 				# Define how the colors are scaled.
-				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale", choices=["Row", "Column", "None"], selected="Row", tooltip="Normalize cell values to either row or column using z-scores. For each row or column, the elements are transformed to have a mean of 0 and a standard deviation of 1. This makes data comparable across rows or columns, which is useful for clustering. Select 'None' to display data without normalization."),
+				config.ScaleType.UI(ui.input_select, id="ScaleType", label="Scale by:", choices=["Row", "Column", "None"], selected="Row", tooltip="Normalize cell values to either row or column using z-scores. For each row or column, the elements are transformed to have a mean of 0 and a standard deviation of 1. This makes data comparable across rows or columns, which is useful for clustering. Select 'None' to display data without normalization."),
 
 				# https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.Elevation == 90", tooltip="Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother."),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Intrpl Method", choices=InterpolationMethods, conditional="input.Elevation == 90", tooltip=ui.HTML('Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother. <br>Read more <a href="https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html" target="_blank">here</a>.')),
 
 				ui.HTML("<b>3D</b>"),
-				config.Elevation.UI(ui.input_numeric, id="Elevation", label="Elevation", tooltip="Control whether the plot is 2D or 3D. Any value other than 90 will display the plot in 3D, with the value specifying the elevation angle of the viewer in respect to the model. Change the angle back to 90 to display the plot in 2D."),
-				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="Rotation", conditional="input.Elevation != 90", tooltip="Change the angle of rotation of the viewer in respect to the model. For 3D plots only."),
+				config.Elevation.UI(ui.input_numeric, id="Elevation", label="View Elevation", tooltip="Control whether the plot is 2D or 3D. Any value other than 90 will display the plot in 3D, with the value specifying the elevation angle of the viewer in respect to the model. Change the angle back to 90 to display the plot in 2D."),
+				config.Rotation.UI(ui.input_numeric, id="Rotation",	label="View Rotation", conditional="input.Elevation != 90", tooltip="Change the angle of rotation of the viewer in respect to the model. For 3D plots only."),
 				config.Zoom.UI(ui.input_numeric, id="Zoom",	label="Zoom", conditional="input.Elevation != 90", step=0.1,tooltip="Crop the view. For 3D plots only."),
-				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Inter", conditional="input.Elevation != 90", step=1, min=1, tooltip="Specify a multiplier for the resolution of the 3D plot. For example, a value of 2 will interpolate the data from an NxM to a 2Nx2M, effectively quadrupling the resolution of each data point by interpolating it into 4. This results in a smoother looking plot, but can be computationally expensive for large datasets."),
+				config.InterpolationLevels.UI(ui.input_numeric, id="InterpolationLevels",	label="Intrpl Level", conditional="input.Elevation != 90", step=1, min=1, tooltip="Specify a multiplier for the resolution of the 3D plot. For example, a value of 2 will interpolate the data from an NxM to a 2Nx2M, effectively quadrupling the resolution of each data point by interpolating it into 4. This results in a smoother looking plot, but can be computationally expensive for large datasets."),
 				config.MinScale.UI(ui.input_switch, id="MinScale", label="Scaling", conditional="input.Elevation != 90", tooltip="Scale the height of all points by the minimum value. This removes negative values and prevents data from extending below the XY plane. For 3D plots only."),
 				config.Opacity.UI(ui.input_numeric, id="Opacity", label="Opacity", conditional="input.Elevation != 90", min=0.0, max=1.0, step=0.1, tooltip="Change the opacity of the height bars in 3D plots."),
 
@@ -519,11 +519,11 @@ app_ui = ui.page_fluid(
 					col_widths=[4,8]
 				),
 				ui.output_ui("Color"),
-				config.Bins.UI(ui.input_numeric, id="Bins", label="Number", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
+				config.Bins.UI(ui.input_numeric, id="Bins", label="# of Color Bins", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="DPI", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
+				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}, tooltip="Row Dendrogram enables clustering of rows. Column Dendrogram enables clustering of columns. X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap.",
