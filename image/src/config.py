@@ -24,7 +24,7 @@ config = ConfigHandler({
 	# Any value between 1-100
 	"Levels": Config(value=20),
 
-	"Quality": Config(value=0.3),
+	"Quality": Config(value=0.5),
 
 	"Elevation": Config(value=90),
 	"Rotation": Config(value=0),
@@ -33,6 +33,9 @@ config = ConfigHandler({
 
 	# Any combination of "x", "y", "legend"
 	"Features": Config(selected=["legend"]),
+    
+	# Any string
+    "Legend": Config(value="Value"),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),

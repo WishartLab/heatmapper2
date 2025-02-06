@@ -87,6 +87,7 @@ def server(input, output, session):
 			config.Algorithm(),
 			config.Levels(),
 			config.Features(),
+			config.Legend(),
 			config.TextSize(),
 			config.DPI(),
 			config.Quality(),
@@ -245,7 +246,7 @@ def server(input, output, session):
 
 					# Visibility of features
 					if "legend" in input.Features():
-						cbar = colorbar(im, ax=ax, label="Value")
+						cbar = colorbar(im, ax=ax, label=config.Legend())
 						cbar.ax.tick_params(labelsize=config.TextSize())
 
 					if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
@@ -367,7 +368,7 @@ app_ui = ui.page_fluid(
 
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Quality.UI(ui.input_numeric, id="Quality", label="Image Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
+				config.Quality.UI(ui.input_slider, id="Quality", label="Image Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
 				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
 				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
@@ -381,6 +382,7 @@ app_ui = ui.page_fluid(
 					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"},
 					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap."
 				),
+				config.Legend.UI(ui.input_text, id="Legend", label="Legend Title", conditional="input.Features.includes('legend')", tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"),
 
 				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
 			),
