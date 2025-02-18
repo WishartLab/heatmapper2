@@ -369,16 +369,6 @@ def NavBar():
 	@returns A ui.navset_bar.
 	"""
 
-	# Sources = {
-	# 	"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}:{Port}",
-	# 	"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}:{Port + 1}",
-	# 	"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}:{Port + 2}",
-	# 	"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}:{Port + 3}",
-	# 	"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
-	# 	"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
-	# 	"spatial": f"{Server}:{Port + 6}",
-	# 	"spectral": f"{URL}/site/spectral/index.html" if Pyodide else f"{Server}:{Port + 7}",
-	# }
 	Sources = {
 		"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}/expression",
 		"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}/pairwise",
@@ -475,6 +465,7 @@ def MainTab(*args, m_type=ui.output_plot):
 			value="WelcomeTab",
 		),
 		ui.nav_panel("Heatmap",
+			#ui.panel_conditional("input.UpdateToggle", m_type(id="Heatmap", hover=True)),
 			ui.panel_conditional("input.UpdateToggle", m_type(id="Heatmap")),
 			ui.panel_conditional("!input.UpdateToggle", m_type(id="HeatmapReactive")),
 			value="HeatmapTab",
@@ -552,6 +543,7 @@ class Config:
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()
 
+		# check for tooltip text
 		tooltip = None
 		if "tooltip" in combined:
 			tooltip = combined["tooltip"]
@@ -562,17 +554,7 @@ class Config:
 				element = Inlineify(ui_element, widths, gap, **combined)
 			else: element = ui_element(*args, **combined)
 
-			### OLD - tooltip when hover on element ###
-			# if "id" in combined and tooltip is not None:
-			# 	element = ui.tooltip(
-			# 		ui.div( 
-			# 			element,
-			# 			TooltipIcon,
-			# 			style="display: inline-flex; gap: 5px;"), 
-			# 		tooltip, 
-			# 		id=combined["id"]+"_tooltip")
-				
-			### NEW - longer tooltip when click on icon ###
+			# display tooltip when user clicks on TooltipIcon
 			if "id" in combined and tooltip is not None:
 				element = ui.div(
 					element,

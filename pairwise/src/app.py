@@ -30,6 +30,10 @@ from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, m
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg, File
 
+# global variable :(
+# saves the largest size of "Expand" heat map encountered so far
+EXPANDED_SIZE = 0
+
 try:
 	from user import config
 except ImportError:
@@ -49,6 +53,7 @@ def server(input, output, session):
 	}
 
 	def HandleData(path, p=None):
+		print("0 - HandleData")
 		suffix = path.suffix
 		if suffix == ".pdb": return PDBMatrix(path.resolve())
 		elif suffix == ".fasta": return FASTAMatrix(path.resolve())
@@ -58,7 +63,7 @@ def server(input, output, session):
 	DataCache = Cache("pairwise", HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
-
+	print(f"config.K\t{config.K()}")
 	InitializeConfig(config, input)
 
 
@@ -66,6 +71,7 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
+		print("ASYNC UpdateData")
 		Data.set((await DataCache.Load(input, p=ui.Progress())));
 		Valid.set(False)
 		DataCache.Invalidate(File(input))
@@ -82,8 +88,10 @@ def server(input, output, session):
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
+			config.K(),
 			config.Features(),
 			config.DPI(),
+			config.AutoSize(),
 			config.Elevation(),
 			input.mode(),
 		]
@@ -97,13 +105,14 @@ def server(input, output, session):
 		@param file: The path to the FASTA File
 		@returns a pairwise matrix.
 		"""
-
+		print("1 - FASTAMatrix")
 		# Get information from the file
 		records = list(SeqIO.parse(open(file), "fasta"))
 		sequences = [str(record.seq) for record in records]
 		column_names = [record.id for record in records]
 
 		# Get our K-Mer value
+		print(f"config.K() FASTAMatrix\t{config.K()}")
 		k = config.K()
 
 		# Generate the value
@@ -201,6 +210,7 @@ def server(input, output, session):
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		print("UpdateTable")
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
@@ -244,6 +254,8 @@ def server(input, output, session):
 		'''
 		@param data: Pandas df
 		'''
+		# TODO: if FASTA file & k-mer is different, create new matrix
+
 		name_col = Filter(data.columns, ColumnType.Name)
 		if name_col is not None:
 			names = data[name_col]
@@ -394,6 +406,9 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
+		global EXPANDED_SIZE
+		size = 0
+		print("2 - GenerateHtmp")
 		inputs = HashString()
 
 		if not DataCache.In(inputs):
@@ -407,11 +422,14 @@ def server(input, output, session):
 					df = data
 				else:
 					df = GenerateMatrix(data, config.MatrixType())
+					print("3 - GenerateMatrix")
 				if df is None: return
 
 				color = input.mode()
 				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 				cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
+
+				num_col = len(df.columns)
 
 				with style.context('dark_background' if color == "dark" else "default"):
 					rotation = config.Rotation()
@@ -429,7 +447,12 @@ def server(input, output, session):
 
 
 					p.inc(message="Plotting...")
-					text_size = config.TextSize()
+					# if "expand" is selected, text size should be 3
+					if config.AutoSize() == "expand":
+						text_size = 3
+					else:
+						text_size = config.TextSize()
+					num_col = len(df.columns)
 
 					# Visibility of features
 					if "legend" in config.Features():
@@ -473,22 +496,54 @@ def server(input, output, session):
 									else:
 										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
 
-					# catch invalid DPI values
-					if config.DPI() < 5:
-						dpi = 5
+				
+					# set image size based on config
+					if config.AutoSize() == "expand":
+						print(f"NUM COL: {num_col}")
+						size = num_col * (1/3) * num_col
+						if size < 1000:
+							size = 1000	
+						print(f"size: {size}")					
+						# save size to global variable to be used when loading from cache
+						if size > EXPANDED_SIZE:
+							EXPANDED_SIZE = size
+					
+					# calculate dpi for auto expand
+					if config.AutoSize() == "expand":
+						dpi = size * 0.15
+						if config.DPI() > dpi:
+							dpi = config.DPI()
 					else:
 						dpi = config.DPI()
+					
+					# catch invalid dpi values
+					if dpi > 1000:
+						dpi = 1000
+					elif dpi < 5:
+						dpi = 5
+					print(f"expand dpi: {dpi}")
 
 					b = BytesIO()
+					# DOWNLOAD FORMAT OPTIONS HERE
 					fig.savefig(b, format="png", dpi=dpi, bbox_inches="tight")
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
+
+		# get image size		
+		if size == 0:  # loading from cache
+			if config.AutoSize() == "fit":
+				size = 500
+			elif config.AutoSize() == "expand":
+				size = EXPANDED_SIZE
+				print(f"expand size: {size}")					
+			else:
+				size = config.Size()
 
 		b = DataCache.Get(inputs)
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)
 			temp.close()
-			img: types.ImgData = {"src": temp.name, "width": f"{config.Size()}px"}
+			img: types.ImgData = {"src": temp.name, "width": f"{size}px"}
 			return img
 
 
@@ -631,14 +686,22 @@ app_ui = ui.page_fluid(
 				config.Bins.UI(ui.input_numeric, id="Bins", label="# of Color Bins", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+				ui.div(
+					config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+					ui.HTML("<u>Image Size</u><br><br>"),
+					config.AutoSize.UI(ui.input_radio_buttons,
+						make_inline=False, id="AutoSize", label=None, choices={"fit": "Fit to Screen", "expand": "Expand", "custom": "Custom Size:"}, 
+						tooltip=ui.HTML("Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting. <br><br>Select <b>Custom Size</b> to specify a custom width (in pixels) for the heat map on your screen."),
+					),
+					config.Size.UI(ui.input_numeric, id="Size", label=None, min=1),
+					style="margin: 0px;"
+				),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group,
 					make_inline=False, id="Features", label=None,
-					choices={"x": "X Labels", "y": "Y Labels", "z": "Z-Labels", "label": "Data Labels", "legend": "Legend"},
-					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Data labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. Legend displays a colorbar legend on the heatmap.",
+					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "label": "Data Labels", "legend": "Legend"},
+					tooltip=ui.HTML("X Labels toggles data labels along the X axis. <br><br>Y Labels toggles data labels along the Y axis. <br><br>Z labels toggles data labels along the Z axis if rendering as a 3D plot. <br><br>Data Labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. <br><br>Legend displays a colorbar legend on the heatmap."),
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
