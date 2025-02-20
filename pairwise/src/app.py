@@ -98,6 +98,36 @@ def server(input, output, session):
 		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 		return inputs
 
+	
+	def CreateErrorImg(text:str, inputs):
+		"""
+		@brief Generates an image of the provided text
+		@param text(str): the text to display
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color="#e3594f", fontsize=24)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# save image to cache
+		b = BytesIO()
+		fig.savefig(b, format="png", dpi=100, bbox_inches="tight")
+		b.seek(0)
+		DataCache.Store(b.read(), inputs)
+		fig_close(fig)
+		# get image for display
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "width": "400px"}
+			return img
+
 
 	def FASTAMatrix(file):
 		"""
@@ -276,11 +306,17 @@ def server(input, output, session):
 		
 
 	def HeatmapCube(df, cmap, p):
+		"""
+		@brief
+		@param
+		@returns
+		"""
 		fig, ax = subplots(subplot_kw={"projection": "3d"})
 
 		x, y, z = Filter(df.columns, ColumnType.X), Filter(df.columns, ColumnType.Y), Filter(df.columns, ColumnType.Z)
 		if not x or not y or not z:
 			Error("An X, Y, and Z column are needed to compute a Cube Visualization!")
+			return None, None, None, None, None, None
 
 		name_col = Filter(df.columns, ColumnType.Name)
 		if name_col is not None:
@@ -437,16 +473,17 @@ def server(input, output, session):
 					rotation = config.Rotation()
 					elevation = config.Elevation()
 
-					if config.HeightMatrix() == "Cube":
-						fig, ax, im, norm, z, df = HeatmapCube(df, cmap, p)
-						d3 = True
-					elif elevation != 90:
-						fig, ax, im, norm, z = Heatmap3D(df, data, cmap, p)
+					if elevation != 90:
+						if config.HeightMatrix() == "Cube":
+							fig, ax, im, norm, z, df = HeatmapCube(df, cmap, p)
+							if fig == None:
+								return CreateErrorImg("Input data with an X, Y, and Z column \nis needed to compute a Cube Visualization.", inputs)
+						else:
+							fig, ax, im, norm, z = Heatmap3D(df, data, cmap, p)
 						d3 = True
 					else:
 						fig, ax, im = Heatmap2D(df, cmap, p)
 						d3 = False
-
 
 					p.inc(message="Plotting...")
 					# set image size based on config selection
@@ -532,10 +569,16 @@ def server(input, output, session):
 							if n > 1:
 								# grab only every n-th label
 								ztick_pos = list(range(len(df.columns)))[::n]
-								ztick_labels = df.columns[::n]
+								# if Cube matrix, use names from table
+								if config.HeightMatrix() == "Cube":
+									ztick_labels = df.columns[::n]
+								# TODO: use numerical values for 3D matrix
+								else:
+									ztick_labels = df.columns[::n]
 								ax.set_zticks(ztick_pos)
 								ax.set_zticklabels(ztick_labels)
 							else:
+								# TODO: use numerical values for 3D matrix
 								ax.set_zticks(range(len(df.columns)))
 								ax.set_zticklabels(df.columns)
 						else:
@@ -582,8 +625,7 @@ def server(input, output, session):
 	@output
 	@render.image(delete_file=True)
 	@reactive.event(input.Update)
-	def HeatmapReactive():
-		return GenerateHeatmap()
+	def HeatmapReactive(): return GenerateHeatmap()
 
 
 	@reactive.effect
