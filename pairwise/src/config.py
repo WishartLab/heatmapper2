@@ -54,11 +54,14 @@ config = ConfigHandler({
     "AutoSize": Config(selected="fit"),
 	
 	# Any value greater than 1.
-	"Size": Config(value=500),
+	"Size": Config(value=600),
 
 	# Any value greater than 1.
 	"DPI": Config(value=150),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
+    
+	# Any integer from 1-25
+    "N": Config(value=1),
 })

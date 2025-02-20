@@ -15,7 +15,7 @@
 
 
 from shiny import App, reactive, render, ui, types
-from matplotlib.pyplot import subplots, colorbar, style
+from matplotlib.pyplot import subplots, colorbar, style, close as fig_close
 from scipy.spatial.distance import pdist, squareform
 from scipy.interpolate import griddata
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -26,18 +26,19 @@ from Bio import SeqIO
 from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min, concatenate
+from numpy import arange, array, column_stack, concatenate, floor, linspace, meshgrid, min as n_min, zeros_like
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg, File
-
-# global variable :(
-# saves the largest size of "Expand" heat map encountered so far
-EXPANDED_SIZE = 0
 
 try:
 	from user import config
 except ImportError:
 	from config import config
+
+
+# global variable :(
+# saves the largest size of "Expand" heat map encountered so far
+EXPANDED_SIZE = 0
 
 
 def server(input, output, session):
@@ -53,7 +54,6 @@ def server(input, output, session):
 	}
 
 	def HandleData(path, p=None):
-		print("0 - HandleData")
 		suffix = path.suffix
 		if suffix == ".pdb": return PDBMatrix(path.resolve())
 		elif suffix == ".fasta": return FASTAMatrix(path.resolve())
@@ -71,7 +71,6 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		print("ASYNC UpdateData")
 		Data.set((await DataCache.Load(input, p=ui.Progress())));
 		Valid.set(False)
 		DataCache.Invalidate(File(input))
@@ -90,6 +89,7 @@ def server(input, output, session):
 			config.TextSize(),
 			config.K(),
 			config.Features(),
+			config.N(),
 			config.DPI(),
 			config.AutoSize(),
 			config.Elevation(),
@@ -105,7 +105,6 @@ def server(input, output, session):
 		@param file: The path to the FASTA File
 		@returns a pairwise matrix.
 		"""
-		print("1 - FASTAMatrix")
 		# Get information from the file
 		records = list(SeqIO.parse(open(file), "fasta"))
 		sequences = [str(record.seq) for record in records]
@@ -210,7 +209,6 @@ def server(input, output, session):
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		print("UpdateTable")
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
@@ -406,30 +404,34 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
+		"""
+		@brief Generates the Heatmap
+		@returns The heatmap
+		"""
 		global EXPANDED_SIZE
 		size = 0
-		print("2 - GenerateHtmp")
+
+		# A list of all the inputs for caching.
 		inputs = HashString()
 
+		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				data = GetData()
 				if data is None or len(data.index) == 0: return
 
+				# Create a figure with a heatmap
 				p.inc(message="Calculating...")
 				if config.HeightMatrix() == "Cube":
 					df = data
 				else:
 					df = GenerateMatrix(data, config.MatrixType())
-					print("3 - GenerateMatrix")
 				if df is None: return
 
 				color = input.mode()
 				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
 				cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
-
-				num_col = len(df.columns)
 
 				with style.context('dark_background' if color == "dark" else "default"):
 					rotation = config.Rotation()
@@ -447,63 +449,12 @@ def server(input, output, session):
 
 
 					p.inc(message="Plotting...")
-					# if "expand" is selected, text size should be 3
-					if config.AutoSize() == "expand":
-						text_size = 3
-					else:
-						text_size = config.TextSize()
+					# set image size based on config selection
 					num_col = len(df.columns)
-
-					# Visibility of features
-					if "legend" in config.Features():
-						if not d3:
-							cbar = colorbar(im, ax=ax, label=config.MatrixType())
-						else:
-							mappable = ScalarMappable(cmap=cmap, norm=norm)
-							mappable.set_array(z)
-							cbar = colorbar(mappable, ax=ax, label='Value', orientation='vertical')
-						cbar.ax.tick_params(labelsize=text_size)
-
-
-					if "y" in config.Features():
-						ax.tick_params(axis="y", labelsize=text_size)
-						ax.set_yticks(range(len(df.columns)))
-						ax.set_yticklabels(df.columns)
-					else:
-						ax.set_yticklabels([])
-
-					if "x" in config.Features():
-						ax.tick_params(axis="x", labelsize=text_size)
-						ax.set_xticks(range(len(df.columns)))
-						ax.set_xticklabels(df.columns, rotation=90)
-					else:
-						ax.set_xticklabels([])
-
-					if d3:
-						if "z" in config.Features():
-							ax.tick_params(axis="z", labelsize=text_size)
-							ax.set_zticks(range(len(df.columns)))
-							ax.set_zticklabels(df.columns)
-						else:
-							ax.set_zticklabels([])
-
-					# Annotate each cell with its value
-					if "label" in config.Features():
-						for i in range(df.shape[0]):
-								for j in range(df.shape[1]):
-									if not d3:
-										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
-									else:
-										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
-
-				
-					# set image size based on config
 					if config.AutoSize() == "expand":
-						print(f"NUM COL: {num_col}")
 						size = num_col * (1/3) * num_col
 						if size < 1000:
-							size = 1000	
-						print(f"size: {size}")					
+							size = 1000					
 						# save size to global variable to be used when loading from cache
 						if size > EXPANDED_SIZE:
 							EXPANDED_SIZE = size
@@ -521,21 +472,97 @@ def server(input, output, session):
 						dpi = 1000
 					elif dpi < 5:
 						dpi = 5
-					print(f"expand dpi: {dpi}")
+
+					# if "expand" is selected, set text size dynamically
+					if config.AutoSize() == "expand":
+						fraction = size/1000
+						if fraction < 1:
+							fraction = 1
+						else:
+							fraction = 1/fraction
+						text_size = 1 + floor(6 * fraction)
+						print(f"size: {size}")
+						print(f"TEXT SIZE CALC: 1 + 6*{fraction}\n{text_size}")
+					else:
+						text_size = config.TextSize()
+
+					# Visibility of features
+					if "legend" in config.Features():
+						if not d3:
+							cbar = colorbar(im, ax=ax, label=config.MatrixType())
+						else:
+							mappable = ScalarMappable(cmap=cmap, norm=norm)
+							mappable.set_array(z)
+							cbar = colorbar(mappable, ax=ax, label='Value', orientation='vertical')
+						cbar.ax.tick_params(labelsize=text_size)
+
+
+					n = config.N()
+					if "y" in config.Features():
+						ax.tick_params(axis="y", labelsize=text_size)
+						if n > 1:
+							# grab only every n-th label
+							ytick_pos = list(range(len(df.columns)))[::n]
+							ytick_labels = df.columns[::n]
+							ax.set_yticks(ytick_pos)
+							ax.set_yticklabels(ytick_labels)
+						else:
+							ax.set_yticks(range(len(df.columns)))
+							ax.set_yticklabels(df.columns)
+					else:
+						ax.set_yticklabels([])
+
+					if "x" in config.Features():
+						ax.tick_params(axis="x", labelsize=text_size)
+						if n > 1:
+							# grab only every n-th label
+							xtick_pos = list(range(len(df.columns)))[::n]
+							xtick_labels = df.columns[::n]
+							ax.set_xticks(xtick_pos)
+							ax.set_xticklabels(xtick_labels, rotation=90)
+						else:
+							ax.set_xticks(range(len(df.columns)))
+							ax.set_xticklabels(df.columns, rotation=90)
+					else:
+						ax.set_xticklabels([])
+
+					if d3:
+						if "z" in config.Features():
+							ax.tick_params(axis="z", labelsize=text_size)
+							if n > 1:
+								# grab only every n-th label
+								ztick_pos = list(range(len(df.columns)))[::n]
+								ztick_labels = df.columns[::n]
+								ax.set_zticks(ztick_pos)
+								ax.set_zticklabels(ztick_labels)
+							else:
+								ax.set_zticks(range(len(df.columns)))
+								ax.set_zticklabels(df.columns)
+						else:
+							ax.set_zticklabels([])
+
+					# Annotate each cell with its value
+					if "label" in config.Features():
+						for i in range(df.shape[0]):
+								for j in range(df.shape[1]):
+									if not d3:
+										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white', fontsize=text_size)
+									else:
+										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black', fontsize=text_size)
 
 					b = BytesIO()
 					# DOWNLOAD FORMAT OPTIONS HERE
 					fig.savefig(b, format="png", dpi=dpi, bbox_inches="tight")
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
+					fig_close(fig)
 
 		# get image size		
 		if size == 0:  # loading from cache
 			if config.AutoSize() == "fit":
 				size = 500
 			elif config.AutoSize() == "expand":
-				size = EXPANDED_SIZE
-				print(f"expand size: {size}")					
+				size = EXPANDED_SIZE			
 			else:
 				size = config.Size()
 
@@ -662,7 +689,6 @@ app_ui = ui.page_fluid(
 				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix Type",	choices=["Distance", "Correlation"], tooltip="Visualize either the distance or correlation between values. Based on the matrix type, you can further select a distance calculation method or correlation calculation method below."),
 				ui.output_ui("Method"),
 
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Intrpl Method", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip=ui.HTML('Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother. <br>Read more <a href="https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html" target="_blank">here</a>.')),
 				config.Chain.UI(ui.input_text, id="Chain", label="PDB Chain", tooltip="This setting only applies if a PDB file is used. Select a chain within the PDB file to display."),
 				config.K.UI(ui.input_slider, id="K", label="K-Mer Length", min=3, max=5, step=1, tooltip="This setting only applies if a FASTA file is used. Specify the length of K-Mer (3, 4, or 5) to use for alignment-free sequence comparison. The file is partitioned into K-Mers and a distance or correlation matrix is generated based on the counts of each K-Mer."),
@@ -685,6 +711,15 @@ app_ui = ui.page_fluid(
 				ui.output_ui("Color"),
 				config.Bins.UI(ui.input_numeric, id="Bins", label="# of Color Bins", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
+				ui.HTML("<b>Features</b>"),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off below."),
+				config.Features.UI(ui.input_checkbox_group,
+					make_inline=False, id="Features", label=None,
+					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "label": "Data Labels", "legend": "Legend"},
+					tooltip=ui.HTML("X Labels toggles data labels along the X axis. <br><br>Y Labels toggles data labels along the Y axis. <br><br>Z labels toggles data labels along the Z axis if rendering as a 3D plot. <br><br>Data Labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. <br><br>Legend displays a colorbar legend on the heatmap."),
+				),
+				config.N.UI(ui.input_slider, id="N", label="Skip N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
+
 				ui.HTML("<b>Image Settings</b>"),
 				ui.div(
 					config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
@@ -695,13 +730,6 @@ app_ui = ui.page_fluid(
 					),
 					config.Size.UI(ui.input_numeric, id="Size", label=None, min=1),
 					style="margin: 0px;"
-				),
-
-				ui.HTML("<b>Features</b>"),
-				config.Features.UI(ui.input_checkbox_group,
-					make_inline=False, id="Features", label=None,
-					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "label": "Data Labels", "legend": "Legend"},
-					tooltip=ui.HTML("X Labels toggles data labels along the X axis. <br><br>Y Labels toggles data labels along the Y axis. <br><br>Z labels toggles data labels along the Z axis if rendering as a 3D plot. <br><br>Data Labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. <br><br>Legend displays a colorbar legend on the heatmap."),
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
