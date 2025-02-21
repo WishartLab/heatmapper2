@@ -154,7 +154,7 @@ def server(input, output, session):
 		return adata
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.CellCount, input.GeneCount, input.UploadType)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.CellCount, input.GeneCount, input.UploadType)
 	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
@@ -457,6 +457,7 @@ def server(input, output, session):
 
 	@output
 	@render.image(delete_file=True)
+	@reactive.event(input.Update)
 	def HeatmapReactive(): return GenerateHeatmap()
 
 
@@ -636,7 +637,9 @@ app_ui = ui.page_fluid(
 				TableOptions(config),
 			),
 
-			ui.panel_conditional("input.MainTab != 'TableTab'",
+			ui.panel_conditional(
+				"input.MainTab != 'TableTab'",
+
 				Update(),
 
 				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Values below the minimum count will not be displayed"),
