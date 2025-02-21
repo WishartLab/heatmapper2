@@ -76,7 +76,9 @@ def server(input, output, session):
 		DataCache.Invalidate(File(input))
 
 
-	def GetData(): return Table.data_view() if Valid() else Data()
+	def GetData(): 
+		print(f"VALID: {Valid()}")
+		return Table.data_view() if Valid() else Data()
 
 
 	def HashString():
@@ -102,7 +104,7 @@ def server(input, output, session):
 	def CreateErrorImg(text:str, inputs):
 		"""
 		@brief Generates an image of the provided text
-		@param text(str): the text to display
+		@param text: The text to display as an error
 		@param inputs: A list of all the inputs for caching (from HashString())
 		@returns 
 		"""
@@ -162,7 +164,7 @@ def server(input, output, session):
 		@param file: The path to a PDB file (Or BytesIO file if applicable)
 		@returns The pairwise matrix.
 		"""
-
+		print("PDB Matrix")
 		parser = PDBParser()
 		structure = parser.get_structure("protein", file)
 
@@ -173,20 +175,23 @@ def server(input, output, session):
 					if chain.id == config.Chain():
 							for residue in chain:
 									for atom in residue:
-											coordinates.append(atom.coord)
-		return DataFrame(coordinates)
+											coordinates.append(list(atom.coord))
+		df = DataFrame(coordinates, dtype=float, columns=[x for x in range(1, len(coordinates[0])+1)])
+		print(f"PDB DATAFRAME:\n{df}\n")
+		print(f"dtypes: {df.dtypes}")
+		return df
 
 
 	def ChartMatrix(df):
 		"""
 		@brief Generates a pairwise matrix from charts
 		@param df:	The DataFrame containing the data. This can either be a chart
-								containing {x,y,z} columns outlining each point on a row, with
-								an optional name column (Any fourth column), a chart to which
-								an explicit "Name" column is provided, to which the first row
-								and column are assumed variable names for an existing matrix,
-								or the default, where it is assumed that the chart is an
-								unlabeled collection either of points, or an existing matrix.
+		containing {x,y,z} columns outlining each point on a row, with
+		an optional name column (Any fourth column), a chart to which
+		an explicit "Name" column is provided, to which the first row
+		and column are assumed variable names for an existing matrix,
+		or the default, where it is assumed that the chart is an
+		unlabeled collection either of points, or an existing matrix.
 		@returns A DataFrame containing the provided data as a pairwise matrix
 		"""
 
@@ -228,17 +233,35 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table():
+		print("TABLE")
 		df = Data()
-		if df is None or len(df.columns) == 0: return
-		if df.columns[0] == 0:
-			Error("The provided input format cannot be rendered")
-		else:
+		if df is None or len(df.columns) == 0:
+			df = DataFrame({"Error": ["No data to display!"]})
+			return df
+
+		# render data as editable table
+		try:
+			grid = render.DataGrid(df, editable=True)
 			Valid.set(True)
-			return render.DataGrid(df, editable=True)
+			return grid
+		# # if the data is not a dataframe, it cannot be rendered
+		# except TypeError:
+		# 	Error("The provided input format cannot be rendered")
+		# 	return DataFrame({"Error": ["The provided input format cannot be rendered."]})
+		
+		# # render PDB files as a table
+		# except AttributeError:
+		# 	Error("The provided input format cannot be rendered")
+		# 	return DataFrame({"Error": ["The provided input format cannot be rendered."]})
+		
+		except Exception:
+			Error("The provided input format cannot be rendered")
+			return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		print("UPDATE TABLE")
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
@@ -518,8 +541,6 @@ def server(input, output, session):
 						else:
 							fraction = 1/fraction
 						text_size = 1 + floor(6 * fraction)
-						print(f"size: {size}")
-						print(f"TEXT SIZE CALC: 1 + 6*{fraction}\n{text_size}")
 					else:
 						text_size = config.TextSize()
 
@@ -766,11 +787,21 @@ app_ui = ui.page_fluid(
 				ui.div(
 					config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 					ui.HTML("<u>Image Size</u><br><br>"),
-					config.AutoSize.UI(ui.input_radio_buttons,
-						make_inline=False, id="AutoSize", label=None, choices={"fit": "Fit to Screen", "expand": "Expand", "custom": "Custom Size:"}, 
-						tooltip=ui.HTML("Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting. <br><br>Select <b>Custom Size</b> to specify a custom width (in pixels) for the heat map on your screen."),
+					ui.div(
+						ui.div(
+							config.AutoSize.UI(ui.input_radio_buttons,
+						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Size:", "fit": "Fit to Screen", "expand": "Expand"}, 
+							),
+							style="flex: 1; padding-top: 15px;",
+						),
+						ui.div(
+							config.Size.UI(ui.input_numeric, gap="0px", id="Size", label=None, min=1,
+					  		tooltip=ui.HTML("Select <b>Custom Size</b> to specify a custom width (in pixels) for the heat map on your screen. <br><br>Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting."),
+							),
+							style="flex: 1;",
+						),
+						style="display: flex; gap: 0px; margin: 0px; align-items: flex-start;"
 					),
-					config.Size.UI(ui.input_numeric, id="Size", label=None, min=1),
 					style="margin: 0px;"
 				),
 
