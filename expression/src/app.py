@@ -11,7 +11,6 @@
 # run the following command within this directory:
 #		shiny run
 #
-#
 
 
 from shiny import App, reactive, render, ui, types
@@ -31,6 +30,11 @@ try:
 	from user import config
 except ImportError:
 	from config import config
+
+
+# global variable :(
+# saves the largest size of "Expand" heat map encountered so far
+EXPANDED_SIZE = 0
 
 
 def server(input, output, session):
@@ -75,6 +79,7 @@ def server(input, output, session):
 			config.ClusterMethod(),
 			config.DistanceMethod(),
 			config.DPI(),
+			config.AutoSize(),
 			config.Elevation(),
 			input.mode(),
 		]
@@ -91,6 +96,8 @@ def server(input, output, session):
 
 		name = config.NameColumn()
 		if name not in df: return None, None , None
+
+		# check if 
 
 		# Drop the naming columns before linkage.
 		data = df.drop(columns=Filter(df.columns, ColumnType.Name, all=True))
@@ -281,6 +288,8 @@ def server(input, output, session):
 		@brief Generates the Heatmap
 		@returns The heatmap
 		"""
+		global EXPANDED_SIZE
+		size = 0
 
 		# A list of all the inputs for caching.
 		inputs = HashString()
@@ -303,7 +312,7 @@ def server(input, output, session):
 					# If we render the row dendrogram, we change the order of the index labels to match the dendrogram.
 					# However, if we aren't rendering it, and thus row_dendrogram isn't defined, we simply assign df
 					# To data, so the order changes when turning the toggle.
-					if "row" in config.Features():
+					if "row" in config.Features() and config.Elevation() == 90:
 						ax_row = fig.add_subplot(gs[1, 0])
 						row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
 						ax_row.axis("off")
@@ -314,9 +323,11 @@ def server(input, output, session):
 						df = data.iloc[leaves]
 					else:
 						df = data
-
+					# get # of columns to calculate expanded view size
+					num_col = max(len(df.columns), df.shape[0])
+					
 					# If we render the column dendrogram.
-					if "col" in config.Features():
+					if "col" in config.Features() and config.Elevation() == 90:
 						ax_col = fig.add_subplot(gs[0, 1])
 						col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
 						ax_col.axis("off")
@@ -330,7 +341,12 @@ def server(input, output, session):
 					else:
 						ax_heatmap = fig.add_subplot(gs[1, 1], projection="3d")
 						heatmap, mappable = Heatmap3D(df, ax_heatmap, p)
-					text_size = config.TextSize()
+					
+					# if "expand" is selected, set text to 3
+					if config.AutoSize() == "expand":
+						text_size = 8
+					else:
+						text_size = config.TextSize()
 
 					# If we render the Y axis.
 					if "y" in config.Features():
@@ -360,17 +376,52 @@ def server(input, output, session):
 						cbar.ax.tick_params(labelsize=text_size)
 
 
+					# set image size based on config
+					if config.AutoSize() == "expand":
+						print(f"NUM COL: {num_col}")
+						size = num_col * (1/3) * num_col
+						if size < 1000:
+							size = 1000	
+						print(f"size: {size}")					
+						# save size to global variable to be used when loading from cache
+						if size > EXPANDED_SIZE:
+							EXPANDED_SIZE = size
+					
+					# calculate dpi for auto expand
+					if config.AutoSize() == "expand":
+						dpi = size * 0.15
+						if config.DPI() > dpi:
+							dpi = config.DPI()
+					else:
+						dpi = config.DPI()
+					
+					# catch invalid dpi values
+					if dpi > 1000:
+						dpi = 1000
+					elif dpi < 5:
+						dpi = 5
+
 					b = BytesIO()
 					fig.savefig(b, format="png", dpi=config.DPI())
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
 					fig_close(fig)
 
+		# get image size		
+		if size == 0:  # loading from cache
+			if config.AutoSize() == "fit":
+				size = 500
+			elif config.AutoSize() == "expand":
+				size = EXPANDED_SIZE
+				print(f"expand size: {size}")					
+			else:
+				size = config.Size()
+		
 		b = DataCache.Get(inputs)
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)
 			temp.close()
-			img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
+			img: types.ImgData = {"src": temp.name, "height": f"{size}px"}
 			return img
 
 
@@ -472,7 +523,10 @@ app_ui = ui.page_fluid(
 		ui.sidebar(
 
 			FileSelection(
-				examples={"example1.txt": "Example 1", "example2.txt": "Example 2", "example3.txt": "Example 3"},
+				examples={
+					"example1.txt": "Example 1", 
+			  		"example2.txt": "Example 2", 
+					"example3.txt": "Example 3"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Expression"
 			),
@@ -522,8 +576,16 @@ app_ui = ui.page_fluid(
 				config.Bins.UI(ui.input_numeric, id="Bins", label="# of Color Bins", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+				ui.div(
+					config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+					ui.HTML("<u>Image Size</u><br><br>"),
+					config.AutoSize.UI(ui.input_radio_buttons,
+						make_inline=False, id="AutoSize", label=None, choices={"fit": "Fit to Screen", "expand": "Expand", "custom": "Custom Size:"}, 
+						tooltip=ui.HTML("Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting. <br><br>Select <b>Custom Size</b> to specify a custom width (in pixels) for the heat map on your screen."),
+					),
+					config.Size.UI(ui.input_numeric, id="Size", label=None, min=1),
+					style="margin: 0px;"
+				),
 
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}, tooltip="Row Dendrogram enables clustering of rows. Column Dendrogram enables clustering of columns. X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap.",
