@@ -50,8 +50,8 @@ def server(input, output, session):
 			"Description": "Input type: pdb<br>Contents: An example protein PDB.<br>Source: https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
-
-	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "rainbow", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
+	# B-factor, RMSD, RMSF, residue number, reverse residue number, secondary structure
+	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "chainHetatm"]
 
 
 	def HandleData(path, p=None):
@@ -83,7 +83,7 @@ def server(input, output, session):
 		@info When any relevant reactive input changes, this function requests data from the Cache,
 		and then invalidates the current data in the table.
 		"""
-		if input.SourceFile() == "ID":
+		if input.SourceFile() == "PDB-ID":
 			data = await DataCache.Download(f"https://files.rcsb.org/view/{input.ID()}.pdb")
 			Data.set(data)
 		else:
@@ -216,7 +216,7 @@ def server(input, output, session):
 
 		# Used for caching.
 		global_inputs = [
-			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(),
+			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(),
 			config.Size(),
 			config.ColorScheme(),
 			config.PFeatures(),
@@ -241,6 +241,7 @@ def server(input, output, session):
 				@param function_declared: Since there is a colorscheme for both the heatmap and the structure, we can accidentally
 				redefine the same JavaScript function twice if they both use the same B-Color scheme. This avoids that.
 				"""
+				# B-factor, RMSD, RMSF, residue number, reverse residue number, secondary structure
 				prop = "color"
 				scheme = initial_scheme
 
@@ -254,7 +255,7 @@ def server(input, output, session):
 					if "norm" in scheme:
 
 						# For caching.
-						entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example()]
+						entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example()]
 						a = 0.0
 						l = 0
 						if not DataCache.In(entry):
@@ -290,6 +291,12 @@ def server(input, output, session):
 								else return "darkred"
 							}}\n"""
 					prop = "colorfunc"
+				
+				# TODO: implement colour using RMSD data
+				elif scheme == "RMSD":
+					pass
+
+				# colour using RMSF data
 				elif scheme == "RMSF":
 
 					if len(structure) == 1:
@@ -300,7 +307,7 @@ def server(input, output, session):
 					# List of atom names of interest
 					atom_names_of_interest = ["C", "CA", "N"]
 
-					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(), model]
+					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(), model]
 					if not DataCache.In(entry):
 						main_model = structure[model]
 						for chain in main_model:
@@ -344,10 +351,10 @@ def server(input, output, session):
 							}}\n"""
 					prop = "colorfunc"
 
-				elif scheme == "rainbow":
-					max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
-					prop = "colorscheme"
-					scheme = {"prop": "index", "gradient": "ROYGB", "min": 0, "max": max}
+				# elif scheme == "rainbow":
+				# 	max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
+				# 	prop = "colorscheme"
+				# 	scheme = {"prop": "index", "gradient": "ROYGB", "min": 0, "max": max}
 				elif scheme != "spectrum": prop = "colorscheme"
 				return source, prop, scheme
 
@@ -506,7 +513,7 @@ def server(input, output, session):
 
 		if data is None: return
 
-		if type(data) == str or input.SourceFile() == "ID":
+		if type(data) == str or input.SourceFile() == "PDB-ID":
 			elements.append(ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False)))
 			elements += [
 				ui.HTML("<b>Customization</b>"),
@@ -578,10 +585,10 @@ app_ui = ui.page_fluid(
 				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"],
 				project="3D",
-				extras=["ID"],),
+				extras=["PDB-ID"],),
 
 			ui.panel_conditional(
-				"input.SourceFile === 'ID'",
+				"input.SourceFile === 'PID'",
 				ui.input_text(id="ID", value="1upp", label="PDB ID"),
 
 			),
