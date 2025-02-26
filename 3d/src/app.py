@@ -171,7 +171,7 @@ def server(input, output, session):
 			<br><br><h3>Format</h3>
 			<i>3D heatmaps can be created in two different ways:</i><br><br>
 			<b>1 - PDB</b><br>
-			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see Example 1).
+			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see example PDB 4K8X).
 			<br><br>
 			<b>2 - Object Files</b><br>
 			Input an .obj file and either a table file or an image. If an image is used, it will be mapped onto the surface of the object (see Example 3).<br>
@@ -216,6 +216,7 @@ def server(input, output, session):
 
 		# Used for caching.
 		global_inputs = [
+			config.ModelType(),
 			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(),
 			config.Size(),
 			config.ColorScheme(),
@@ -394,8 +395,10 @@ def server(input, output, session):
 		@info Object will also need to be defined.
 		"""
 		if Pyodide:
-			Error(f"Cannot render objects in WebAssembly! Please use the Server version (server.heatmapper2.ca/3d) for this functionality.")
-			return
+			# Error message pop-up
+			Error(f"The WebAssembly version of Heatmapper2 does not support object rendering! Please use the Server version (server.heatmapper2.ca/3d) for this functionality.")
+			# Error message in Heatmap tab
+			return "The WebAssembly version of Heatmapper2 does not support object rendering! Please use the Server version (server.heatmapper2.ca/3d) for this functionality."
 
 		# For Caching.
 		inputs = [
@@ -449,12 +452,15 @@ def server(input, output, session):
 				except NotImplementedError:
 					return "Make sure you have uploaded a Table or Image file, as well as an Object file!"
 				except ValueError:
-					return "The number of rows in the Table file must match either the number of cells or the number of points in the Object file!"
+					return "The number of rows in the Table file must match either the number of cells in the Object file, or the number of points in the Object file!"
 
 			# If we have a texture, map it.
 			elif type(source) is plotting.texture.Texture:
-				mesh = model.texture_map_to_plane()
-				pl.add_mesh(mesh, texture=source)
+				try:
+					mesh = model.texture_map_to_plane()
+					pl.add_mesh(mesh, texture=source)
+				except:
+					return "Make sure you have uploaded a Table or Image file, as well as an Object file!"
 
 			# Exporting as None returns the HTML as a file handle, which we read.
 			p.inc(message="Exporting...")
@@ -545,6 +551,22 @@ def server(input, output, session):
 
 		return elements
 
+	@output
+	@render.ui
+	def GetInputTypes():
+		if config.ModelType() =="Object":
+			return FileSelection(
+				examples={"example1.csv": "Example 2", "texture.jpg": "Example 3"},
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"],
+				project="3D",
+			)
+		else:
+			return FileSelection(
+				examples={"4K8X.pdb": "PDB 4K8X"},
+				types=[".pdb"],
+				project="3D",
+				extras=["PDB-ID"],
+			)
 
 
 app_ui = ui.page_fluid(
@@ -581,11 +603,9 @@ app_ui = ui.page_fluid(
 			ui.HTML("<br>"),
 			#Update(),
 
-			FileSelection(
-				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"},
-				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"],
-				project="3D",
-				extras=["PDB-ID"],),
+			config.ModelType.UI(ui.input_select, id="ModelType", label="Choose 3D Model Format", choices=["Protein", "Object"], tooltip=ui.HTML('Create a Protein heat map using a .pdb file and optional Table file, or an Object heat map using an .obj file and an Image or Table file.')),
+			
+			ui.output_ui(id="GetInputTypes"),
 
 			ui.panel_conditional(
 				"input.SourceFile === 'PID'",

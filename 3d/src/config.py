@@ -9,6 +9,9 @@ from shared import Config, ConfigHandler
 
 config = ConfigHandler({
 
+	# Protein or Object
+    "ModelType": Config(selected="Protein"),
+	
 	# Any value from 0.0-1.0
 	"Opacity": Config(value=1.0),
 
