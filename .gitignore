@@ -4,4 +4,4 @@
 .zed/*
 .obsidian/*
 pyrightconfig.json
-venv
+.venv
