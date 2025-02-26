@@ -219,14 +219,10 @@ def server(input, output, session):
 			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(),
 			config.Size(),
 			config.ColorScheme(),
-			config.PStyle(),
 			config.PFeatures(),
 			config.Thickness(),
 			config.Width(),
 			config.Opacity(),
-			config.SurfaceOpacity(),
-			config.SurfaceType(),
-			config.SurfaceScheme(),
 			config.Model(),
 		]
 
@@ -357,29 +353,23 @@ def server(input, output, session):
 
 			viewer = view(width=f"{input.Size()}vw", height=f"{input.Size()}vh")
 			source, heatmap_property, heatname_name = GenerateScheme(source, config.ColorScheme(), model=model)
-			source, surface_property, surface_name = GenerateScheme(source, config.SurfaceScheme(), function_declared=config.SurfaceScheme() == config.ColorScheme(), model=model)
 
 			viewer.addModelsAsFrames(source)
 			viewer.zoomTo()
 
 
 			p.inc(message="Styling...")
-			viewer.setStyle({config.PStyle().lower(): {
+			viewer.setStyle({"cartoon": {
 				heatmap_property: heatname_name,
-				"style": "trace" if "Trace (Cartoon Style)" in config.PFeatures() else "rectangle",
+				"style": "trace" if "Trace" in config.PFeatures() else "rectangle",
 				"thickness": config.Thickness(),
-				"tubes": "Tubes (Cartoon Style)" in config.PFeatures(),
+				"tubes": "Tubes" in config.PFeatures(),
 				"width": config.Width(),
 				"opacity": config.Opacity(),
-				"dashedBonds": "Dashed Bonds (Stick Style)" in config.PFeatures(),
-				"showNonBonded": "Show Non-Bonded (Stick Style)" in config.PFeatures(),
-				"singleBonds": "Single Bonds (Stick Style)" in config.PFeatures(),
 				"scale": 1,
 			}})
-			viewer.addSurface(config.SurfaceType(), {"opacity": config.SurfaceOpacity(), surface_property: surface_name})
 
 			if heatmap_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{heatname_name}"', f'{heatname_name}')
-			if surface_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{surface_name}"', f'{surface_name}')
 
 
 			p.inc(message="Exporting...")
@@ -519,22 +509,17 @@ def server(input, output, session):
 		if type(data) == str or input.SourceFile() == "ID":
 			elements.append(ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False)))
 			elements += [
-				ui.HTML("<b>Model</b>"),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Model Opacity", min=0.0, max=1.0, step=0.1, tooltip=ui.HTML('Specify the opacity of the <i>model</i>. 1.0 indicates full opacity, while lower values make the model more transparent.')),
-				ui.HTML("<b>Surface</b>"),
-				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Color Scheme", choices=Schemes, tooltip='Define the coloring of the surface drawn on top of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.'),
-				config.SurfaceOpacity.UI(ui.input_slider, id="SurfaceOpacity", label="Surface Opacity", min=0.0, max=1.0, step=0.1, tooltip=ui.HTML('Specify the opacity of the <i>surface</i> drawn on top of the model. 1.0 indicates full opacity, while lower values make the surface more transparent.')),
 				ui.HTML("<b>Customization</b>"),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),			
+				
 				config.Model.UI(ui.input_numeric, id="Model", label="PDB Model", min=0, tooltip="Select which model to use from the PDB file, if the PDB contains multiple models."),
-				config.PStyle.UI(ui.input_select, id="PStyle", label="Model Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"], tooltip=ui.HTML("Specify the rendering style of the model. <br>Cartoon visualizes secondary structures as ribbons, cylinders, arrows, and lines. <br>Stick depicts atoms as colored nodes and bonds as sticks. <br>Sphere depicts atoms as spheres. <br>Line depicts atoms and bonds as lines. <br>Cross depicts atoms as crosses.")),
-				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"], tooltip=ui.HTML('Specify a surface to draw on top of the model. To see the surface, change the Surface Opacity above to be greater than 0. <br><br><u><b>VDW:</b></u> van der Waals surface, each atom is surrounded by a sphere whose size is proportional to the van der Waals radius of that atom. <br><u><b>MS:</b></u> Molecular surface, the outer boundary of the molecule, accessible by a probe sphere rolling over the VDW surface. <br><u><b>SAS:</b></u> Solvent accessible surface, the boundary traced by the <i>centre</i> of a probe sphere rolling over the VDW surface. <br><u><b>SES:</b></u> Solvent exposed surface, the outer boundary of a molecule where a solvent can come into contact with the molecule. This excludes parts of the surface that are shielded by other atoms.')),
+				
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Model Opacity", min=0.0, max=1.0, step=0.1, tooltip=ui.HTML('Specify the opacity of the <i>model</i>. 1.0 indicates full opacity, while lower values make the model more transparent.')),	
 				config.Thickness.UI(ui.input_slider, id="Thickness", label="Ribbon Thickness", min=0, max=10, step=0.1, tooltip="Specify the thickness of the visualized components. Lower values make components thinner, while higher values (to a maximum of 10) make components thicker."),
-				config.Width.UI(ui.input_slider, id="Width", label="Ribbon Width", min=0, max=10, step=0.1, tooltip="Specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider."),
+				config.Width.UI(ui.input_slider, id="Width", label="Ribbon Width", min=0, max=10, step=0.1, tooltip=ui.HTML("Specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider. <br>If 'Trace' is selected below, Ribbon Width is ignored.")),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Tubes", "Trace"], tooltip=ui.HTML('''Tubes - display alpha helices as simple cylinders. <br><br>Trace - draw the model as a simple outline. This overrides the 'Tubes' feature.''')),
 		
 				config.Size.UI(ui.input_numeric, id="Size", label="View Size", min=1, max=100, step=1, tooltip="Change the size of the viewer in your browser."),
-				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Tubes", "Trace"], tooltip=ui.HTML('''Tubes - display alpha helices as simple cylinders. <br><br>Trace - draw the model as a simple outline. This overrides the 'Tubes' feature.''')),
 			]
 
 		else:

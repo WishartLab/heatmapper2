@@ -27,15 +27,11 @@ config = ConfigHandler({
 	# Combination of "Edges", "Lighting", "Smooth Shading"
 	"Features": Config(selected=["Lighting", "Smooth Shading"]),
 
-	# "Cartoon", "Stick", "Sphere", "Line"
-	"PStyle": Config(selected="Cartoon"),
-
 	# Any numerical value > 0
 	"Model": Config(value=0),
 
 	# See 3D's ConditionalElements function for details
 	"ColorScheme": Config(selected="spectrum"),
-	"SurfaceScheme": Config(selected="spectrum"),
 
 	# Can vary depending on PStyle. See ConditionalElements for details.
 	"PFeatures": Config(selected=[]),
@@ -48,10 +44,4 @@ config = ConfigHandler({
 
 	# Any numerical value
 	"Size": Config(value=75),
-
-	# Any value from 0.0-1.0
-	"SurfaceOpacity": Config(value=0.0),
-
-	# VDW, MS, SAS, or SES
-	"SurfaceType": Config(selected="VDS")
 })
