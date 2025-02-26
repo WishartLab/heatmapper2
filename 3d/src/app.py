@@ -224,8 +224,6 @@ def server(input, output, session):
 			config.Thickness(),
 			config.Width(),
 			config.Opacity(),
-			config.Radius(),
-			config.Scale(),
 			config.SurfaceOpacity(),
 			config.SurfaceType(),
 			config.SurfaceScheme(),
@@ -366,16 +364,6 @@ def server(input, output, session):
 
 
 			p.inc(message="Styling...")
-			# handle: if both radius and scale are included, radius overrides scale
-			if config.Radius() > 0:
-				var = "radius"
-				val = config.Radius()
-			else:
-				var = "scale"
-				if config.Scale() > 0:
-					val = config.Scale()
-				else:
-					val = 1
 			viewer.setStyle({config.PStyle().lower(): {
 				heatmap_property: heatname_name,
 				"style": "trace" if "Trace (Cartoon Style)" in config.PFeatures() else "rectangle",
@@ -386,9 +374,7 @@ def server(input, output, session):
 				"dashedBonds": "Dashed Bonds (Stick Style)" in config.PFeatures(),
 				"showNonBonded": "Show Non-Bonded (Stick Style)" in config.PFeatures(),
 				"singleBonds": "Single Bonds (Stick Style)" in config.PFeatures(),
-				var: val,
-				# "scale": config.Scale(),
-				# "radius": config.Radius(),
+				"scale": 1,
 			}})
 			viewer.addSurface(config.SurfaceType(), {"opacity": config.SurfaceOpacity(), surface_property: surface_name})
 
@@ -451,17 +437,22 @@ def server(input, output, session):
 			# If are data source is a table, render it as a heatmap.
 			elif type(source) is DataFrame:
 				values = source[Filter(source.columns, ColumnType.Name)]
-				pl.add_mesh(
-					model,
-					scalars=values,
-					style=style,
-					cmap=cmap,
-					opacity=opacity,
-					n_colors=colors,
-					show_edges="Edges" in features,
-					lighting="Lighting" in features,
-					smooth_shading="Smooth Shading" in features,
-				)
+				try:
+					pl.add_mesh(
+						model,
+						scalars=values,
+						style=style,
+						cmap=cmap,
+						opacity=opacity,
+						n_colors=colors,
+						show_edges="Edges" in features,
+						lighting="Lighting" in features,
+						smooth_shading="Smooth Shading" in features,
+					)
+				except NotImplementedError:
+					return "Make sure you have uploaded a Table or Image file, as well as an Object file!"
+				except ValueError:
+					return "The number of rows in the Table file must match either the number of cells or the number of points in the Object file!"
 
 			# If we have a texture, map it.
 			elif type(source) is plotting.texture.Texture:
@@ -526,6 +517,7 @@ def server(input, output, session):
 		if data is None: return
 
 		if type(data) == str or input.SourceFile() == "ID":
+			elements.append(ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False)))
 			elements += [
 				ui.HTML("<b>Model</b>"),
 				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),
@@ -537,13 +529,12 @@ def server(input, output, session):
 				config.Model.UI(ui.input_numeric, id="Model", label="PDB Model", min=0, tooltip="Select which model to use from the PDB file, if the PDB contains multiple models."),
 				config.PStyle.UI(ui.input_select, id="PStyle", label="Model Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"], tooltip=ui.HTML("Specify the rendering style of the model. <br>Cartoon visualizes secondary structures as ribbons, cylinders, arrows, and lines. <br>Stick depicts atoms as colored nodes and bonds as sticks. <br>Sphere depicts atoms as spheres. <br>Line depicts atoms and bonds as lines. <br>Cross depicts atoms as crosses.")),
 				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"], tooltip=ui.HTML('Specify a surface to draw on top of the model. To see the surface, change the Surface Opacity above to be greater than 0. <br><br><u><b>VDW:</b></u> van der Waals surface, each atom is surrounded by a sphere whose size is proportional to the van der Waals radius of that atom. <br><u><b>MS:</b></u> Molecular surface, the outer boundary of the molecule, accessible by a probe sphere rolling over the VDW surface. <br><u><b>SAS:</b></u> Solvent accessible surface, the boundary traced by the <i>centre</i> of a probe sphere rolling over the VDW surface. <br><u><b>SES:</b></u> Solvent exposed surface, the outer boundary of a molecule where a solvent can come into contact with the molecule. This excludes parts of the surface that are shielded by other atoms.')),
-				config.Thickness.UI(ui.input_slider, id="Thickness", label="Cartoon Thickness", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify the thickness of the visualized components. Lower values make components thinner, while higher values (to a maximum of 10) make components thicker."),
-				config.Width.UI(ui.input_slider, id="Width", label="Cartoon Width", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider."),
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Atom Radius", min=0, max=5, step=0.05, tooltip=ui.HTML('''Stick, Sphere, or Cross style only - Specify a fixed radius (in Angstroms) for atoms in the <i>model</i>. Lower values make atoms smaller, while higher values (to a maximum of 5) make atoms larger. This value overrides 'Scale'.''')),
-				config.Scale.UI(ui.input_slider, id="Scale", label="Atom Scale", min=1, max=10, step=1, tooltip=ui.HTML("Sphere or Cross style only - specify a scalar to modify the van der Waals radius of atoms in the <i>model</i>. If a 'Radius' is specified above, this value is ignored. Set 'Radius' to 0 to visualize 'Scale'.")),
+				config.Thickness.UI(ui.input_slider, id="Thickness", label="Ribbon Thickness", min=0, max=10, step=0.1, tooltip="Specify the thickness of the visualized components. Lower values make components thinner, while higher values (to a maximum of 10) make components thicker."),
+				config.Width.UI(ui.input_slider, id="Width", label="Ribbon Width", min=0, max=10, step=0.1, tooltip="Specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider."),
+		
 				config.Size.UI(ui.input_numeric, id="Size", label="View Size", min=1, max=100, step=1, tooltip="Change the size of the viewer in your browser."),
 				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds (Stick Style)", "Show Non-Bonded (Stick Style)", "Single Bonds (Stick Style)", "Tubes (Cartoon Style)", "Trace (Cartoon Style)"], tooltip=ui.HTML('''Dashed Bonds (Stick Style) - draw bonds as dashed lines. <br><br>Show Non-Bonded (Stick Style) - display non-bonded atoms as spheres (hidden otherwise). <br><br>Single Bonds (Stick Style) - display all bonds as single bonds. <br><br>Tubes (Cartoon Style) - display alpha helices as simple cylinders. <br><br>Trace (Cartoon Style) - draw the model as a simple outline. This overrides the 'Tubes' feature.''')),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Tubes", "Trace"], tooltip=ui.HTML('''Tubes - display alpha helices as simple cylinders. <br><br>Trace - draw the model as a simple outline. This overrides the 'Tubes' feature.''')),
 			]
 
 		else:
@@ -595,15 +586,19 @@ app_ui = ui.page_fluid(
 
 	ui.layout_sidebar(
 		ui.sidebar(
+			ui.HTML("<br>"),
+			#Update(),
+
 			FileSelection(
 				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"],
 				project="3D",
-				extras=["ID"]),
+				extras=["ID"],),
 
 			ui.panel_conditional(
 				"input.SourceFile === 'ID'",
 				ui.input_text(id="ID", value="1upp", label="PDB ID"),
+
 			),
 
 			TableOptions(config),

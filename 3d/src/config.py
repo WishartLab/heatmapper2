@@ -46,12 +46,6 @@ config = ConfigHandler({
 	# Any value from 0-10
 	"Width": Config(value=1),
 
-	# Any value from 0-10
-	"Radius": Config(value=0.25),
-
-	# Any value from 0-10
-	"Scale": Config(value=1),
-
 	# Any numerical value
 	"Size": Config(value=75),
 
