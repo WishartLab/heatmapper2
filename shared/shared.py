@@ -431,7 +431,7 @@ def FileSelection(examples, types, upload_label=None, multiple=False, default="U
 			choices=["Example", "Upload"] + extras,
 			selected=default,
 			inline=True
-	),
+		),
 
 		# Only display an input dialog if the user is one Upload
 		ui.panel_conditional(
