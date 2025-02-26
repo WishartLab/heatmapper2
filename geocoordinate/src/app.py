@@ -46,8 +46,8 @@ def server(input, output, session):
 		"example1.txt": "Input type: txt<br>Contents: Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water.<br>Source: A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
 		"example3.txt": "Input type: txt<br>Contents: The location of traffic signals in Toronto.<br>Source: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
 		"example21.csv": "Input type: csv<br>Contents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.<br>Source: https://www.nhc.noaa.gov/data/",
-		"example3.csv": "Input type: csv<br>Contents: Recorded mean temperature (F) in the USA in 2023 as measured by the EPA.<br>Source: https://aqs.epa.gov/aqsweb/airdata/FileFormats.html#_daily_summary_files",
-		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anomalies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt"
+		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anomalies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt",
+		"NYCtaxi-2013.csv": "Input type: csv<br>Contents: A subset of 2013 taxi trip data from the NYC Taxi and Limousine Commission.<br>Source: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
 	}
 
 
@@ -474,14 +474,6 @@ app_ui = ui.page_fluid(
 			width: 100%;
 		    justify-content: space-between;
 		}	   
-
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Geocoordinate"),
@@ -495,7 +487,7 @@ app_ui = ui.page_fluid(
 					"example1.txt": "1: Cholera Deaths",
 					"example3.txt": "2: Traffic Signals",
 					"example21.csv": "3: Hurricanes",
-					"example3.csv": "4: Temperature",
+					"NYCtaxi-2013.csv": "4: NYC Taxi Trips",
 					"test.txt": "5: Temperature Anomalies",
 				},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".nc"],

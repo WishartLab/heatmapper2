@@ -11,7 +11,6 @@
 # run the following command within this directory:
 #		shiny run
 #
-#
 
 
 from shiny import App, reactive, render, ui, types
@@ -101,16 +100,17 @@ def server(input, output, session):
 		return inputs
 
 	
-	def CreateErrorImg(text:str, inputs):
+	def CreateErrorImg(text, color, inputs):
 		"""
 		@brief Generates an image of the provided text
 		@param text: The text to display as an error
 		@param inputs: A list of all the inputs for caching (from HashString())
+		@param color: Hex color code for the text
 		@returns 
 		"""
 		# create image with error text
 		fig, ax = subplots()
-		ax.text(0, 50, text, color="#e3594f", fontsize=24)
+		ax.text(0, 50, text, color=color, fontsize=24)
 		ax.set_xlim(0, 200)
 		ax.set_ylim(0, 100)
 		# make axes transparent
@@ -179,6 +179,9 @@ def server(input, output, session):
 		df = DataFrame(coordinates, dtype=float, columns=[x for x in range(1, len(coordinates[0])+1)])
 		print(f"PDB DATAFRAME:\n{df}\n")
 		print(f"dtypes: {df.dtypes}")
+
+
+		df = DataFrame({"Error": ["PDB test"]})
 		return df
 
 
@@ -415,6 +418,7 @@ def server(input, output, session):
 				df_height = GenerateMatrix(data, config.HeightMatrix())
 			else: df_height = df
 
+			# scale height values to remove negatives
 			z = df_height.values.flatten()
 			if config.MinScale():
 				z += abs(n_min(z))
@@ -500,7 +504,7 @@ def server(input, output, session):
 						if config.HeightMatrix() == "Cube":
 							fig, ax, im, norm, z, df = HeatmapCube(df, cmap, p)
 							if fig == None:
-								return CreateErrorImg("Input data with an X, Y, and Z column \nis needed to compute a Cube Visualization.", inputs)
+								return CreateErrorImg("Input data with an X, Y, and Z column \nis needed to compute a Cube Visualization.", "#027bc2", inputs)
 						else:
 							fig, ax, im, norm, z = Heatmap3D(df, data, cmap, p)
 						d3 = True
@@ -551,7 +555,12 @@ def server(input, output, session):
 						else:
 							mappable = ScalarMappable(cmap=cmap, norm=norm)
 							mappable.set_array(z)
-							cbar = colorbar(mappable, ax=ax, label='Value', orientation='vertical')
+							# get legend label
+							if config.HeightMatrix() == "Cube":
+								value = config.MatrixType()
+							else:
+								value = config.HeightMatrix()
+							cbar = colorbar(mappable, ax=ax, label=value, orientation='vertical')
 						cbar.ax.tick_params(labelsize=text_size)
 
 
@@ -587,21 +596,32 @@ def server(input, output, session):
 					if d3:
 						if "z" in config.Features():
 							ax.tick_params(axis="z", labelsize=text_size)
-							if n > 1:
-								# grab only every n-th label
+							
+							if n > 1:  # grab only every n-th label
 								ztick_pos = list(range(len(df.columns)))[::n]
-								# if Cube matrix, use names from table
+								# if Cube matrix, use names from table for z-axis
 								if config.HeightMatrix() == "Cube":
 									ztick_labels = df.columns[::n]
-								# TODO: use numerical values for 3D matrix
+								# if 3D matrix, use numerical values for z-axis
 								else:
+									# TODO
 									ztick_labels = df.columns[::n]
+								
 								ax.set_zticks(ztick_pos)
 								ax.set_zticklabels(ztick_labels)
+							
 							else:
-								# TODO: use numerical values for 3D matrix
-								ax.set_zticks(range(len(df.columns)))
-								ax.set_zticklabels(df.columns)
+								# if Cube matrix, use names from table for z-axis
+								if config.HeightMatrix() == "Cube":
+									ztick_pos = range(len(df.columns))
+									ztick_labels = df.columns
+								# if 3D matrix, use numerical values for z-axis
+								else:
+									ztick_pos = range(0,6)
+									ztick_labels = [0.0, 0.2,0.4,0.6,0.8,1.0]
+								
+								ax.set_zticks(ztick_pos)
+								ax.set_zticklabels(ztick_labels)
 						else:
 							ax.set_zticklabels([])
 
@@ -713,13 +733,6 @@ app_ui = ui.page_fluid(
 		    justify-content: space-between;
 		}	   
 
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Pairwise"),
@@ -781,7 +794,7 @@ app_ui = ui.page_fluid(
 					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "label": "Data Labels", "legend": "Legend"},
 					tooltip=ui.HTML("X Labels toggles data labels along the X axis. <br><br>Y Labels toggles data labels along the Y axis. <br><br>Z labels toggles data labels along the Z axis if rendering as a 3D plot. <br><br>Data Labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. <br><br>Legend displays a colorbar legend on the heatmap."),
 				),
-				config.N.UI(ui.input_slider, id="N", label="Skip N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
+				config.N.UI(ui.input_slider, id="N", label="Show N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
 
 				ui.HTML("<b>Image Settings</b>"),
 				ui.div(
@@ -790,13 +803,13 @@ app_ui = ui.page_fluid(
 					ui.div(
 						ui.div(
 							config.AutoSize.UI(ui.input_radio_buttons,
-						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Size:", "fit": "Fit to Screen", "expand": "Expand"}, 
+						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Width", "fit": "Fit to Screen", "expand": "Expand"}, 
 							),
 							style="flex: 1; padding-top: 15px;",
 						),
 						ui.div(
 							config.Size.UI(ui.input_numeric, gap="0px", id="Size", label=None, min=1,
-					  		tooltip=ui.HTML("Select <b>Custom Size</b> to specify a custom width (in pixels) for the heat map on your screen. <br><br>Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting."),
+					  		tooltip=ui.HTML("Select <b>Custom Width</b> to specify a custom width (in pixels) for the heat map on your screen. <br><br>Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting."),
 							),
 							style="flex: 1;",
 						),

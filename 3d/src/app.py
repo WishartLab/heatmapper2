@@ -117,9 +117,11 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table():
+		# warning message if input is an image, not a table
 		if isinstance(Data(), plotting.texture.Texture):
 			df = DataFrame({"Note": ["This heatmap is mapping an image file (.png or .jpg) onto the 3D surface. There is no table data to display."]})
 			return df
+		# display SEQRES info from PDB files
 		elif isinstance(Data(), str):
 			string = Data()
 			lines = string.split("\n")
@@ -130,13 +132,17 @@ def server(input, output, session):
 					output_lines.append(line)
 			df = DataFrame(output_lines, columns=[str(i) for i in range(len(output_lines[0]))])
 			return df
+		# display table data
 		else:
 			try:
 				grid = render.DataGrid(Data(), editable=True)
 				Valid.set(True)
+				print(grid)
 				return grid
 			except TypeError:
 				Error("The provided input format cannot be rendered")
+				df = DataFrame({"Error": ["The provided input format cannot be rendered."]})
+				return df
 
 
 	@Table.set_patch_fn
@@ -581,14 +587,7 @@ app_ui = ui.page_fluid(
 			width: 100%;
 		    justify-content: space-between;
 		}	   
-
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
+		
 	"""),
 
 	ui.panel_title(title=None, window_title="3D"),

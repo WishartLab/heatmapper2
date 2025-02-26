@@ -425,13 +425,6 @@ app_ui = ui.page_fluid(
 		    justify-content: space-between;
 		}	   
 
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Spectral"),

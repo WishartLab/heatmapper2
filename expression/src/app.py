@@ -71,6 +71,7 @@ def server(input, output, session):
 			File(input),
 			config.NameColumn(),
 			config.Features(),
+			config.N(),
 			config.ScaleType(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
@@ -349,6 +350,7 @@ def server(input, output, session):
 						text_size = config.TextSize()
 
 					# If we render the Y axis.
+					# TODO: show every N-th (n = config.N()...)
 					if "y" in config.Features():
 						if config.Elevation() == 90: ax_heatmap.set_yticks(range(len(index_labels)))
 						ax_heatmap.set_yticklabels(index_labels, fontsize=text_size)
@@ -357,6 +359,7 @@ def server(input, output, session):
 						ax_heatmap.set_yticklabels([])
 
 					# If we render the X axis.
+					# TODO: show every N-th (n = config.N()...)
 					if "x" in config.Features():
 						if config.Elevation() == 90: ax_heatmap.set_xticks(range(len(x_labels)))
 						ax_heatmap.set_xticklabels(x_labels, rotation=90, fontsize=text_size)
@@ -507,13 +510,6 @@ app_ui = ui.page_fluid(
 		    justify-content: space-between;
 		}	   
 
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Expression"),
@@ -575,20 +571,31 @@ app_ui = ui.page_fluid(
 				ui.output_ui("Color"),
 				config.Bins.UI(ui.input_numeric, id="Bins", label="# of Color Bins", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
+				ui.HTML("<b>Features</b>"),
+				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}, tooltip="Row Dendrogram enables clustering of rows. Column Dendrogram enables clustering of columns. X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap.",
+				),
+				config.N.UI(ui.input_slider, id="N", label="Show N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
+
 				ui.HTML("<b>Image Settings</b>"),
 				ui.div(
 					config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 					ui.HTML("<u>Image Size</u><br><br>"),
-					config.AutoSize.UI(ui.input_radio_buttons,
-						make_inline=False, id="AutoSize", label=None, choices={"fit": "Fit to Screen", "expand": "Expand", "custom": "Custom Size:"}, 
-						tooltip=ui.HTML("Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting. <br><br>Select <b>Custom Size</b> to specify a custom width (in pixels) for the heat map on your screen."),
+					ui.div(
+						ui.div(
+							config.AutoSize.UI(ui.input_radio_buttons,
+						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Width", "fit": "Fit to Screen", "expand": "Expand"}, 
+							),
+							style="flex: 1; padding-top: 15px;",
+						),
+						ui.div(
+							config.Size.UI(ui.input_numeric, gap="0px", id="Size", label=None, min=1,
+					  		tooltip=ui.HTML("Select <b>Custom Width</b> to specify a custom width (in pixels) for the heat map on your screen. <br><br>Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting."),
+							),
+							style="flex: 1;",
+						),
+						style="display: flex; gap: 0px; margin: 0px; align-items: flex-start;"
 					),
-					config.Size.UI(ui.input_numeric, id="Size", label=None, min=1),
 					style="margin: 0px;"
-				),
-
-				ui.HTML("<b>Features</b>"),
-				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}, tooltip="Row Dendrogram enables clustering of rows. Column Dendrogram enables clustering of columns. X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap.",
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
