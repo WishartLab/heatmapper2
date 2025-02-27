@@ -118,6 +118,9 @@ def server(input, output, session):
 	@render.data_frame
 	def Table():
 		# warning message if input is an image, not a table
+		if Data() is None:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+		
 		if isinstance(Data(), plotting.texture.Texture):
 			df = DataFrame({"Note": ["This heatmap is mapping an image file (.png or .jpg) onto the 3D surface. There is no table data to display."]})
 			return df
@@ -140,9 +143,8 @@ def server(input, output, session):
 				print(grid)
 				return grid
 			except TypeError:
-				Error("The provided input format cannot be rendered")
-				df = DataFrame({"Error": ["The provided input format cannot be rendered."]})
-				return df
+				#Error("Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered.")
+				return DataFrame({"Note": ["Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -479,7 +481,7 @@ def server(input, output, session):
 			p.inc(message="Loading input...")
 
 			source = GetData()
-			if source is None: return
+			if source is None: return "No data to display! <br>Please upload your data or select an example data set in the sidebar."
 
 			if type(source) == str:
 				return PDBViewer(source, p)

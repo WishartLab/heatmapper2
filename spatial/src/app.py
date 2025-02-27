@@ -12,9 +12,9 @@
 # WebGL is required for this application.
 #
 
-from pandas.core.arrays.arrow.array import pa
+from pandas import DataFrame
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import get_cmap
+from matplotlib.pyplot import get_cmap, subplots, close as fig_close
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from anndata import read_h5ad
 from squidpy import gr, pl, read
@@ -38,6 +38,29 @@ def server(input, output, session):
 	}
 
 	InitializeConfig(config, input)
+
+
+	def CreateErrorImg(text, color, file):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=32)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# get image for display
+		fig.savefig(file.name, format="png", dpi=100, bbox_inches="tight")
+		fig_close(fig)
+		img: types.ImgData = {"src": file.name, "width": "400px"}
+		return img
 
 
 	def HandleData(path, p=None):
@@ -180,7 +203,6 @@ def server(input, output, session):
 						else: return None
 					except Exception:
 						Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
-						return None
 
 					if adata is None: return
 
@@ -265,15 +287,24 @@ def server(input, output, session):
 				ColumnNames(Data(), p)
 				p.close()
 
-
 	@output
 	@render.data_frame
 	def Table():
 		state = config.TableType()
 		df = Data()
-		if df is None: return
-		if state == "obs": return render.DataGrid(df.obs, editable=True)
-		elif state == "var": return render.DataGrid(df.var, editable=True)
+		# add placeholder message if no data is uploaded
+		if df is None: 
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+		if state == "obs": 
+			try:
+				return render.DataGrid(df.obs, editable=True)
+			except:
+				return DataFrame({"Error": ["Observation table could not be rendered."]})
+		elif state == "var": 
+			try:
+				return render.DataGrid(df.var, editable=True)
+			except:
+				return DataFrame({"Error": ["Variable table could not be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -440,14 +471,22 @@ def server(input, output, session):
 		NamedTemporaryFile within the scope if it's function, and let the Operating System delete it after the call.
 		"""
 		with ui.Progress() as p:
-
 			p.inc(message="Loading input...")
 			adata = Data()
 			if file is None: file = NamedTemporaryFile(delete=False, suffix=".png")
-			if input.SourceFile() == "Example" or input.UploadType() == "Visium":
-				return GenerateVisium(adata, file, p)
-			elif input.UploadType() == "NanoString":
-				return GenerateNanoString(adata, file, p)
+			
+			# add placeholder message if no data uploaded
+			if adata is None:
+				return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", file)
+			
+			# generate heat maps
+			try:
+				if input.SourceFile() == "Example" or input.UploadType() == "Visium":
+					return GenerateVisium(adata, file, p)
+				elif input.UploadType() == "NanoString":
+					return GenerateNanoString(adata, file, p)
+			except:
+				return CreateErrorImg("Spatial heat map could not be rendered.", "#027bc2", file)
 
 
 	@output
@@ -470,7 +509,17 @@ def server(input, output, session):
 			adata = Data()
 			score = config.Score()
 
-			if adata is None: return
+			# add placeholder message if no data uploaded
+			if adata is None: 
+				# create image with error text
+				fig, ax = subplots()
+				ax.text(0, 50, "No data to display! \nPlease upload your data or select an example data set in the sidebar.", color="#027bc2", fontsize=8)
+				ax.set_xlim(0, 200)
+				ax.set_ylim(0, 100)
+				# make axes transparent
+				[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+				ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+				return fig
 
 			key = "cluster"
 			location = f"{key}_centrality_scores"
@@ -495,7 +544,17 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			if adata is None: return
+			# add placeholder message if no data uploaded
+			if adata is None: 
+				# create image with error text
+				fig, ax = subplots()
+				ax.text(0, 50, "No data to display! \nPlease upload your data or select an example data set in the sidebar.", color="#027bc2", fontsize=8)
+				ax.set_xlim(0, 200)
+				ax.set_ylim(0, 100)
+				# make axes transparent
+				[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+				ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+				return fig
 
 			function = config.Function()
 			metric = config.Distance().lower()
@@ -530,7 +589,17 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			if adata is None: return
+			# add placeholder message if no data uploaded
+			if adata is None: 
+				# create image with error text
+				fig, ax = subplots()
+				ax.text(0, 50, "No data to display! \nPlease upload your data or select an example data set in the sidebar.", color="#027bc2", fontsize=8)
+				ax.set_xlim(0, 200)
+				ax.set_ylim(0, 100)
+				# make axes transparent
+				[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+				ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+				return fig
 
 			if input.UploadType() == "NanoString":
 				adata = adata[adata.obs.fov.isin(input.Keys())].copy()

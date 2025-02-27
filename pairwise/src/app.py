@@ -104,13 +104,13 @@ def server(input, output, session):
 		"""
 		@brief Generates an image of the provided text
 		@param text: The text to display as an error
-		@param inputs: A list of all the inputs for caching (from HashString())
 		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
 		@returns 
 		"""
 		# create image with error text
 		fig, ax = subplots()
-		ax.text(0, 50, text, color=color, fontsize=24)
+		ax.text(0, 50, text, color=color, fontsize=32)
 		ax.set_xlim(0, 200)
 		ax.set_ylim(0, 100)
 		# make axes transparent
@@ -238,9 +238,8 @@ def server(input, output, session):
 	def Table():
 		print("TABLE")
 		df = Data()
-		if df is None or len(df.columns) == 0:
-			df = DataFrame({"Error": ["No data to display!"]})
-			return df
+		if len(df.columns) == 0 or df is None:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
 
 		# render data as editable table
 		try:
@@ -482,7 +481,8 @@ def server(input, output, session):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				data = GetData()
-				if data is None or len(data.index) == 0: return
+				if data is None or len(data.index) == 0: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs)
 
 				# Create a figure with a heatmap
 				p.inc(message="Calculating...")

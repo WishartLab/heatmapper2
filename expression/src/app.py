@@ -17,6 +17,7 @@ from shiny import App, reactive, render, ui, types
 from matplotlib.pyplot import figure, style, subplots, close as fig_close
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.cm import ScalarMappable
+from pandas import DataFrame
 from scipy.cluster import hierarchy
 from scipy.stats import zscore
 from scipy.interpolate import griddata
@@ -86,6 +87,41 @@ def server(input, output, session):
 		]
 		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 		return inputs
+	
+
+	def CreateErrorImg(text, color, inputs):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=12)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		if inputs == "fig":
+			fig_close(fig)
+			return fig
+		else:
+			# save image to cache
+			b = BytesIO()
+			fig.savefig(b, format="png", dpi=100, bbox_inches="tight")
+			b.seek(0)
+			DataCache.Store(b.read(), inputs)
+			fig_close(fig)
+			# get image for display
+			b = DataCache.Get(inputs)
+			with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+				temp.write(b)
+				temp.close()
+				img: types.ImgData = {"src": temp.name, "width": "400px"}
+				return img
 
 
 	def ProcessData(df):
@@ -166,7 +202,21 @@ def server(input, output, session):
 
 	@output
 	@render.data_frame
-	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	def Table(): 
+		df = Data()
+
+		# instruct users to load data if table is empty
+		if len(df.columns) == 0 or df is None:
+			df = DataFrame({"_": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+			return df
+
+		# render data as editable table
+		try:
+			grid = render.DataGrid(df, editable=True)
+			Valid.set(True)
+			return grid
+		except Exception:
+			return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -301,7 +351,8 @@ def server(input, output, session):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				index_labels, x_labels, data = ProcessData(GetData())
-				if data is None: return
+				if data is None or len(data.index) == 0: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs)
 
 				# Create a figure with a heatmap and associated dendrograms
 				p.inc(message="Plotting...")
@@ -442,7 +493,10 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def RowDendrogram():
-		index_labels, _, data = ProcessData(GetData());
+		index_labels, _, data = ProcessData(GetData())
+		# instruct user to upload files if empty data
+		if data is None:
+			return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs="fig")
 		with ui.Progress() as p:
 			return RenderDendrogram(data=data, labels=index_labels, invert=False, progress=p)
 
@@ -450,7 +504,10 @@ def server(input, output, session):
 	@output
 	@render.plot
 	def ColumnDendrogram():
-		_, x_labels, data = ProcessData(GetData());
+		_, x_labels, data = ProcessData(GetData())
+		# instruct user to upload files if empty data
+		if data is None:
+			return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs="fig")
 		with ui.Progress() as p:
 			return RenderDendrogram(data=data, labels=x_labels, invert=True, progress=p)
 

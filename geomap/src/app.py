@@ -209,7 +209,17 @@ def server(input, output, session):
 
 	@output
 	@render.data_frame
-	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	def Table(): 
+		df = Data()
+		print(f"Data: \n{df}")
+		if df is None or df.empty:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+		try:
+			grid = render.DataGrid(df, editable=True)
+			Valid.set(True)
+			return grid
+		except:
+			return DataFrame({'Note': [ui.HTML('Could not render data! <br><br>Please make sure the names in your dataset match the names in a corresponding GeoJSON. Your input data should also have a column of values, and optionally, time. <br><br>See more formatting info <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geomap:~:text=work%20with%20it.-,Geomap,-Geomap%20has%20two"; target="_blank"; rel=”noopener noreferrer”>here</a>.')]})
 
 
 	@Table.set_patch_fn
@@ -258,7 +268,7 @@ def server(input, output, session):
 					<li>.xlsx</li>
 				</td>
 				<td style="vertical-align:top;">
-					<li>standard .geojson files, see <a href="https://geojson.org/">geojson.org</a></li>
+					<li>standard .geojson files, see <a href="https://geojson.org/"; target="_blank"; rel=”noopener noreferrer”>geojson.org</a></li>
 				</td>
 			</tr>
 			</table>
@@ -275,18 +285,20 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			df = GetData()
-			if df is None: return
+			if df is None:
+				print("df is None")
+				return ui.HTML("No data to display! Please upload your data or select an example data set in the sidebar.")
 
 			p.inc(message="Loading GeoJSON...")
 			try:
 				geojson = JSON()
 				properties = list(geojson['features'][0]['properties'].keys())
 			except Exception:
-				return
+				return ui.HTML('Make sure a GeoJSON is selected in the sidebar, <br>or upload your own following the <a href="https://geojson.org/"; target="_blank"; rel=”noopener noreferrer”>GeoJSON format</a>.')
 
 			p.inc(message="Formatting...")
 			k_col, v_col, k_prop = config.KeyColumn(), config.ValueColumn(), config.KeyProperty()
-			if k_col not in df or v_col not in df or k_prop not in properties: return
+			if k_col not in df or v_col not in df or k_prop not in properties: return ui.HTML("Data could not be displayed. <br>Please upload a Table file and a GeoJSON, or select an example data set in the sidebar. <br><br><i>Uploaded Table files should include: <br>a Key column (e.g. 'name', 'continent', 'country', 'location') <br>and a Value column (e.g. 'value', 'weight', 'intensity')</i>")
 
 			map_type = config.MapType()
 
@@ -310,8 +322,8 @@ def server(input, output, session):
 					elif config.ROI_Mode() == "Round": df.at[index, v_col] = u if value > u else l
 			df = df.drop(to_drop)
 			if len(df) == 0:
-				Error("No locations! Ensure Key Column and Key Properties are correct, and your ROI is properly set!")
-				return
+				Error("No locations found")
+				return ui.HTML("No locations were found. <br>Please ensure your data table contains a name column, whose values match a property in the GeoJSON. <br><br>Still having trouble? Make sure your range of interest does not exclude all values!")
 
 			# Load the choropleth.
 			p.inc(message="Plotting...")
@@ -334,12 +346,15 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def GeoJSON():
-		try:
-			geojson = JSON()
+		geojson = JSON()
+		if geojson is None:
+			return DataFrame({'Note':[ui.HTML('Hmmm, we could not render the GeoJSON table.<br><br>Make sure a GeoJSON is selected in the sidebar, <br>or upload your own following the <a href="https://geojson.org/"; target="_blank"; rel=”noopener noreferrer”>GeoJSON format</a>.')]})
+		try:	
 			names = [feature['properties'][config.KeyProperty()] for feature in geojson['features']]
 			return DataFrame({config.KeyProperty(): names})
-		except Exception:
+		except:
 			Error("Could not render the GeoJSON table!")
+			return DataFrame({'Note':[ui.HTML('Hmmm, we could not render the GeoJSON table.<br><br>Make sure a GeoJSON is selected in the sidebar, <br>or upload your own following the <a href="https://geojson.org/"; target="_blank"; rel=”noopener noreferrer”>GeoJSON format</a>.')]})
 
 
 	@reactive.effect

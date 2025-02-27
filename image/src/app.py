@@ -14,11 +14,12 @@
 #
 
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import subplots, colorbar, style
+from matplotlib.pyplot import subplots, colorbar, style, close as fig_close
 from matplotlib.tri import Triangulation
 from PIL import Image
 from tempfile import NamedTemporaryFile
 from io import BytesIO
+from pandas import DataFrame
 from numpy import meshgrid, arange, zeros_like, array, zeros, linspace, column_stack
 from scipy.interpolate import griddata
 
@@ -97,9 +98,55 @@ def server(input, output, session):
 		return inputs
 
 
+	def CreateErrorImg(text, color, inputs):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=32)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# save image to cache
+		b = BytesIO()
+		fig.savefig(b, format="png", dpi=100, bbox_inches="tight")
+		b.seek(0)
+		DataCache.Store(b.read(), inputs)
+		fig_close(fig)
+		# get image for display
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "width": "400px"}
+			return img
+		
+
 	@output
 	@render.data_frame
-	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	def Table():
+		df = Data()
+		print(f"df.col: {df.columns}")
+		print(type(df))
+		if len(df.columns) == 0 or df is None:
+			df = DataFrame({"_": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+			return df
+
+		# render data as editable table
+		try:
+			grid = render.DataGrid(df, editable=True)
+			Valid.set(True)
+			return grid	
+		except Exception:
+			pass
+			return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -175,7 +222,8 @@ def server(input, output, session):
 
 				p.inc(message="Loading image...")
 				img = IMG()
-				if img is None or df.empty: return None
+				if img is None or df.empty: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs)
 
 				if img is not None:
 					try:

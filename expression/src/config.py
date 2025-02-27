@@ -42,6 +42,9 @@ config = ConfigHandler({
 
 	# A list of any of "row", "col", "x", "y", "legend"
 	"Features": Config(selected=["row", "col", "x", "y", "legend"]),
+    
+	# Any integer from 1-25
+    "N": Config(value=1),
 
 	# True or False to Use custom color maps or pre-defined ones.
 	"Custom": Config(value=False),
@@ -51,6 +54,9 @@ config = ConfigHandler({
 
 	# Any number between 3-100 to define amount of bins for color mapping
 	"Bins": Config(value=50),
+
+	# Either "fit", "expand" or "custom"
+    "AutoSize": Config(selected="fit"),
 
 	# Any value greater than 1.
 	"Size": Config(value=600),

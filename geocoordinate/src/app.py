@@ -65,7 +65,7 @@ def server(input, output, session):
 		latitude, longitude, time = Filter(dimensions, ColumnType.Latitude), Filter(dimensions, ColumnType.Longitude), Filter(dimensions, ColumnType.Time)
 
 		if not latitude or not longitude:
-			Error("NC file requires a latitude and longitude!")
+			Error("NC files require both a latitude and longitude field.")
 			return None
 
 		df = {
@@ -138,7 +138,7 @@ def server(input, output, session):
 	async def UpdateData():
 		try:
 			with ui.Progress() as p:
-				Data.set((await DataCache.Load(input, p=p)));
+				Data.set((await DataCache.Load(input, p=p)))
 				Valid.set(False)
 
 				if File(input).endswith(".nc"):
@@ -157,7 +157,7 @@ def server(input, output, session):
 						ui.update_select(id="ValueColumn", selected=columns[1] if len(columns) > 1 else None)
 				DataCache.Invalidate(File(input))
 		except Exception as e:
-			Error(f"Failed to load file", e)
+			Error(f"File could not be loaded.", e)
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -278,13 +278,18 @@ def server(input, output, session):
 	@render.data_frame
 	def Table():
 		df = Data()
+		# display placeholder message if no table uploaded yet
+		if df is None:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+
 		if File(input).endswith(".nc"):
 			df = NCDataFrame(df)
 
 		try:
-			Valid.set(True); return render.DataGrid(df, editable=True)
+			Valid.set(True)
+			return render.DataGrid(df, editable=True)
 		except Exception as e:
-			Error(f"Failed to render table", e)
+			return DataFrame({'Note': ['Table could not be rendered. Ensure your data is properly formatted, and your data file is a compatible type. <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geocoordinate:~:text=the%20Table%20tab)-,Geocoordinate,-Geocoordinate%20takes%20a"; target="_blank"; rel=”noopener noreferrer;>Read more</a>.']})
 
 
 	@Table.set_patch_fn
@@ -332,11 +337,13 @@ def server(input, output, session):
 		with ui.Progress() as p:
 			p.inc(message="Loading input...")
 			df = GetData()
-			if df is None: return
+			if df is None: 
+				return ui.HTML('No data to display! <br>Please upload your data or select an example data set in the sidebar.')
 
 			if File(input).endswith(".nc") and not Valid():
 				df = NCDataFrame(GetData())
-				if df is None: return None
+				if df is None: 
+					return ui.HTML('The heat map could not be rendered. <br><br>Please ensure your .nc input file is properly formatted. <br>Input data should contain latitude and longitude columns, with optional value and time columns. <br>More information on formatting is available in the <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geocoordinate:~:text=the%20Table%20tab)-,Geocoordinate,-Geocoordinate%20takes%20a"; target="_blank"; rel=”noopener noreferrer;>Wiki</a>.')
 				nc = True
 			else:
 				df = df.copy(deep=True)
@@ -346,7 +353,8 @@ def server(input, output, session):
 
 			lon_col = Filter(df.columns, ColumnType.Longitude)
 			lat_col = Filter(df.columns, ColumnType.Latitude)
-			if lat_col is None or lon_col is None: return
+			if lat_col is None or lon_col is None: 
+				return ui.HTML('The heat map could not be rendered. <br><br>Please ensure your input data contains a latitude column (named "latitude" or "lat"), and a longitude column (named "longitude", "long", or "lon"). Column names are case-insensitive. <br>More information on formatting is available in the <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geocoordinate:~:text=the%20Table%20tab)-,Geocoordinate,-Geocoordinate%20takes%20a"; target="_blank"; rel=”noopener noreferrer;>Wiki</a>.')
 
 			v_col = config.ValueColumn()
 			if v_col == "Uniform":
@@ -367,8 +375,8 @@ def server(input, output, session):
 						elif config.ROI_Mode() == "Round": df.at[index, v_col] = u if value > u else l
 				df = df.drop(to_drop)
 				if len(df) == 0:
-					Error("No locations to display! Check your Range of Interest and ensure the Value column is properly set.")
-					return
+					Error("No locations to display! Check your Range of Interest and ensure the Value Column is properly set.")
+					return ui.HTML("No locations to display! Check your Range of Interest and ensure the Value Column is properly set.")
 
 			if config.Interpolation() != 1:
 				p.inc(message="Interpolating...")
@@ -421,9 +429,10 @@ def server(input, output, session):
 		try:
 			return GenerateHeatmap()
 		except KeyError:
-			pass
+			return ui.HTML('The heat map could not be rendered due to a Key Error. <br><br>Please ensure your input data contains latitude and longitude columns, with optional value and time columns. <br>More information on formatting is available in the <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geocoordinate:~:text=the%20Table%20tab)-,Geocoordinate,-Geocoordinate%20takes%20a"; target="_blank"; rel=”noopener noreferrer;>Wiki</a>.')
 		except Exception as e:
-			Error(f"Failed to generate heatmap", e)
+			#Error(f"Failed to generate heatmap", e)
+			return ui.HTML('The heat map could not be rendered. <br><br>Please ensure your input data contains latitude and longitude columns, with optional value and time columns. <br>More information on formatting is available in the <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geocoordinate:~:text=the%20Table%20tab)-,Geocoordinate,-Geocoordinate%20takes%20a"; target="_blank"; rel=”noopener noreferrer;>Wiki</a>.')
 
 
 	@output
@@ -433,8 +442,7 @@ def server(input, output, session):
 		try:
 			return GenerateHeatmap()
 		except Exception as e:
-			Error(f"Failed to generate heatmap", e)
-			raise e
+			return ui.HTML('The heat map could not be rendered. <br><br>Please ensure your input data contains latitude and longitude columns, with optional value and time columns. <br>More information on formatting is available in the <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#geocoordinate:~:text=the%20Table%20tab)-,Geocoordinate,-Geocoordinate%20takes%20a"; target="_blank"; rel=”noopener noreferrer;>Wiki</a>.')
 
 
 	@reactive.effect
