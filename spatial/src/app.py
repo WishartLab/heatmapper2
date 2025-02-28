@@ -12,6 +12,10 @@
 # WebGL is required for this application.
 #
 
+'''
+I don’t see any legend in the example file. The Auto Update slider looks different than the other Auto Update slides.  These need to be consistent.
+'''
+
 from pandas import DataFrame
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import get_cmap, subplots, close as fig_close
@@ -290,7 +294,7 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table():
-		state = config.TableType()
+		state = config.State()
 		df = Data()
 		# add placeholder message if no data is uploaded
 		if df is None: 
@@ -317,7 +321,7 @@ def server(input, output, session):
 		col = patch["column_index"]
 
 		df = Data()
-		table = df.obs if config.TableType() == "obs" else df.var
+		table = df.obs if config.State() == "obs" else df.var
 		table.iloc[row, col] = value
 		Data.set(df)
 
@@ -635,7 +639,9 @@ def server(input, output, session):
 	@render.download(filename="adata.h5ad")
 	def DownloadTable():
 		adata = Data()
-		if adata is None: return
+		if adata is None: 
+			Error("The downloaded .h5ad file is empty! Please upload your data or select an example data set in the sidebar.")
+			return
 		temp = NamedTemporaryFile()
 		adata.write(temp.name)
 		yield open(temp.name, "rb").read()
@@ -694,8 +700,10 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'TableTab'",
-				config.TableType.UI(ui.input_select, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"}),
-				TableOptions(config),
+				config.State.UI(ui.input_select, id="State", label="Table", choices={"obs": "Observations", "var": "Variable"}),
+				config.Type.UI(ui.input_radio_buttons, make_inline=False, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+				ui.input_action_button(id="Reset", label="Reset Values"),
+				ui.download_button(id="DownloadTable", label="Download h5ad File"),
 			),
 
 			ui.panel_conditional(

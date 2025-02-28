@@ -189,7 +189,7 @@ def server(input, output, session):
 	# 	return value
 
 
-		# Info text in welcome tab
+	# Info text in welcome tab
 	@render.ui
 	def Welcome():
 		return ui.HTML("""
@@ -429,8 +429,38 @@ def server(input, output, session):
 		Msg(ui.HTML(Info[input.Example()]))
 
 
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data is None:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+			return
+		
+		output_data = []
+		for spectrum in data:
+			if spectrum.ms_level:
+				polarity = None
+				if spectrum["negative scan"]:
+					polarity = "negative"
+				elif spectrum["positive scan"]:
+					polarity = "positive"
+
+				spectrum_dict = {
+					"ID": spectrum.ID,
+					"MS Level": spectrum.ms_level,
+					"RT (minutes)": spectrum.scan_time_in_minutes(),
+					"Polarity": polarity,
+					"Raw Peaks": len(spectrum.peaks("raw")),
+					"Centroided Peaks": len(spectrum.peaks("centroided")),
+					"Reprofiled Peaks": len(spectrum.peaks("reprofiled")),
+					"Highest Intensity": spectrum.highest_peaks(1)[0],
+					"Extreme Values (mz)": spectrum.extreme_values("mz"),
+					#"Total Ion Current": spectrum.tic,
+				}
+				output_data.append(spectrum_dict)
+		yield str(output_data)
 
 
 	@render.download(filename="heatmap.png")

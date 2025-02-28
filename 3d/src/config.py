@@ -34,7 +34,7 @@ config = ConfigHandler({
 	"Model": Config(value=0),
 
 	# See 3D's ConditionalElements function for details
-	"ColorScheme": Config(selected="spectrum"),
+	"ColorScheme": Config(selected="Residue #"),
 
 	# Can vary depending on PStyle. See ConditionalElements for details.
 	"PFeatures": Config(selected=[]),
@@ -47,4 +47,7 @@ config = ConfigHandler({
 
 	# Any numerical value
 	"Size": Config(value=75),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })

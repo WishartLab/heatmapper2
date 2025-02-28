@@ -64,4 +64,7 @@ config = ConfigHandler({
     
 	# Any integer from 1-25
     "N": Config(value=1),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })

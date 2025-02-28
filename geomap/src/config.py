@@ -44,4 +44,7 @@ config = ConfigHandler({
 
 	# No value, just toggle visibility.
 	"DownloadTable": Config(),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })

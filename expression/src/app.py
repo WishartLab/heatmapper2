@@ -25,7 +25,7 @@ from tempfile import NamedTemporaryFile
 from io import BytesIO
 from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg, File
+from shared import Error, Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, Colors, InterpolationMethods, ClusteringMethods, DistanceMethods, InitializeConfig, Update, Msg, File
 
 try:
 	from user import config
@@ -517,8 +517,16 @@ def server(input, output, session):
 		Msg(ui.HTML(Info[input.Example()]))
 
 
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data.empty:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+		
+		file_contents = data.to_string()
+		yield file_contents
 
 
 	@render.download(filename="heatmap.png")

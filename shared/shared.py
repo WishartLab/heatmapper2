@@ -226,8 +226,8 @@ class Cache:
 			if path.is_file():
 				self._primary[n] = self._handler(path, p)
 			else:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix);
-				temp.write(raw);
+				temp = NamedTemporaryFile(suffix=Path(n).suffix)
+				temp.write(raw)
 				temp.seek(0)
 				self._primary[n] = self._handler(Path(temp.name), p)
 		try:
@@ -454,6 +454,8 @@ def TableOptions(config):
 		"input.MainTab === 'TableTab'",
 		config.Type.UI(ui.input_radio_buttons, make_inline=False, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
 		ui.input_action_button(id="Reset", label="Reset Values"),
+		
+		config.TableType.UI(ui.input_radio_buttons, make_inline=False, id="TableType", label="Download File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
 		ui.download_button(id="DownloadTable", label="Download Table"),
 	),
 

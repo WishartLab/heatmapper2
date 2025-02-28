@@ -361,10 +361,18 @@ def server(input, output, session):
 	@reactive.event(input.ExampleInfo)
 	def ExampleInfo():
 		Msg(ui.HTML(Info[input.Example()]))
+		
 
-
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data.empty:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+		
+		file_contents = data.to_string()
+		yield file_contents
 
 
 	@render.download(filename="heatmap.html")

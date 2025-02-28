@@ -69,4 +69,7 @@ config = ConfigHandler({
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Float"),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })

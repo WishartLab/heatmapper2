@@ -10,7 +10,7 @@ from shared import Config, ConfigHandler
 config = ConfigHandler({
 
 	# "obs", "var"
-	"TableType": Config(selected="obs"),
+	"State": Config(selected="obs"),
 
 	# "moran", "sepal", "geary"
 	"Statistic": Config(selected="moran"),
@@ -72,4 +72,7 @@ config = ConfigHandler({
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })

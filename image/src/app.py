@@ -23,7 +23,7 @@ from pandas import DataFrame
 from numpy import meshgrid, arange, zeros_like, array, zeros, linspace, column_stack
 from scipy.interpolate import griddata
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
+from shared import Cache, Error, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
 
 try:
 	from user import config
@@ -63,9 +63,13 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())))
-		Valid.set(False)
-		DataCache.Invalidate(File(input))
+		# catch error here
+		try:
+			Data.set((await DataCache.Load(input, p=ui.Progress())))
+			Valid.set(False)
+			DataCache.Invalidate(File(input))
+		except:
+			Error("File could not be loaded!\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file. \nImages can be uploaded as a .bmp, .gif, .ico, .jpg, .tif, .webp, or .png file.")
 
 
 	@reactive.effect
@@ -255,7 +259,10 @@ def server(input, output, session):
 						if img is not None:
 							img = img.transpose(method=Image.FLIP_TOP_BOTTOM)
 							ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
-						im = ax.contourf(df, cmap=cmap, extent=[0, 1, 0, 1], zorder=1, alpha=alpha, algorithm=algorithm, levels=levels)
+						try:
+							im = ax.contourf(df, cmap=cmap, extent=[0, 1, 0, 1], zorder=1, alpha=alpha, algorithm=algorithm, levels=levels)
+						except:
+							return CreateErrorImg("Data could not be parsed, please check formatting.\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file.", "#027bc2", inputs)
 						ax.invert_yaxis()
 
 					else:
@@ -337,8 +344,17 @@ def server(input, output, session):
 		Msg(ui.HTML(Info[input.Example()]["Description"]))
 
 
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data.empty:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+		
+		file_contents = data.to_string()
+		yield file_contents
+
 
 	@render.download(filename="heatmap.png")
 	def DownloadHeatmap(): yield DataCache.Get(HashString())

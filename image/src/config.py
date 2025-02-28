@@ -45,4 +45,7 @@ config = ConfigHandler({
 
 	# Any value greater than 1.
 	"DPI": Config(value=300),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })
