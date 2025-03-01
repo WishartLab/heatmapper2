@@ -12,9 +12,13 @@
 # WebGL is required for this application.
 #
 
-from pandas.core.arrays.arrow.array import pa
+'''
+I don’t see any legend in the example file. The Auto Update slider looks different than the other Auto Update slides.  These need to be consistent.
+'''
+
+from pandas import DataFrame
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import get_cmap
+from matplotlib.pyplot import get_cmap, subplots, close as fig_close
 from tempfile import TemporaryDirectory, NamedTemporaryFile
 from anndata import read_h5ad
 from squidpy import gr, pl, read
@@ -38,6 +42,29 @@ def server(input, output, session):
 	}
 
 	InitializeConfig(config, input)
+
+
+	def CreateErrorImg(text, color, file):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=32)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# get image for display
+		fig.savefig(file.name, format="png", dpi=100, bbox_inches="tight")
+		fig_close(fig)
+		img: types.ImgData = {"src": file.name, "width": "400px"}
+		return img
 
 
 	def HandleData(path, p=None):
@@ -154,7 +181,7 @@ def server(input, output, session):
 		return adata
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.CellCount, input.GeneCount, input.UploadType)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.CellCount, input.GeneCount, input.UploadType)
 	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
@@ -180,7 +207,6 @@ def server(input, output, session):
 						else: return None
 					except Exception:
 						Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
-						return None
 
 					if adata is None: return
 
@@ -265,15 +291,24 @@ def server(input, output, session):
 				ColumnNames(Data(), p)
 				p.close()
 
-
 	@output
 	@render.data_frame
 	def Table():
-		state = config.TableType()
+		state = config.State()
 		df = Data()
-		if df is None: return
-		if state == "obs": return render.DataGrid(df.obs, editable=True)
-		elif state == "var": return render.DataGrid(df.var, editable=True)
+		# add placeholder message if no data is uploaded
+		if df is None: 
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+		if state == "obs": 
+			try:
+				return render.DataGrid(df.obs, editable=True)
+			except:
+				return DataFrame({"Error": ["Observation table could not be rendered."]})
+		elif state == "var": 
+			try:
+				return render.DataGrid(df.var, editable=True)
+			except:
+				return DataFrame({"Error": ["Variable table could not be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -286,7 +321,7 @@ def server(input, output, session):
 		col = patch["column_index"]
 
 		df = Data()
-		table = df.obs if config.TableType() == "obs" else df.var
+		table = df.obs if config.State() == "obs" else df.var
 		table.iloc[row, col] = value
 		Data.set(df)
 
@@ -440,14 +475,22 @@ def server(input, output, session):
 		NamedTemporaryFile within the scope if it's function, and let the Operating System delete it after the call.
 		"""
 		with ui.Progress() as p:
-
 			p.inc(message="Loading input...")
 			adata = Data()
 			if file is None: file = NamedTemporaryFile(delete=False, suffix=".png")
-			if input.SourceFile() == "Example" or input.UploadType() == "Visium":
-				return GenerateVisium(adata, file, p)
-			elif input.UploadType() == "NanoString":
-				return GenerateNanoString(adata, file, p)
+			
+			# add placeholder message if no data uploaded
+			if adata is None:
+				return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", file)
+			
+			# generate heat maps
+			try:
+				if input.SourceFile() == "Example" or input.UploadType() == "Visium":
+					return GenerateVisium(adata, file, p)
+				elif input.UploadType() == "NanoString":
+					return GenerateNanoString(adata, file, p)
+			except:
+				return CreateErrorImg("Spatial heat map could not be rendered.", "#027bc2", file)
 
 
 	@output
@@ -457,6 +500,7 @@ def server(input, output, session):
 
 	@output
 	@render.image(delete_file=True)
+	@reactive.event(input.Update)
 	def HeatmapReactive(): return GenerateHeatmap()
 
 
@@ -469,7 +513,17 @@ def server(input, output, session):
 			adata = Data()
 			score = config.Score()
 
-			if adata is None: return
+			# add placeholder message if no data uploaded
+			if adata is None: 
+				# create image with error text
+				fig, ax = subplots()
+				ax.text(0, 50, "No data to display! \nPlease upload your data or select an example data set in the sidebar.", color="#027bc2", fontsize=8)
+				ax.set_xlim(0, 200)
+				ax.set_ylim(0, 100)
+				# make axes transparent
+				[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+				ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+				return fig
 
 			key = "cluster"
 			location = f"{key}_centrality_scores"
@@ -494,7 +548,17 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			if adata is None: return
+			# add placeholder message if no data uploaded
+			if adata is None: 
+				# create image with error text
+				fig, ax = subplots()
+				ax.text(0, 50, "No data to display! \nPlease upload your data or select an example data set in the sidebar.", color="#027bc2", fontsize=8)
+				ax.set_xlim(0, 200)
+				ax.set_ylim(0, 100)
+				# make axes transparent
+				[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+				ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+				return fig
 
 			function = config.Function()
 			metric = config.Distance().lower()
@@ -529,7 +593,17 @@ def server(input, output, session):
 
 			p.inc(message="Loading input...")
 			adata = Data()
-			if adata is None: return
+			# add placeholder message if no data uploaded
+			if adata is None: 
+				# create image with error text
+				fig, ax = subplots()
+				ax.text(0, 50, "No data to display! \nPlease upload your data or select an example data set in the sidebar.", color="#027bc2", fontsize=8)
+				ax.set_xlim(0, 200)
+				ax.set_ylim(0, 100)
+				# make axes transparent
+				[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+				ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+				return fig
 
 			if input.UploadType() == "NanoString":
 				adata = adata[adata.obs.fov.isin(input.Keys())].copy()
@@ -565,7 +639,9 @@ def server(input, output, session):
 	@render.download(filename="adata.h5ad")
 	def DownloadTable():
 		adata = Data()
-		if adata is None: return
+		if adata is None: 
+			Error("The downloaded .h5ad file is empty! Please upload your data or select an example data set in the sidebar.")
+			return
 		temp = NamedTemporaryFile()
 		adata.write(temp.name)
 		yield open(temp.name, "rb").read()
@@ -603,14 +679,6 @@ app_ui = ui.page_fluid(
 			width: 100%;
 		    justify-content: space-between;
 		}	   
-
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Spatial"),
@@ -632,11 +700,15 @@ app_ui = ui.page_fluid(
 
 			ui.panel_conditional(
 				"input.MainTab === 'TableTab'",
-				config.TableType.UI(ui.input_select, id="TableType", label="Table", choices={"obs": "Observations", "var": "Variable"}),
-				TableOptions(config),
+				config.State.UI(ui.input_select, id="State", label="Table", choices={"obs": "Observations", "var": "Variable"}),
+				config.Type.UI(ui.input_radio_buttons, make_inline=False, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
+				ui.input_action_button(id="Reset", label="Reset Values"),
+				ui.download_button(id="DownloadTable", label="Download h5ad File"),
 			),
 
-			ui.panel_conditional("input.MainTab != 'TableTab'",
+			ui.panel_conditional(
+				"input.MainTab != 'TableTab'",
+
 				Update(),
 
 				ui.tooltip(ui.HTML("<b>Minimum Count Filtering</b>"), "Values below the minimum count will not be displayed"),

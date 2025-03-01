@@ -50,8 +50,8 @@ def server(input, output, session):
 			"Description": "Input type: pdb<br>Contents: An example protein PDB.<br>Source: https://dash.plotly.com/dash-bio/molecule3dviewer"
 		}
 	}
-
-	Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "rainbow", "ssPyMol", "ssJmol", "Jmol", "amino", "shapely", "nucleic", "chain", "rasmol", "default", "greenCarbon", "cyanCarbon", "magentaCarbon", "purpleCarbon", "whiteCarbon", "orangeCarbon", "yellowCarbon", "blueCarbon", "chainHetatm"]
+	#Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "RMSD", "ssJmol", "amino", "shapely", "nucleic", "chain", "rasmol"]
+	Schemes = ["Residue #", "Reverse Residue #", "B-factor", "RMSF", "RMSD", "2ndary Structure", "pLDDT"]
 
 
 	def HandleData(path, p=None):
@@ -83,7 +83,7 @@ def server(input, output, session):
 		@info When any relevant reactive input changes, this function requests data from the Cache,
 		and then invalidates the current data in the table.
 		"""
-		if input.SourceFile() == "ID":
+		if input.SourceFile() == "PDB-ID":
 			data = await DataCache.Download(f"https://files.rcsb.org/view/{input.ID()}.pdb")
 			Data.set(data)
 		else:
@@ -117,26 +117,48 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table():
-		if isinstance(Data(), plotting.texture.Texture):
+		data = Data()
+		
+		# warning message if input is an image, not a table
+		if data is None:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+		
+		if isinstance(data, plotting.texture.Texture):
 			df = DataFrame({"Note": ["This heatmap is mapping an image file (.png or .jpg) onto the 3D surface. There is no table data to display."]})
 			return df
-		elif isinstance(Data(), str):
-			string = Data()
-			lines = string.split("\n")
-			output_lines = []
-			for line in lines:
-				if line.startswith("SEQRES"):
-					line = line.split()[1:]
-					output_lines.append(line)
-			df = DataFrame(output_lines, columns=[str(i) for i in range(len(output_lines[0]))])
+		# display residue numbers, B-factor data from PDB files
+			'''
+			Dr. Wishart notes:
+			The Table should display the residue numbers (column 1) and the B-factor or RMSD or RMSF values (column 2)
+			'''
+		elif isinstance(data, str):
+			output_data = []
+			selection = config.ColorScheme()
+			col_name = "B-factor"
+			if selection == "RMSF":
+				col_name = "RMSF"
+			elif selection == "RMSD":
+				col_name = "RMSD"
+			elif selection == "pLDDT":
+				col_name = "pLDDT"
+
+			for line in data.splitlines():
+				if line.startswith("ATOM"):
+					residue_num = int(line[22:26].strip())
+					b_factor = float(line[60:66].strip())
+					output_data.append((residue_num, b_factor))
+			df = DataFrame(output_data, columns=["Residue Number", col_name])
 			return df
+		# display table data
 		else:
 			try:
 				grid = render.DataGrid(Data(), editable=True)
 				Valid.set(True)
+				print(grid)
 				return grid
 			except TypeError:
-				Error("The provided input format cannot be rendered")
+				#Error("Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered.")
+				return DataFrame({"Note": ["Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -165,7 +187,7 @@ def server(input, output, session):
 			<br><br><h3>Format</h3>
 			<i>3D heatmaps can be created in two different ways:</i><br><br>
 			<b>1 - PDB</b><br>
-			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see Example 1).
+			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see example PDB 4K8X).
 			<br><br>
 			<b>2 - Object Files</b><br>
 			Input an .obj file and either a table file or an image. If an image is used, it will be mapped onto the surface of the object (see Example 3).<br>
@@ -210,19 +232,14 @@ def server(input, output, session):
 
 		# Used for caching.
 		global_inputs = [
-			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(),
+			config.ModelType(),
+			input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(),
 			config.Size(),
 			config.ColorScheme(),
-			config.PStyle(),
 			config.PFeatures(),
 			config.Thickness(),
 			config.Width(),
 			config.Opacity(),
-			config.Radius(),
-			config.Scale(),
-			config.SurfaceOpacity(),
-			config.SurfaceType(),
-			config.SurfaceScheme(),
 			config.Model(),
 		]
 
@@ -241,41 +258,55 @@ def server(input, output, session):
 				@param function_declared: Since there is a colorscheme for both the heatmap and the structure, we can accidentally
 				redefine the same JavaScript function twice if they both use the same B-Color scheme. This avoids that.
 				"""
+				# dict mapping 
+				scheme_dict = {
+					"Residue #": "residue",
+					"Reverse Residue #": "reverse",
+					"B-factor": "b-factor",
+					"2ndary Structure": "ssJmol",
+					"RMSF": "rmsf",
+					"RMSD": "rmsd",
+					"pLDDT": "plddt",
+				}
+				
+				# B-factor, RMSD, RMSF, residue number, reverse residue number, secondary structure
 				prop = "color"
-				scheme = initial_scheme
+				scheme = scheme_dict[initial_scheme]
 
 				# B Color requires a custom function.
-				if scheme == "b-factor" or scheme == "b-factor (norm)":
+				#if scheme == "b-factor" or scheme == "b-factor (norm)":
+				if scheme == "b-factor":
 
 					# Initial weights
 					darkblue, blue, lightblue, white, orange, red = 5, 10, 15, 20, 40, 50
 
 					# If we're normalizing, get the average B-Factor, then assign that as white.
-					if "norm" in scheme:
+					# if "norm" in scheme:
 
-						# For caching.
-						entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example()]
-						a = 0.0
-						l = 0
-						if not DataCache.In(entry):
-							p.inc(message="Normalizing...")
-							l = 0
-							# Get all the Atoms from the string, split by spaces, and remove empty entries.
-							for atom in [atom for atom in source.split("\n") if atom.startswith("ATOM")]:
-								entries = list(filter(None, atom.split(" ")))
+					# 	# For caching.
+					# 	entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example()]
+					# 	a = 0.0
+					# 	l = 0
+					# 	if not DataCache.In(entry):
+					# 		p.inc(message="Normalizing...")
+					# 		l = 0
+					# 		# Get all the Atoms from the string, split by spaces, and remove empty entries.
+					# 		for atom in [atom for atom in source.split("\n") if atom.startswith("ATOM")]:
+					# 			entries = list(filter(None, atom.split(" ")))
 
-								# This should be B-Factor, but sometimes the B-Factor is absent, in which case its an element.
-								if not entries[10].isalpha():
-									a += float(entries[10])
-									l += 1
-							a /= l
+					# 			# This should be B-Factor, but sometimes the B-Factor is absent, in which case its an element.
+					# 			if not entries[10].isalpha():
+					# 				a += float(entries[10])
+					# 				l += 1
+					# 		a /= l
 
-							# White is the average
-							DataCache.Store((a * 0.25, a * 0.50, a * 0.75, a, a * 1.25, a * 1.5), entry)
-						darkblue, blue, lightblue, white, orange, red = DataCache.Get(entry)
-						Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
-						scheme = "NormalizedScheme"
-					else: scheme = "Scheme"
+					# 		# White is the average
+					# 		DataCache.Store((a * 0.25, a * 0.50, a * 0.75, a, a * 1.25, a * 1.5), entry)
+					# 	darkblue, blue, lightblue, white, orange, red = DataCache.Get(entry)
+					# 	Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
+					# 	scheme = "NormalizedScheme"
+					# else: scheme = "Scheme"
+					scheme = "Scheme"
 
 					# Declare the function.
 					if not function_declared:
@@ -290,17 +321,29 @@ def server(input, output, session):
 								else return "darkred"
 							}}\n"""
 					prop = "colorfunc"
-				elif scheme == "RMSF":
+				
+				# TODO: implement colour by pLDDT
+				elif scheme == "plddt":
+					pass
+				
+				# TODO: implement colour using RMSD data
+				elif scheme == "rmsd":
+					
+					if len(structure) == 1:
+						Error("RMSD requires a PDB with more than one model to compute difference!")
+						return source, prop, scheme
+
+				# colour using RMSF data
+				elif scheme == "rmsf":
 
 					if len(structure) == 1:
 						Error("RMSF requires a PDB with more than one model to compute difference!")
 						return source, prop, scheme
 
-
 					# List of atom names of interest
 					atom_names_of_interest = ["C", "CA", "N"]
 
-					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "ID" else input.Example(), model]
+					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(), model]
 					if not DataCache.In(entry):
 						main_model = structure[model]
 						for chain in main_model:
@@ -326,7 +369,7 @@ def server(input, output, session):
 						DataCache.Store(output.getvalue(), entry)
 						output.close()
 
-					scheme = "RMSD"
+					scheme = "RMSD"  # ?????
 					source = DataCache.Get(entry)
 
 					darkblue, blue, lightblue, white, orange, red = 0.5, 1.0, 1.5, 2, 3, 4
@@ -344,50 +387,59 @@ def server(input, output, session):
 							}}\n"""
 					prop = "colorfunc"
 
-				elif scheme == "rainbow":
+				# elif scheme == "rainbow":
+				# 	max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
+				# 	prop = "colorscheme"
+				# 	scheme = {"prop": "index", "gradient": "ROYGB", "min": 0, "max": max}
+				
+				elif scheme == "residue":
+					# get number of residues (protein length)
 					max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
 					prop = "colorscheme"
-					scheme = {"prop": "index", "gradient": "ROYGB", "min": 0, "max": max}
-				elif scheme != "spectrum": prop = "colorscheme"
+					scheme = {
+						"prop": "index",  # index, b, resi
+			   			"gradient": "linear", 
+						"colors": ["red", "orange", "yellow", "green", "blue", "purple"],
+						"min": 0, 
+						"max": max
+					}
+				
+				elif scheme == "reverse":
+					# get number of residues (protein length)
+					max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
+					prop = "colorscheme"
+					scheme = {
+						"prop": "index",  # index, b, resi
+			   			"gradient": "linear", 
+						"colors": ["purple", "blue", "green", "yellow", "orange", "red"],
+						"min": 0, 
+						"max": max
+					}
+
+				elif scheme == "ssJmol": 
+					prop = "colorscheme"
+					
 				return source, prop, scheme
 
 			viewer = view(width=f"{input.Size()}vw", height=f"{input.Size()}vh")
 			source, heatmap_property, heatname_name = GenerateScheme(source, config.ColorScheme(), model=model)
-			source, surface_property, surface_name = GenerateScheme(source, config.SurfaceScheme(), function_declared=config.SurfaceScheme() == config.ColorScheme(), model=model)
 
 			viewer.addModelsAsFrames(source)
 			viewer.zoomTo()
 
 
 			p.inc(message="Styling...")
-			# handle: if both radius and scale are included, radius overrides scale
-			if config.Radius() > 0:
-				var = "radius"
-				val = config.Radius()
-			else:
-				var = "scale"
-				if config.Scale() > 0:
-					val = config.Scale()
-				else:
-					val = 1
-			viewer.setStyle({config.PStyle().lower(): {
+			viewer.setStyle({"cartoon": {
 				heatmap_property: heatname_name,
-				"style": "trace" if "Trace (Cartoon Style)" in config.PFeatures() else "rectangle",
+				"style": "trace" if "Simplified View" in config.PFeatures() else "rectangle",
 				"thickness": config.Thickness(),
-				"tubes": "Tubes (Cartoon Style)" in config.PFeatures(),
+				"tubes": "Helices as Tubes" in config.PFeatures(),
 				"width": config.Width(),
 				"opacity": config.Opacity(),
-				"dashedBonds": "Dashed Bonds (Stick Style)" in config.PFeatures(),
-				"showNonBonded": "Show Non-Bonded (Stick Style)" in config.PFeatures(),
-				"singleBonds": "Single Bonds (Stick Style)" in config.PFeatures(),
-				var: val,
-				# "scale": config.Scale(),
-				# "radius": config.Radius(),
+				"scale": 1,
 			}})
-			viewer.addSurface(config.SurfaceType(), {"opacity": config.SurfaceOpacity(), surface_property: surface_name})
 
 			if heatmap_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{heatname_name}"', f'{heatname_name}')
-			if surface_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{surface_name}"', f'{surface_name}')
 
 
 			p.inc(message="Exporting...")
@@ -405,8 +457,10 @@ def server(input, output, session):
 		@info Object will also need to be defined.
 		"""
 		if Pyodide:
-			Error(f"Cannot render objects in WebAssembly! Please use the Server version (server.heatmapper2.ca/3d) for this functionality.")
-			return
+			# Error message pop-up
+			Error(f"The WebAssembly version of Heatmapper2 does not support object rendering! Please use the Server version (server.heatmapper2.ca/3d) for this functionality.")
+			# Error message in Heatmap tab
+			return "The WebAssembly version of Heatmapper2 does not support object rendering! Please use the Server version (server.heatmapper2.ca/3d) for this functionality."
 
 		# For Caching.
 		inputs = [
@@ -445,22 +499,30 @@ def server(input, output, session):
 			# If are data source is a table, render it as a heatmap.
 			elif type(source) is DataFrame:
 				values = source[Filter(source.columns, ColumnType.Name)]
-				pl.add_mesh(
-					model,
-					scalars=values,
-					style=style,
-					cmap=cmap,
-					opacity=opacity,
-					n_colors=colors,
-					show_edges="Edges" in features,
-					lighting="Lighting" in features,
-					smooth_shading="Smooth Shading" in features,
-				)
+				try:
+					pl.add_mesh(
+						model,
+						scalars=values,
+						style=style,
+						cmap=cmap,
+						opacity=opacity,
+						n_colors=colors,
+						show_edges="Edges" in features,
+						lighting="Lighting" in features,
+						smooth_shading="Smooth Shading" in features,
+					)
+				except NotImplementedError:
+					return "Make sure you have uploaded a Table or Image file, as well as an Object file!"
+				except ValueError:
+					return "The number of rows in the Table file must match either the number of cells in the Object file, or the number of points in the Object file!"
 
 			# If we have a texture, map it.
 			elif type(source) is plotting.texture.Texture:
-				mesh = model.texture_map_to_plane()
-				pl.add_mesh(mesh, texture=source)
+				try:
+					mesh = model.texture_map_to_plane()
+					pl.add_mesh(mesh, texture=source)
+				except:
+					return "Make sure you have uploaded a Table or Image file, as well as an Object file!"
 
 			# Exporting as None returns the HTML as a file handle, which we read.
 			p.inc(message="Exporting...")
@@ -479,7 +541,7 @@ def server(input, output, session):
 			p.inc(message="Loading input...")
 
 			source = GetData()
-			if source is None: return
+			if source is None: return "No data to display! <br>Please upload your data or select an example data set in the sidebar."
 
 			if type(source) == str:
 				return PDBViewer(source, p)
@@ -500,7 +562,13 @@ def server(input, output, session):
 	@render.download(filename="table.csv")
 	def DownloadTable():
 		df = GetData()
-		if df is not None:
+		# don't download if there is no data
+		if df is None:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+		# if data is already a string
+		elif isinstance(df, str):
+			yield df
+		else:
 			yield df.to_string()
 
 
@@ -519,25 +587,23 @@ def server(input, output, session):
 
 		if data is None: return
 
-		if type(data) == str or input.SourceFile() == "ID":
+		if type(data) == str or input.SourceFile() == "PDB-ID":
+			# add tooltip: two column *.csv file containing the protein residue numbers and the corresponding B-factor or RMSD or RMSF values
+			elements.append(
+				ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False)))
 			elements += [
-				ui.HTML("<b>Model</b>"),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),
-				config.Opacity.UI(ui.input_slider, id="Opacity", label="Model Opacity", min=0.0, max=1.0, step=0.1, tooltip=ui.HTML('Specify the opacity of the <i>model</i>. 1.0 indicates full opacity, while lower values make the model more transparent.')),
-				ui.HTML("<b>Surface</b>"),
-				config.SurfaceScheme.UI(ui.input_select, id="SurfaceScheme", label="Color Scheme", choices=Schemes, tooltip='Define the coloring of the surface drawn on top of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.'),
-				config.SurfaceOpacity.UI(ui.input_slider, id="SurfaceOpacity", label="Surface Opacity", min=0.0, max=1.0, step=0.1, tooltip=ui.HTML('Specify the opacity of the <i>surface</i> drawn on top of the model. 1.0 indicates full opacity, while lower values make the surface more transparent.')),
 				ui.HTML("<b>Customization</b>"),
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),			
+				
 				config.Model.UI(ui.input_numeric, id="Model", label="PDB Model", min=0, tooltip="Select which model to use from the PDB file, if the PDB contains multiple models."),
-				config.PStyle.UI(ui.input_select, id="PStyle", label="Model Style", choices=["Cartoon", "Stick", "Sphere", "Line", "Cross"], tooltip=ui.HTML("Specify the rendering style of the model. <br>Cartoon visualizes secondary structures as ribbons, cylinders, arrows, and lines. <br>Stick depicts atoms as colored nodes and bonds as sticks. <br>Sphere depicts atoms as spheres. <br>Line depicts atoms and bonds as lines. <br>Cross depicts atoms as crosses.")),
-				config.SurfaceType.UI(ui.input_select, id="SurfaceType", label="Surface Type", choices=["VDW", "MS", "SAS", "SES"], tooltip=ui.HTML('Specify a surface to draw on top of the model. To see the surface, change the Surface Opacity above to be greater than 0. <br><br><u><b>VDW:</b></u> van der Waals surface, each atom is surrounded by a sphere whose size is proportional to the van der Waals radius of that atom. <br><u><b>MS:</b></u> Molecular surface, the outer boundary of the molecule, accessible by a probe sphere rolling over the VDW surface. <br><u><b>SAS:</b></u> Solvent accessible surface, the boundary traced by the <i>centre</i> of a probe sphere rolling over the VDW surface. <br><u><b>SES:</b></u> Solvent exposed surface, the outer boundary of a molecule where a solvent can come into contact with the molecule. This excludes parts of the surface that are shielded by other atoms.')),
-				config.Thickness.UI(ui.input_slider, id="Thickness", label="Cartoon Thickness", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify the thickness of the visualized components. Lower values make components thinner, while higher values (to a maximum of 10) make components thicker."),
-				config.Width.UI(ui.input_slider, id="Width", label="Cartoon Width", min=0, max=10, step=0.1, tooltip="Cartoon style only - specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider."),
-				config.Radius.UI(ui.input_numeric, id="Radius", label="Atom Radius", min=0, max=5, step=0.05, tooltip=ui.HTML('''Stick, Sphere, or Cross style only - Specify a fixed radius (in Angstroms) for atoms in the <i>model</i>. Lower values make atoms smaller, while higher values (to a maximum of 5) make atoms larger. This value overrides 'Scale'.''')),
-				config.Scale.UI(ui.input_slider, id="Scale", label="Atom Scale", min=1, max=10, step=1, tooltip=ui.HTML("Sphere or Cross style only - specify a scalar to modify the van der Waals radius of atoms in the <i>model</i>. If a 'Radius' is specified above, this value is ignored. Set 'Radius' to 0 to visualize 'Scale'.")),
+				
+				config.Opacity.UI(ui.input_slider, id="Opacity", label="Model Opacity", min=0.0, max=1.0, step=0.1, tooltip=ui.HTML('Specify the opacity of the <i>model</i>. 1.0 indicates full opacity, while lower values make the model more transparent.')),	
+				config.Thickness.UI(ui.input_slider, id="Thickness", label="Ribbon Thickness", min=0, max=10, step=0.1, tooltip="Specify the thickness of the visualized components. Lower values make components thinner, while higher values (to a maximum of 10) make components thicker."),
+				config.Width.UI(ui.input_slider, id="Width", label="Ribbon Width", min=0, max=10, step=0.1, tooltip=ui.HTML("Specify the width of the visualized components. Lower values make components narrower, while higher values (to a maximum of 10) make components wider. <br>If 'Simplified View' is selected below, Ribbon Width is ignored.")),
+				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Helices as Tubes", "Simplified View"], tooltip=ui.HTML('''Helices as Tubes - display alpha helices as simple cylinders. <br><br>Simplified View - draw the model as a simple outline. This overrides the 'Helices as Tubes' feature.''')),
+
+		
 				config.Size.UI(ui.input_numeric, id="Size", label="View Size", min=1, max=100, step=1, tooltip="Change the size of the viewer in your browser."),
-				ui.HTML("<b>Features</b>"),
-				config.PFeatures.UI(ui.input_checkbox_group, make_inline=False, id="PFeatures", label=None, choices=["Dashed Bonds (Stick Style)", "Show Non-Bonded (Stick Style)", "Single Bonds (Stick Style)", "Tubes (Cartoon Style)", "Trace (Cartoon Style)"], tooltip=ui.HTML('''Dashed Bonds (Stick Style) - draw bonds as dashed lines. <br><br>Show Non-Bonded (Stick Style) - display non-bonded atoms as spheres (hidden otherwise). <br><br>Single Bonds (Stick Style) - display all bonds as single bonds. <br><br>Tubes (Cartoon Style) - display alpha helices as simple cylinders. <br><br>Trace (Cartoon Style) - draw the model as a simple outline. This overrides the 'Tubes' feature.''')),
 			]
 
 		else:
@@ -556,6 +622,22 @@ def server(input, output, session):
 
 		return elements
 
+	@output
+	@render.ui
+	def GetInputTypes():
+		if config.ModelType() =="Object":
+			return FileSelection(
+				examples={"example1.csv": "Example 2", "texture.jpg": "Example 3"},
+				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"],
+				project="3D",
+			)
+		else:
+			return FileSelection(
+				examples={"4K8X.pdb": "PDB 4K8X"},
+				types=[".pdb"],
+				project="3D",
+				extras=["PDB-ID"],
+			)
 
 
 app_ui = ui.page_fluid(
@@ -581,14 +663,7 @@ app_ui = ui.page_fluid(
 			width: 100%;
 		    justify-content: space-between;
 		}	   
-
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
+		
 	"""),
 
 	ui.panel_title(title=None, window_title="3D"),
@@ -596,14 +671,15 @@ app_ui = ui.page_fluid(
 
 	ui.layout_sidebar(
 		ui.sidebar(
-			FileSelection(
-				examples={"4K8X.pdb": "Example 1", "example1.csv": "Example 2", "texture.jpg": "Example 3"},
-				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg", ".pdb"],
-				project="3D",
-				extras=["ID"]),
+			ui.HTML("<br>"),
+			#Update(),
+
+			config.ModelType.UI(ui.input_select, id="ModelType", label="Choose 3D Model Format", choices=["Protein", "Object"], tooltip=ui.HTML('Create a Protein heat map using a .pdb file and optional Table file, or an Object heat map using an .obj file and an Image or Table file.')),
+			
+			ui.output_ui(id="GetInputTypes"),
 
 			ui.panel_conditional(
-				"input.SourceFile === 'ID'",
+				"input.SourceFile === 'PDB-ID'",
 				ui.input_text(id="ID", value="1upp", label="PDB ID"),
 			),
 

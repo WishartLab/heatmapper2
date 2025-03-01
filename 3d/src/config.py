@@ -9,6 +9,9 @@ from shared import Config, ConfigHandler
 
 config = ConfigHandler({
 
+	# Protein or Object
+    "ModelType": Config(selected="Protein"),
+	
 	# Any value from 0.0-1.0
 	"Opacity": Config(value=1.0),
 
@@ -27,15 +30,11 @@ config = ConfigHandler({
 	# Combination of "Edges", "Lighting", "Smooth Shading"
 	"Features": Config(selected=["Lighting", "Smooth Shading"]),
 
-	# "Cartoon", "Stick", "Sphere", "Line"
-	"PStyle": Config(selected="Cartoon"),
-
 	# Any numerical value > 0
 	"Model": Config(value=0),
 
 	# See 3D's ConditionalElements function for details
-	"ColorScheme": Config(selected="spectrum"),
-	"SurfaceScheme": Config(selected="spectrum"),
+	"ColorScheme": Config(selected="Residue #"),
 
 	# Can vary depending on PStyle. See ConditionalElements for details.
 	"PFeatures": Config(selected=[]),
@@ -46,18 +45,9 @@ config = ConfigHandler({
 	# Any value from 0-10
 	"Width": Config(value=1),
 
-	# Any value from 0-10
-	"Radius": Config(value=0.25),
-
-	# Any value from 0-10
-	"Scale": Config(value=1),
-
 	# Any numerical value
 	"Size": Config(value=75),
-
-	# Any value from 0.0-1.0
-	"SurfaceOpacity": Config(value=0.0),
-
-	# VDW, MS, SAS, or SES
-	"SurfaceType": Config(selected="VDS")
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 })

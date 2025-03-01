@@ -17,7 +17,7 @@
 import regex
 
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import subplots, colorbar, style, get_cmap
+from matplotlib.pyplot import subplots, colorbar, style, get_cmap, close as fig_close
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -79,6 +79,30 @@ def server(input, output, session):
 			]
 
 
+	def CreateErrorImg(text, color):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		file = NamedTemporaryFile(delete=False, suffix=".png")
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=12)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# get image for display
+		fig.savefig(file.name, format="png", dpi=100, bbox_inches="tight")
+		fig_close(fig)
+		img: types.ImgData = {"src": file.name, "width": "400px"}
+		return img
+
+
 	def HandleData(path, p=None):
 		"""
 		@brief A custom Data Handler for the Cache.
@@ -124,8 +148,14 @@ def server(input, output, session):
 		Valid.set(True)
 		table_data = []
 		# Data() is a pymzml.run.Reader object
-		# turn pymzml.run.Reader object into a dataframe
-		for spectrum in Data():
+		data = Data()
+		
+		# display placeholder message if no file has been uploaded
+		if data is None:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+
+		# goal is to turn the pymzml.run.Reader object into a dataframe
+		for spectrum in data:
 			if spectrum.ms_level:
 				polarity = None
 				if spectrum["negative scan"]:
@@ -159,7 +189,7 @@ def server(input, output, session):
 	# 	return value
 
 
-		# Info text in welcome tab
+	# Info text in welcome tab
 	@render.ui
 	def Welcome():
 		return ui.HTML("""
@@ -192,9 +222,11 @@ def server(input, output, session):
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
-
 				reader = GetData()
-				if reader is None: return
+				
+				# display placeholder message if no data has been uploaded
+				if reader is None: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2")
 
 				# Get all the spectra the user wants.
 				distances = {}
@@ -273,7 +305,10 @@ def server(input, output, session):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
 				reader = GetData()
-				if reader is None: return
+
+				# display placeholder message if no data is uploaded
+				if reader is None: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2")
 
 				fig, ax = subplots(subplot_kw={"projection": "3d"})
 				cmap = get_cmap(config.ColorMap().lower())
@@ -299,7 +334,7 @@ def server(input, output, session):
 							rts.append(rt)
 					if not values:
 						Error("No Spectra in File!")
-						return
+						return CreateErrorImg("No specta could be identified in the input file.", "#027bc2")
 
 					# Get the min and max of each list.
 					vm, vM, rm, rM = min(values), max(values), min(rts), max(rts)
@@ -333,7 +368,8 @@ def server(input, output, session):
 				ax.view_init(elev=config.Elevation(), azim=config.Rotation())
 				ax.set_box_aspect(None, zoom=config.Zoom())
 
-				if plot is None: return
+				if plot is None: 
+					return CreateErrorImg("The input file could not be plotted.", "#027bc2")
 
 				# Visibility of features
 				try:
@@ -393,8 +429,38 @@ def server(input, output, session):
 		Msg(ui.HTML(Info[input.Example()]))
 
 
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data is None:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+			return
+		
+		output_data = []
+		for spectrum in data:
+			if spectrum.ms_level:
+				polarity = None
+				if spectrum["negative scan"]:
+					polarity = "negative"
+				elif spectrum["positive scan"]:
+					polarity = "positive"
+
+				spectrum_dict = {
+					"ID": spectrum.ID,
+					"MS Level": spectrum.ms_level,
+					"RT (minutes)": spectrum.scan_time_in_minutes(),
+					"Polarity": polarity,
+					"Raw Peaks": len(spectrum.peaks("raw")),
+					"Centroided Peaks": len(spectrum.peaks("centroided")),
+					"Reprofiled Peaks": len(spectrum.peaks("reprofiled")),
+					"Highest Intensity": spectrum.highest_peaks(1)[0],
+					"Extreme Values (mz)": spectrum.extreme_values("mz"),
+					#"Total Ion Current": spectrum.tic,
+				}
+				output_data.append(spectrum_dict)
+		yield str(output_data)
 
 
 	@render.download(filename="heatmap.png")
@@ -425,13 +491,6 @@ app_ui = ui.page_fluid(
 		    justify-content: space-between;
 		}	   
 
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Spectral"),

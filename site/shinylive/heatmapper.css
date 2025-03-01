@@ -33,8 +33,9 @@
 }
 
 @keyframes change-content {
-	0%, 5.45%, 100% {content:	"Welcome to Heatmapper 2!";}
-  12.5% {content: "This version is built with WebAssembly!";}
+	0%, 5.45%, 100% {content:	"Welcome to Heatmapper2...";}
+  12.5% {content: "This version is built with WebAssembly...";}
+  12.5% {content: "Please be patient while WebAssembly loads to your computer";}
   20% {content: "Once loaded, Heatmapper will run locally in your browser!";}
   28.5% {content: "With no need for a server, you'll have better performance";}
   33.5% {content: "There won't be any server congestion or lag spikes";}

@@ -45,6 +45,9 @@ config = ConfigHandler({
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+    "TableType": Config(selected=".txt"),
 
 	# No value, just toggle visibility.
 	"DownloadTable": Config(),

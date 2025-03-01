@@ -141,8 +141,8 @@ class Cache:
 	@staticmethod
 	def HandleDataFrame(path, function, p=None):
 		"""
-		@brief Handle DataFrame's
-		@param i: The binary of the file
+		@brief Handle DataFrames
+		@param path: 
 		@param function: The pandas function to use to read the file.
 		@returns A DataFrame
 		"""
@@ -164,10 +164,9 @@ class Cache:
 	@staticmethod
 	def DefaultHandler(path, p=None):
 		"""
-		@brief The default handler. It can handle CSVs, Excel files, Tables, and all other files will simply
-		be stored as strings of the file content
+		@brief The default handler. It can handle CSVs, Excel files, Tables, and all other files will simply be stored as strings of the file content
 
-		@param n: The path to the file
+		@param path: The path to the file
 		@returns: An object.
 		"""
 
@@ -226,8 +225,8 @@ class Cache:
 			if path.is_file():
 				self._primary[n] = self._handler(path, p)
 			else:
-				temp = NamedTemporaryFile(suffix=Path(n).suffix);
-				temp.write(raw);
+				temp = NamedTemporaryFile(suffix=Path(n).suffix)
+				temp.write(raw)
 				temp.seek(0)
 				self._primary[n] = self._handler(Path(temp.name), p)
 		try:
@@ -259,13 +258,10 @@ class Cache:
 			input.SourceFile: Whether the user wants "Upload" or "Example"
 		@param source_file: The input ID that should be used to fetch the file (Defaults to input.File() if None)
 		@param example_file: The input ID that should be used to fetch the example (Defaults to input.Example() if None)
-		@param input_switch:	The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user
-													uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
+		@param input_switch: The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
 		@param upload: The value of the input_switch such that we should fetch a source file from source_file
 		@param example: The value of the input_switch such that we should fetch an example from example_file
-		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
-										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
-										initialize without arguments.
+		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to initialize without arguments.
 		@param p: A progress bar to increment; optional.
 		@param p_name: What we're fetching, to be displayed in the progress bar; optional
 		@param wasm: Whether this fetch can run in WebAssembly
@@ -369,16 +365,6 @@ def NavBar():
 	@returns A ui.navset_bar.
 	"""
 
-	# Sources = {
-	# 	"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}:{Port}",
-	# 	"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}:{Port + 1}",
-	# 	"image": f"{URL}/site/image/index.html" if Pyodide else f"{Server}:{Port + 2}",
-	# 	"geomap": f"{URL}/site/geomap/index.html" if Pyodide else f"{Server}:{Port + 3}",
-	# 	"geocoordinate": f"{URL}/site/geocoordinate/index.html" if Pyodide else f"{Server}:{Port + 4}",
-	# 	"3d": f"{URL}/site/3d/index.html" if Pyodide else f"{Server}:{Port + 5}",
-	# 	"spatial": f"{Server}:{Port + 6}",
-	# 	"spectral": f"{URL}/site/spectral/index.html" if Pyodide else f"{Server}:{Port + 7}",
-	# }
 	Sources = {
 		"expression": f"{URL}/site/expression/index.html" if Pyodide else f"{Server}/expression",
 		"pairwise": f"{URL}/site/pairwise/index.html" if Pyodide else f"{Server}/pairwise",
@@ -441,7 +427,7 @@ def FileSelection(examples, types, upload_label=None, multiple=False, default="U
 			choices=["Example", "Upload"] + extras,
 			selected=default,
 			inline=True
-	),
+		),
 
 		# Only display an input dialog if the user is one Upload
 		ui.panel_conditional(
@@ -464,6 +450,8 @@ def TableOptions(config):
 		"input.MainTab === 'TableTab'",
 		config.Type.UI(ui.input_radio_buttons, make_inline=False, id="Type", label="Datatype", choices=["Integer", "Float", "String"], inline=True),
 		ui.input_action_button(id="Reset", label="Reset Values"),
+		
+		config.TableType.UI(ui.input_radio_buttons, make_inline=False, id="TableType", label="Download File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
 		ui.download_button(id="DownloadTable", label="Download Table"),
 	),
 
@@ -475,6 +463,7 @@ def MainTab(*args, m_type=ui.output_plot):
 			value="WelcomeTab",
 		),
 		ui.nav_panel("Heatmap",
+			#ui.panel_conditional("input.UpdateToggle", m_type(id="Heatmap", hover=True)),
 			ui.panel_conditional("input.UpdateToggle", m_type(id="Heatmap")),
 			ui.panel_conditional("!input.UpdateToggle", m_type(id="HeatmapReactive")),
 			value="HeatmapTab",
@@ -552,6 +541,7 @@ class Config:
 		if "selected" in combined: combined["selected"] = self()
 		elif "value" in combined: combined["value"] = self()
 
+		# check for tooltip text
 		tooltip = None
 		if "tooltip" in combined:
 			tooltip = combined["tooltip"]
@@ -562,17 +552,7 @@ class Config:
 				element = Inlineify(ui_element, widths, gap, **combined)
 			else: element = ui_element(*args, **combined)
 
-			### OLD - tooltip when hover on element ###
-			# if "id" in combined and tooltip is not None:
-			# 	element = ui.tooltip(
-			# 		ui.div( 
-			# 			element,
-			# 			TooltipIcon,
-			# 			style="display: inline-flex; gap: 5px;"), 
-			# 		tooltip, 
-			# 		id=combined["id"]+"_tooltip")
-				
-			### NEW - longer tooltip when click on icon ###
+			# display tooltip when user clicks on TooltipIcon
 			if "id" in combined and tooltip is not None:
 				element = ui.div(
 					element,

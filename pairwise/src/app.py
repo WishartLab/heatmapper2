@@ -11,11 +11,10 @@
 # run the following command within this directory:
 #		shiny run
 #
-#
 
 
 from shiny import App, reactive, render, ui, types
-from matplotlib.pyplot import subplots, colorbar, style
+from matplotlib.pyplot import subplots, colorbar, style, close as fig_close
 from scipy.spatial.distance import pdist, squareform
 from scipy.interpolate import griddata
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -26,7 +25,7 @@ from Bio import SeqIO
 from pandas import DataFrame
 from tempfile import NamedTemporaryFile
 from io import BytesIO
-from numpy import arange, zeros_like, meshgrid, array, column_stack, linspace, min as n_min, concatenate
+from numpy import arange, array, column_stack, concatenate, floor, linspace, meshgrid, min as n_min, zeros_like
 
 from shared import Cache, NavBar, MainTab, Filter, ColumnType, FileSelection, TableOptions, Colors, DistanceMethods, InterpolationMethods, InitializeConfig, Error, Update, Msg, File
 
@@ -34,6 +33,11 @@ try:
 	from user import config
 except ImportError:
 	from config import config
+
+
+# global variable :(
+# saves the largest size of "Expand" heat map encountered so far
+EXPANDED_SIZE = 0
 
 
 def server(input, output, session):
@@ -58,7 +62,7 @@ def server(input, output, session):
 	DataCache = Cache("pairwise", HandleData)
 	Data = reactive.value(None)
 	Valid = reactive.value(False)
-
+	print(f"config.K\t{config.K()}")
 	InitializeConfig(config, input)
 
 
@@ -71,7 +75,9 @@ def server(input, output, session):
 		DataCache.Invalidate(File(input))
 
 
-	def GetData(): return Table.data_view() if Valid() else Data()
+	def GetData(): 
+		print(f"VALID: {Valid()}")
+		return Table.data_view() if Valid() else Data()
 
 
 	def HashString():
@@ -82,13 +88,47 @@ def server(input, output, session):
 			config.Interpolation(),
 			config.Bins(),
 			config.TextSize(),
+			config.K(),
 			config.Features(),
+			config.N(),
 			config.DPI(),
+			config.AutoSize(),
 			config.Elevation(),
 			input.mode(),
 		]
 		if config.Elevation() != 90: inputs.extend([config.Rotation(), config.HeightMatrix(), config.Zoom(), config.InterpolationLevels(), config.MinScale(), config.Opacity()])
 		return inputs
+
+	
+	def CreateErrorImg(text, color, inputs):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=32)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# save image to cache
+		b = BytesIO()
+		fig.savefig(b, format="png", dpi=100, bbox_inches="tight")
+		b.seek(0)
+		DataCache.Store(b.read(), inputs)
+		fig_close(fig)
+		# get image for display
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "width": "400px"}
+			return img
 
 
 	def FASTAMatrix(file):
@@ -97,13 +137,13 @@ def server(input, output, session):
 		@param file: The path to the FASTA File
 		@returns a pairwise matrix.
 		"""
-
 		# Get information from the file
 		records = list(SeqIO.parse(open(file), "fasta"))
 		sequences = [str(record.seq) for record in records]
 		column_names = [record.id for record in records]
 
 		# Get our K-Mer value
+		print(f"config.K() FASTAMatrix\t{config.K()}")
 		k = config.K()
 
 		# Generate the value
@@ -124,7 +164,7 @@ def server(input, output, session):
 		@param file: The path to a PDB file (Or BytesIO file if applicable)
 		@returns The pairwise matrix.
 		"""
-
+		print("PDB Matrix")
 		parser = PDBParser()
 		structure = parser.get_structure("protein", file)
 
@@ -135,20 +175,26 @@ def server(input, output, session):
 					if chain.id == config.Chain():
 							for residue in chain:
 									for atom in residue:
-											coordinates.append(atom.coord)
-		return DataFrame(coordinates)
+											coordinates.append(list(atom.coord))
+		df = DataFrame(coordinates, dtype=float, columns=[x for x in range(1, len(coordinates[0])+1)])
+		print(f"PDB DATAFRAME:\n{df}\n")
+		print(f"dtypes: {df.dtypes}")
+
+
+		df = DataFrame({"Error": ["PDB test"]})
+		return df
 
 
 	def ChartMatrix(df):
 		"""
 		@brief Generates a pairwise matrix from charts
 		@param df:	The DataFrame containing the data. This can either be a chart
-								containing {x,y,z} columns outlining each point on a row, with
-								an optional name column (Any fourth column), a chart to which
-								an explicit "Name" column is provided, to which the first row
-								and column are assumed variable names for an existing matrix,
-								or the default, where it is assumed that the chart is an
-								unlabeled collection either of points, or an existing matrix.
+		containing {x,y,z} columns outlining each point on a row, with
+		an optional name column (Any fourth column), a chart to which
+		an explicit "Name" column is provided, to which the first row
+		and column are assumed variable names for an existing matrix,
+		or the default, where it is assumed that the chart is an
+		unlabeled collection either of points, or an existing matrix.
 		@returns A DataFrame containing the provided data as a pairwise matrix
 		"""
 
@@ -190,17 +236,34 @@ def server(input, output, session):
 	@output
 	@render.data_frame
 	def Table():
+		print("TABLE")
 		df = Data()
-		if df is None or len(df.columns) == 0: return
-		if df.columns[0] == 0:
-			Error("The provided input format cannot be rendered")
-		else:
+		if len(df.columns) == 0 or df is None:
+			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+
+		# render data as editable table
+		try:
+			grid = render.DataGrid(df, editable=True)
 			Valid.set(True)
-			return render.DataGrid(df, editable=True)
+			return grid
+		# # if the data is not a dataframe, it cannot be rendered
+		# except TypeError:
+		# 	Error("The provided input format cannot be rendered")
+		# 	return DataFrame({"Error": ["The provided input format cannot be rendered."]})
+		
+		# # render PDB files as a table
+		# except AttributeError:
+		# 	Error("The provided input format cannot be rendered")
+		# 	return DataFrame({"Error": ["The provided input format cannot be rendered."]})
+		
+		except Exception:
+			Error("The provided input format cannot be rendered")
+			return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
 	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+		print("UPDATE TABLE")
 		if config.Type() == "Integer": value = int(patch["value"])
 		elif config.Type() == "Float": value = float(patch["value"])
 		else: value = patch["value"]
@@ -244,6 +307,8 @@ def server(input, output, session):
 		'''
 		@param data: Pandas df
 		'''
+		# TODO: if FASTA file & k-mer is different, create new matrix
+
 		name_col = Filter(data.columns, ColumnType.Name)
 		if name_col is not None:
 			names = data[name_col]
@@ -266,11 +331,17 @@ def server(input, output, session):
 		
 
 	def HeatmapCube(df, cmap, p):
+		"""
+		@brief
+		@param
+		@returns
+		"""
 		fig, ax = subplots(subplot_kw={"projection": "3d"})
 
 		x, y, z = Filter(df.columns, ColumnType.X), Filter(df.columns, ColumnType.Y), Filter(df.columns, ColumnType.Z)
 		if not x or not y or not z:
 			Error("An X, Y, and Z column are needed to compute a Cube Visualization!")
+			return None, None, None, None, None, None
 
 		name_col = Filter(df.columns, ColumnType.Name)
 		if name_col is not None:
@@ -346,6 +417,7 @@ def server(input, output, session):
 				df_height = GenerateMatrix(data, config.HeightMatrix())
 			else: df_height = df
 
+			# scale height values to remove negatives
 			z = df_height.values.flatten()
 			if config.MinScale():
 				z += abs(n_min(z))
@@ -394,14 +466,25 @@ def server(input, output, session):
 
 
 	def GenerateHeatmap():
+		"""
+		@brief Generates the Heatmap
+		@returns The heatmap
+		"""
+		global EXPANDED_SIZE
+		size = 0
+
+		# A list of all the inputs for caching.
 		inputs = HashString()
 
+		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				data = GetData()
-				if data is None or len(data.index) == 0: return
+				if data is None or len(data.index) == 0: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs)
 
+				# Create a figure with a heatmap
 				p.inc(message="Calculating...")
 				if config.HeightMatrix() == "Cube":
 					df = data
@@ -417,19 +500,53 @@ def server(input, output, session):
 					rotation = config.Rotation()
 					elevation = config.Elevation()
 
-					if config.HeightMatrix() == "Cube":
-						fig, ax, im, norm, z, df = HeatmapCube(df, cmap, p)
-						d3 = True
-					elif elevation != 90:
-						fig, ax, im, norm, z = Heatmap3D(df, data, cmap, p)
+					if elevation != 90:
+						if config.HeightMatrix() == "Cube":
+							fig, ax, im, norm, z, df = HeatmapCube(df, cmap, p)
+							if fig == None:
+								return CreateErrorImg("Input data with an X, Y, and Z column \nis needed to compute a Cube Visualization.", "#027bc2", inputs)
+						else:
+							fig, ax, im, norm, z = Heatmap3D(df, data, cmap, p)
 						d3 = True
 					else:
 						fig, ax, im = Heatmap2D(df, cmap, p)
 						d3 = False
 
-
 					p.inc(message="Plotting...")
-					text_size = config.TextSize()
+					# set image size based on config selection
+					num_col = len(df.columns)
+					if config.AutoSize() == "expand":
+						size = num_col * (1/3) * num_col
+						if size < 1000:
+							size = 1000					
+						# save size to global variable to be used when loading from cache
+						if size > EXPANDED_SIZE:
+							EXPANDED_SIZE = size
+					
+					# calculate dpi for auto expand
+					if config.AutoSize() == "expand":
+						dpi = size * 0.15
+						if config.DPI() > dpi:
+							dpi = config.DPI()
+					else:
+						dpi = config.DPI()
+					
+					# catch invalid dpi values
+					if dpi > 1000:
+						dpi = 1000
+					elif dpi < 5:
+						dpi = 5
+
+					# if "expand" is selected, set text size dynamically
+					if config.AutoSize() == "expand":
+						fraction = size/1000
+						if fraction < 1:
+							fraction = 1
+						else:
+							fraction = 1/fraction
+						text_size = 1 + floor(6 * fraction)
+					else:
+						text_size = config.TextSize()
 
 					# Visibility of features
 					if "legend" in config.Features():
@@ -438,29 +555,73 @@ def server(input, output, session):
 						else:
 							mappable = ScalarMappable(cmap=cmap, norm=norm)
 							mappable.set_array(z)
-							cbar = colorbar(mappable, ax=ax, label='Value', orientation='vertical')
+							# get legend label
+							if config.HeightMatrix() == "Cube":
+								value = config.MatrixType()
+							else:
+								value = config.HeightMatrix()
+							cbar = colorbar(mappable, ax=ax, label=value, orientation='vertical')
 						cbar.ax.tick_params(labelsize=text_size)
 
 
+					n = config.N()
 					if "y" in config.Features():
 						ax.tick_params(axis="y", labelsize=text_size)
-						ax.set_yticks(range(len(df.columns)))
-						ax.set_yticklabels(df.columns)
+						if n > 1:
+							# grab only every n-th label
+							ytick_pos = list(range(len(df.columns)))[::n]
+							ytick_labels = df.columns[::n]
+							ax.set_yticks(ytick_pos)
+							ax.set_yticklabels(ytick_labels)
+						else:
+							ax.set_yticks(range(len(df.columns)))
+							ax.set_yticklabels(df.columns)
 					else:
 						ax.set_yticklabels([])
 
 					if "x" in config.Features():
 						ax.tick_params(axis="x", labelsize=text_size)
-						ax.set_xticks(range(len(df.columns)))
-						ax.set_xticklabels(df.columns, rotation=90)
+						if n > 1:
+							# grab only every n-th label
+							xtick_pos = list(range(len(df.columns)))[::n]
+							xtick_labels = df.columns[::n]
+							ax.set_xticks(xtick_pos)
+							ax.set_xticklabels(xtick_labels, rotation=90)
+						else:
+							ax.set_xticks(range(len(df.columns)))
+							ax.set_xticklabels(df.columns, rotation=90)
 					else:
 						ax.set_xticklabels([])
 
 					if d3:
 						if "z" in config.Features():
 							ax.tick_params(axis="z", labelsize=text_size)
-							ax.set_zticks(range(len(df.columns)))
-							ax.set_zticklabels(df.columns)
+							
+							if n > 1:  # grab only every n-th label
+								ztick_pos = list(range(len(df.columns)))[::n]
+								# if Cube matrix, use names from table for z-axis
+								if config.HeightMatrix() == "Cube":
+									ztick_labels = df.columns[::n]
+								# if 3D matrix, use numerical values for z-axis
+								else:
+									# TODO
+									ztick_labels = df.columns[::n]
+								
+								ax.set_zticks(ztick_pos)
+								ax.set_zticklabels(ztick_labels)
+							
+							else:
+								# if Cube matrix, use names from table for z-axis
+								if config.HeightMatrix() == "Cube":
+									ztick_pos = range(len(df.columns))
+									ztick_labels = df.columns
+								# if 3D matrix, use numerical values for z-axis
+								else:
+									ztick_pos = range(0,6)
+									ztick_labels = [0.0, 0.2,0.4,0.6,0.8,1.0]
+								
+								ax.set_zticks(ztick_pos)
+								ax.set_zticklabels(ztick_labels)
 						else:
 							ax.set_zticklabels([])
 
@@ -469,26 +630,31 @@ def server(input, output, session):
 						for i in range(df.shape[0]):
 								for j in range(df.shape[1]):
 									if not d3:
-										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white')
+										ax.text(j, i, '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='white', fontsize=text_size)
 									else:
-										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black')
-
-					# catch invalid DPI values
-					if config.DPI() < 5:
-						dpi = 5
-					else:
-						dpi = config.DPI()
+										ax.text(j, i, z[i * df.shape[1] + j], '{:.2f}'.format(df.iloc[i, j]), ha='center', va='center', color='black', fontsize=text_size)
 
 					b = BytesIO()
+					# DOWNLOAD FORMAT OPTIONS HERE
 					fig.savefig(b, format="png", dpi=dpi, bbox_inches="tight")
 					b.seek(0)
 					DataCache.Store(b.read(), inputs)
+					fig_close(fig)
+
+		# get image size		
+		if size == 0:  # loading from cache
+			if config.AutoSize() == "fit":
+				size = 500
+			elif config.AutoSize() == "expand":
+				size = EXPANDED_SIZE			
+			else:
+				size = config.Size()
 
 		b = DataCache.Get(inputs)
 		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
 			temp.write(b)
 			temp.close()
-			img: types.ImgData = {"src": temp.name, "width": f"{config.Size()}px"}
+			img: types.ImgData = {"src": temp.name, "width": f"{size}px"}
 			return img
 
 
@@ -500,8 +666,7 @@ def server(input, output, session):
 	@output
 	@render.image(delete_file=True)
 	@reactive.event(input.Update)
-	def HeatmapReactive():
-		return GenerateHeatmap()
+	def HeatmapReactive(): return GenerateHeatmap()
 
 
 	@reactive.effect
@@ -510,8 +675,16 @@ def server(input, output, session):
 		Msg(ui.HTML(Info[input.Example()]))
 
 
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data is None:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+		
+		file_contents = data.to_string()
+		yield file_contents
 
 
 	@render.download(filename="heatmap.png")
@@ -568,13 +741,6 @@ app_ui = ui.page_fluid(
 		    justify-content: space-between;
 		}	   
 
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Pairwise"),
@@ -607,7 +773,6 @@ app_ui = ui.page_fluid(
 				config.MatrixType.UI(ui.input_select, id="MatrixType",	label="Matrix Type",	choices=["Distance", "Correlation"], tooltip="Visualize either the distance or correlation between values. Based on the matrix type, you can further select a distance calculation method or correlation calculation method below."),
 				ui.output_ui("Method"),
 
-				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
 				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Intrpl Method", choices=InterpolationMethods, conditional="input.Elevation === 90", tooltip=ui.HTML('Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother. <br>Read more <a href="https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html" target="_blank">here</a>.')),
 				config.Chain.UI(ui.input_text, id="Chain", label="PDB Chain", tooltip="This setting only applies if a PDB file is used. Select a chain within the PDB file to display."),
 				config.K.UI(ui.input_slider, id="K", label="K-Mer Length", min=3, max=5, step=1, tooltip="This setting only applies if a FASTA file is used. Specify the length of K-Mer (3, 4, or 5) to use for alignment-free sequence comparison. The file is partitioned into K-Mers and a distance or correlation matrix is generated based on the counts of each K-Mer."),
@@ -630,15 +795,35 @@ app_ui = ui.page_fluid(
 				ui.output_ui("Color"),
 				config.Bins.UI(ui.input_numeric, id="Bins", label="# of Color Bins", min=3, step=1, tooltip="Specify the number of color bins to use. A higher number of color bins results in a smoother gradient between neighbouring values. Fewer bins results in more distinct colors."),
 
-				ui.HTML("<b>Image Settings</b>"),
-				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
-				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
-
 				ui.HTML("<b>Features</b>"),
+				config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=20, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off below."),
 				config.Features.UI(ui.input_checkbox_group,
 					make_inline=False, id="Features", label=None,
-					choices={"x": "X Labels", "y": "Y Labels", "z": "Z-Labels", "label": "Data Labels", "legend": "Legend"},
-					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Data labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. Legend displays a colorbar legend on the heatmap.",
+					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "label": "Data Labels", "legend": "Legend"},
+					tooltip=ui.HTML("X Labels toggles data labels along the X axis. <br><br>Y Labels toggles data labels along the Y axis. <br><br>Z labels toggles data labels along the Z axis if rendering as a 3D plot. <br><br>Data Labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. <br><br>Legend displays a colorbar legend on the heatmap."),
+				),
+				config.N.UI(ui.input_slider, id="N", label="Show N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
+
+				ui.HTML("<b>Image Settings</b>"),
+				ui.div(
+					config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=5, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
+					ui.HTML("<u>Image Size</u><br><br>"),
+					ui.div(
+						ui.div(
+							config.AutoSize.UI(ui.input_radio_buttons,
+						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Width", "fit": "Fit to Screen", "expand": "Expand"}, 
+							),
+							style="flex: 1; padding-top: 15px;",
+						),
+						ui.div(
+							config.Size.UI(ui.input_numeric, gap="0px", id="Size", label=None, min=1,
+					  		tooltip=ui.HTML("Select <b>Custom Width</b> to specify a custom width (in pixels) for the heat map on your screen. <br><br>Select <b>Fit to Screen</b> to have the entire heat map visible in your browser window. <br><br>Select <b>Expand</b> to expand the heat map so that axis labels for all rows and columns are legible. You may have to scroll to see the entire heat map. 'Expand' can be computationally expensive for large datasets, and overrides the 'Text Size' setting."),
+							),
+							style="flex: 1;",
+						),
+						style="display: flex; gap: 0px; margin: 0px; align-items: flex-start;"
+					),
+					style="margin: 0px;"
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download PNG"),

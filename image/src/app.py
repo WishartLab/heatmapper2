@@ -14,15 +14,16 @@
 #
 
 from shiny import App, reactive, render, ui
-from matplotlib.pyplot import subplots, colorbar, style
+from matplotlib.pyplot import subplots, colorbar, style, close as fig_close
 from matplotlib.tri import Triangulation
 from PIL import Image
 from tempfile import NamedTemporaryFile
 from io import BytesIO
+from pandas import DataFrame
 from numpy import meshgrid, arange, zeros_like, array, zeros, linspace, column_stack
 from scipy.interpolate import griddata
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
+from shared import Cache, Error, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Msg, File
 
 try:
 	from user import config
@@ -62,9 +63,13 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())))
-		Valid.set(False)
-		DataCache.Invalidate(File(input))
+		# catch error here
+		try:
+			Data.set((await DataCache.Load(input, p=ui.Progress())))
+			Valid.set(False)
+			DataCache.Invalidate(File(input))
+		except:
+			Error("File could not be loaded!\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file. \nImages can be uploaded as a .bmp, .gif, .ico, .jpg, .tif, .webp, or .png file.")
 
 
 	@reactive.effect
@@ -87,6 +92,7 @@ def server(input, output, session):
 			config.Algorithm(),
 			config.Levels(),
 			config.Features(),
+			config.Legend(),
 			config.TextSize(),
 			config.DPI(),
 			config.Quality(),
@@ -96,9 +102,55 @@ def server(input, output, session):
 		return inputs
 
 
+	def CreateErrorImg(text, color, inputs):
+		"""
+		@brief Generates an image of the provided text
+		@param text: The text to display as an error
+		@param color: Hex color code for the text
+		@param inputs: A list of all the inputs for caching (from HashString())
+		@returns 
+		"""
+		# create image with error text
+		fig, ax = subplots()
+		ax.text(0, 50, text, color=color, fontsize=32)
+		ax.set_xlim(0, 200)
+		ax.set_ylim(0, 100)
+		# make axes transparent
+		[ax.spines[side].set_alpha(0.0) for side in ["top", "bottom", "left", "right"]]
+		ax.tick_params(axis='both', which='both', reset=False, color=[0,0,0,0], labelcolor=[0,0,0,0])
+		# save image to cache
+		b = BytesIO()
+		fig.savefig(b, format="png", dpi=100, bbox_inches="tight")
+		b.seek(0)
+		DataCache.Store(b.read(), inputs)
+		fig_close(fig)
+		# get image for display
+		b = DataCache.Get(inputs)
+		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+			temp.write(b)
+			temp.close()
+			img: types.ImgData = {"src": temp.name, "width": "400px"}
+			return img
+		
+
 	@output
 	@render.data_frame
-	def Table(): Valid.set(True); return render.DataGrid(Data(), editable=True)
+	def Table():
+		df = Data()
+		print(f"df.col: {df.columns}")
+		print(type(df))
+		if len(df.columns) == 0 or df is None:
+			df = DataFrame({"_": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
+			return df
+
+		# render data as editable table
+		try:
+			grid = render.DataGrid(df, editable=True)
+			Valid.set(True)
+			return grid	
+		except Exception:
+			pass
+			return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 
 
 	@Table.set_patch_fn
@@ -174,7 +226,8 @@ def server(input, output, session):
 
 				p.inc(message="Loading image...")
 				img = IMG()
-				if img is None or df.empty: return None
+				if img is None or df.empty: 
+					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", inputs)
 
 				if img is not None:
 					try:
@@ -206,7 +259,10 @@ def server(input, output, session):
 						if img is not None:
 							img = img.transpose(method=Image.FLIP_TOP_BOTTOM)
 							ax.imshow(img, extent=[0, 1, 0, 1], aspect="auto",zorder=0)
-						im = ax.contourf(df, cmap=cmap, extent=[0, 1, 0, 1], zorder=1, alpha=alpha, algorithm=algorithm, levels=levels)
+						try:
+							im = ax.contourf(df, cmap=cmap, extent=[0, 1, 0, 1], zorder=1, alpha=alpha, algorithm=algorithm, levels=levels)
+						except:
+							return CreateErrorImg("Data could not be parsed, please check formatting.\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file.", "#027bc2", inputs)
 						ax.invert_yaxis()
 
 					else:
@@ -245,7 +301,7 @@ def server(input, output, session):
 
 					# Visibility of features
 					if "legend" in input.Features():
-						cbar = colorbar(im, ax=ax, label="Value")
+						cbar = colorbar(im, ax=ax, label=config.Legend())
 						cbar.ax.tick_params(labelsize=config.TextSize())
 
 					if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
@@ -288,8 +344,17 @@ def server(input, output, session):
 		Msg(ui.HTML(Info[input.Example()]["Description"]))
 
 
-	@render.download(filename="table.csv")
-	def DownloadTable(): yield GetData().to_string()
+	@render.download(filename=lambda: f"table{config.TableType()}")
+	def DownloadTable(): 
+		data = GetData()
+		
+		# return error if no data to download
+		if data.empty:
+			Error("The downloaded table is empty! Please upload your data or select an example data set in the sidebar.")
+		
+		file_contents = data.to_string()
+		yield file_contents
+
 
 	@render.download(filename="heatmap.png")
 	def DownloadHeatmap(): yield DataCache.Get(HashString())
@@ -319,13 +384,6 @@ app_ui = ui.page_fluid(
 		    justify-content: space-between;
 		}	   
 
-		#MainTab {
-			position: sticky;  /* prevent tabs from scrolling */
-			top: 0;
-			width: 100%;
-			z-index: 1000;
-			background: rgba(255, 255, 255, 0.25);
-		}
 	"""),
 
 	ui.panel_title(title=None, window_title="Image"),
@@ -367,7 +425,7 @@ app_ui = ui.page_fluid(
 
 
 				ui.HTML("<b>Image Settings</b>"),
-				config.Quality.UI(ui.input_numeric, id="Quality", label="Image Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
+				config.Quality.UI(ui.input_slider, id="Quality", label="Image Quality", min=0.1, max=1.0, step=0.1, tooltip="Specify a multiplier to downscale the background image. Lower values decrease image quality and improve rendering speed. Set the value to 1.0 to use the original image with no downscaling."),
 				config.Size.UI(ui.input_numeric, id="Size", label="Heatmap Size", min=1, tooltip="Change the width (in pixels) of the heatmap on your screen."),
 				config.DPI.UI(ui.input_numeric, id="DPI", label="Resolution (DPI)", min=1, tooltip="Specify the resolution of the image in pixels per inch. Higher DPI values result in higher quality images, but larger file sizes. This setting affects the heatmap on screen as well as the downloaded plot."),
 
@@ -381,6 +439,7 @@ app_ui = ui.page_fluid(
 					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"},
 					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap."
 				),
+				config.Legend.UI(ui.input_text, id="Legend", label="Legend Title", conditional="input.Features.includes('legend')", tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"),
 
 				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
 			),
