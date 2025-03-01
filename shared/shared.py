@@ -141,8 +141,8 @@ class Cache:
 	@staticmethod
 	def HandleDataFrame(path, function, p=None):
 		"""
-		@brief Handle DataFrame's
-		@param i: The binary of the file
+		@brief Handle DataFrames
+		@param path: 
 		@param function: The pandas function to use to read the file.
 		@returns A DataFrame
 		"""
@@ -164,10 +164,9 @@ class Cache:
 	@staticmethod
 	def DefaultHandler(path, p=None):
 		"""
-		@brief The default handler. It can handle CSVs, Excel files, Tables, and all other files will simply
-		be stored as strings of the file content
+		@brief The default handler. It can handle CSVs, Excel files, Tables, and all other files will simply be stored as strings of the file content
 
-		@param n: The path to the file
+		@param path: The path to the file
 		@returns: An object.
 		"""
 
@@ -259,13 +258,10 @@ class Cache:
 			input.SourceFile: Whether the user wants "Upload" or "Example"
 		@param source_file: The input ID that should be used to fetch the file (Defaults to input.File() if None)
 		@param example_file: The input ID that should be used to fetch the example (Defaults to input.Example() if None)
-		@param input_switch:	The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user
-													uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
+		@param input_switch: The input ID to check for Upload/Example/Other. The value is compared against "Upload" for user uploaded items, and defaults to fetching example_file otherwise. (Defaults to input.SourceFile())
 		@param upload: The value of the input_switch such that we should fetch a source file from source_file
 		@param example: The value of the input_switch such that we should fetch an example from example_file
-		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an
-										object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to
-										initialize without arguments.
+		@param default:	The object that should be returned if files cannot be fetched. Ensures that Load will always return an object, avoiding the needing to check output. Defaults to a DataFrame. The object should be able to initialize without arguments.
 		@param p: A progress bar to increment; optional.
 		@param p_name: What we're fetching, to be displayed in the progress bar; optional
 		@param wasm: Whether this fetch can run in WebAssembly
