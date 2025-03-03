@@ -164,13 +164,13 @@ def server(input, output, session):
 			Error("Additional data could not be merged! Please check your column names and formatting.")
 			return
 
-		# map values to residue number and chain ID
+		# map values to atom number and chain ID
 		map = {}
 		for index, row in opt_data.iterrows():
 			new_chain_id = row[chain].strip()
-			new_res_num = row[num]
+			new_atom_num = row[num]
 			new_name = row[name].strip()
-			key = tuple(i for i in (new_res_num, new_chain_id, new_name) if i is not None)
+			key = tuple(i for i in (new_atom_num, new_chain_id, new_name) if i is not None)
 			map[key] = float(row[val])
 		
 		# update pdb string
@@ -190,7 +190,7 @@ def server(input, output, session):
 				chain_id = line[21:22].strip()
 				res_name = line[17:20].strip()
 				
-				# match with chain ID or residue number
+				# match with chain ID or atom number
 				key_3 = (number, chain_id, res_name)
 				key_2 = (number, chain_id)
 				key_1 = (number,)
@@ -260,7 +260,6 @@ def server(input, output, session):
 			try:
 				grid = render.DataGrid(Data(), editable=True)
 				Valid.set(True)  # use this table as data to generate heatmap
-				print(grid)
 				return grid
 			except TypeError:
 				return DataFrame({"Note": ["Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered."]})
@@ -432,10 +431,6 @@ def server(input, output, session):
 
 				####### colour by RMSD value
 				elif scheme == "rmsd":
-				
-					# if len(structure) == 1:
-					# 	Error("RMSD requires a PDB with more than one model to compute difference!")
-					# 	return source, prop, scheme
 					
 					if config.OptType() != "rmsd":
 						# remind user that RMSD requires additional input
@@ -740,14 +735,11 @@ def server(input, output, session):
 		if data is None: return
 
 		if type(data) == str or input.SourceFile() == "PDB-ID":
-			# add tooltip: two column *.csv file containing the protein residue numbers and the corresponding B-factor or RMSD or RMSF values
-			elements.append(
-				ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False, placeholder='Optional Data')),
-			)
-			elements.append(
-				config.OptType.UI(ui.input_radio_buttons, make_inline=True, id="OptType", label="Optional Data Type:", choices={"bfactor": "B-Factor", "rmsf": "RMSF", "rmsd": "RMSD", "plddt": "pLDDT"}, tooltip="Specify the type of data that has been uploaded as an optional additional file.")
-			)
 			elements += [
+				# add upload box for additional data file
+				ui.panel_conditional("input.SourceFile === 'Upload' || input.SourceFile === 'PDB-ID'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False, placeholder='Optional Data')),
+				config.OptType.UI(ui.input_radio_buttons, make_inline=True, id="OptType", label="Optional Data Type:", choices={"bfactor": "B-Factor", "rmsf": "RMSF", "rmsd": "RMSD", "plddt": "pLDDT"}, tooltip="Specify the type of data that has been uploaded as an optional additional file. Optional files should be a table file with 4 columns: atom number, residue name, chain letter, and value (B-factor, RMSF, RMSD, or pLDDT data)."),
+				
 				ui.HTML("<b>Customization</b>"),
 				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. <br><b>Residue #</b> - Apply a rainbow gradient based on residue number. <br><b>Reverse Residue #</b> - Apply a reversed rainbow gradient based on residue number. <br><b>B-Factor</b> - Color by B-factor. Low values are blue, and high values are red. <br><b>RMSF</b> - Color by Root Mean Square Fluctuation. Low values are blue, and high values are red. RMSF requires a PDB with more than one model to compute difference. <br><b>RMSD</b> - Color by Root Mean Square Deviation. Low values are blue, and high values are red. RMSD values must be provided in an additional table file. <br><b>2ndary Structure</b> - Color by secondary structure using the ssJmol coloring scheme. <br><b>pLDDT</b> - Color by predicted Local Distance Difference Test confidence. Low confidence values are red, and high confidence values are blue. ')),			
 				
