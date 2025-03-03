@@ -132,7 +132,7 @@ def server(input, output, session):
 		@brief Moves RMSD, RMSF, B-Factor or pLDDT data from an input file to the B-factor column of the PDB data
 		"""
 		# ignore optional file if 3D model is not PDB
-		data = GetData()  # GetData() vs Data()?
+		data = GetData()
 		if type(data) != str:
 			return
 		
@@ -146,10 +146,7 @@ def server(input, output, session):
 		# don't load files incompatible with WASM 
 		# if n.endswith(blacklist) and Pyodide: return
 		path = Path(n)
-		#opt_data = read_table(path.resolve()).fillna(0)
 		opt_data = Cache.DefaultHandler(path)
-		print(f"\nxxxxxxxxxxxxxxxx\n{opt_data}\nxxxxxxxxxxxxxxxx\n")
-		print(type(opt_data))
 		
 		# find residue name, number, chain, and value columns in data
 		name_cols = ["name", "residue", "res_name"]
@@ -158,15 +155,10 @@ def server(input, output, session):
 		val_cols = ["rmsd", "rmsf", "plddt", "bfactor"]
 
 		cols = [col.lower() for col in opt_data.columns]
-		print(f"cols:\t{cols}")
 		name = next((col for col in name_cols if col in cols), None)
-		print(name)
 		num = next((col for col in num_cols if col in cols), None)
-		print(num)
 		chain = next((col for col in chain_cols if col in cols), None)
-		print(chain)
 		val = next((col for col in val_cols if col in cols), None)
-		print(val)
 		
 		if name is None or num is None or chain is None or val is None:
 			Error("Additional data could not be merged! Please check your column names and formatting.")
@@ -177,7 +169,8 @@ def server(input, output, session):
 		for index, row in opt_data.iterrows():
 			new_chain_id = row[chain].strip()
 			new_res_num = row[num]
-			key = (new_res_num,) if not new_chain_id else (new_res_num, new_chain_id)
+			new_name = row[name].strip()
+			key = tuple(i for i in (new_res_num, new_chain_id, new_name) if i is not None)
 			map[key] = float(row[val])
 		
 		# update pdb string
@@ -185,35 +178,39 @@ def server(input, output, session):
 		for line in data.splitlines():
 			# handle multiple models
 			if line.startswith("MODEL"):
-				updated_pdb += line
+				updated_pdb += line + "\n"
 				continue
 			elif line.startswith("ENDMDL"):
-				updated_pdb += line
+				updated_pdb += line + "\n"
 				continue
 
 			if line.startswith("ATOM"):
-				res_num = int(line[22:26].strip())
+				#res_num = int(line[22:26].strip())
+				number = int(line[6:11].strip())  # atom number, not res
 				chain_id = line[21:22].strip()
+				res_name = line[17:20].strip()
 				
 				# match with chain ID or residue number
-				full_key = (res_num, chain_id)
-				mini_key = (res_num,)
-				if full_key in map:
-					new_val = map[full_key]
-				elif mini_key in map:
-					new_val = map[mini_key]
+				key_3 = (number, chain_id, res_name)
+				key_2 = (number, chain_id)
+				key_1 = (number,)
+				if key_3 in map:
+					new_val = map[key_3]
+				elif key_2 in map:
+					new_val = map[key_2]
+				elif key_1 in map:
+					new_val = map[key_1]
 				else:  # no match found
-					updated_pdb += line
+					updated_pdb += line + "\n"
 					continue
 
 				# replace existing b-factor with new value
 				# b-factor is in columns 60:66
-				new_line = f"{line[:60]}{new_val:6.2f}{line[66:]}"
+				new_line = f"{line[:60]}{new_val:6.2f}{line[66:]}\n"
 				updated_pdb += new_line
 
 			else:
-				updated_pdb += line
-
+				updated_pdb += line + "\n"
 		# overwrite old PDB string with new one
 		Data.set(updated_pdb)
 		Valid.set(False)
@@ -228,28 +225,27 @@ def server(input, output, session):
 	def Table():
 		data = Data()
 		
-		# warning message if input is an image, not a table
+		# placeholder message if no data has been successfully uploaded
 		if data is None:
 			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
 		
+		# warning message if input is an image, not a table
 		if isinstance(data, plotting.texture.Texture):
 			df = DataFrame({"Note": ["This heatmap is mapping an image file (.png or .jpg) onto the 3D surface. There is no table data to display."]})
 			return df
+		
 		# display residue numbers, B-factor data from PDB files
-			'''
-			Dr. Wishart notes:
-			The Table should display the residue numbers (column 1) and the B-factor or RMSD or RMSF values (column 2)
-			'''
 		elif isinstance(data, str):
 			output_data = []
 			selection = config.ColorScheme()
-			col_name = "B-factor"
-			if selection == "RMSF":
-				col_name = "RMSF"
-			elif selection == "RMSD":
-				col_name = "RMSD"
-			elif selection == "pLDDT":
-				col_name = "pLDDT"
+			col_name = "Value"
+			# col_name = "B-factor"
+			# if selection == "RMSF":
+			# 	col_name = "RMSF"
+			# elif selection == "RMSD":
+			# 	col_name = "RMSD"
+			# elif selection == "pLDDT":
+			# 	col_name = "pLDDT"
 
 			for line in data.splitlines():
 				if line.startswith("ATOM"):
@@ -258,15 +254,15 @@ def server(input, output, session):
 					output_data.append((residue_num, b_factor))
 			df = DataFrame(output_data, columns=["Residue Number", col_name])
 			return df
+		
 		# display table data
 		else:
 			try:
 				grid = render.DataGrid(Data(), editable=True)
-				Valid.set(True)
+				Valid.set(True)  # use this table as data to generate heatmap
 				print(grid)
 				return grid
 			except TypeError:
-				#Error("Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered.")
 				return DataFrame({"Note": ["Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered."]})
 
 
@@ -361,6 +357,7 @@ def server(input, output, session):
 		if not DataCache.In(global_inputs):
 
 			parser = PDBParser()
+			# XXXXX
 			structure = parser.get_structure("protein", StringIO(source))
 			model = config.Model()
 
@@ -700,7 +697,7 @@ def server(input, output, session):
 		if type(data) == str or input.SourceFile() == "PDB-ID":
 			# add tooltip: two column *.csv file containing the protein residue numbers and the corresponding B-factor or RMSD or RMSF values
 			elements.append(
-				ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False)))
+				ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False, placeholder='Optional Data')))
 			elements += [
 				ui.HTML("<b>Customization</b>"),
 				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),			
