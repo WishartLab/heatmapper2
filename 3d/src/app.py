@@ -132,7 +132,7 @@ def server(input, output, session):
 		@brief Moves RMSD, RMSF, B-Factor or pLDDT data from an input file to the B-factor column of the PDB data
 		"""
 		# ignore optional file if 3D model is not PDB
-		data = GetData()  # GetData() vs Data()?
+		data = GetData()
 		if type(data) != str:
 			return
 		
@@ -146,10 +146,11 @@ def server(input, output, session):
 		# don't load files incompatible with WASM 
 		# if n.endswith(blacklist) and Pyodide: return
 		path = Path(n)
-		#opt_data = read_table(path.resolve()).fillna(0)
-		opt_data = Cache.DefaultHandler(path)
-		print(f"\nxxxxxxxxxxxxxxxx\n{opt_data}\nxxxxxxxxxxxxxxxx\n")
-		print(type(opt_data))
+		try:
+			opt_data = Cache.DefaultHandler(path)
+		except:
+			Error("File could not be loaded!\nPlease ensure you are using a properly formatted table file.")
+			return
 		
 		# find residue name, number, chain, and value columns in data
 		name_cols = ["name", "residue", "res_name"]
@@ -158,26 +159,22 @@ def server(input, output, session):
 		val_cols = ["rmsd", "rmsf", "plddt", "bfactor"]
 
 		cols = [col.lower() for col in opt_data.columns]
-		print(f"cols:\t{cols}")
 		name = next((col for col in name_cols if col in cols), None)
-		print(name)
 		num = next((col for col in num_cols if col in cols), None)
-		print(num)
 		chain = next((col for col in chain_cols if col in cols), None)
-		print(chain)
 		val = next((col for col in val_cols if col in cols), None)
-		print(val)
 		
 		if name is None or num is None or chain is None or val is None:
 			Error("Additional data could not be merged! Please check your column names and formatting.")
 			return
 
-		# map values to residue number and chain ID
+		# map values to atom number and chain ID
 		map = {}
 		for index, row in opt_data.iterrows():
 			new_chain_id = row[chain].strip()
-			new_res_num = row[num]
-			key = (new_res_num,) if not new_chain_id else (new_res_num, new_chain_id)
+			new_atom_num = row[num]
+			new_name = row[name].strip()
+			key = tuple(i for i in (new_atom_num, new_chain_id, new_name) if i is not None)
 			map[key] = float(row[val])
 		
 		# update pdb string
@@ -185,35 +182,39 @@ def server(input, output, session):
 		for line in data.splitlines():
 			# handle multiple models
 			if line.startswith("MODEL"):
-				updated_pdb += line
+				updated_pdb += line + "\n"
 				continue
 			elif line.startswith("ENDMDL"):
-				updated_pdb += line
+				updated_pdb += line + "\n"
 				continue
 
 			if line.startswith("ATOM"):
-				res_num = int(line[22:26].strip())
+				#res_num = int(line[22:26].strip())
+				number = int(line[6:11].strip())  # atom number, not res
 				chain_id = line[21:22].strip()
+				res_name = line[17:20].strip()
 				
-				# match with chain ID or residue number
-				full_key = (res_num, chain_id)
-				mini_key = (res_num,)
-				if full_key in map:
-					new_val = map[full_key]
-				elif mini_key in map:
-					new_val = map[mini_key]
+				# match with chain ID or atom number
+				key_3 = (number, chain_id, res_name)
+				key_2 = (number, chain_id)
+				key_1 = (number,)
+				if key_3 in map:
+					new_val = map[key_3]
+				elif key_2 in map:
+					new_val = map[key_2]
+				elif key_1 in map:
+					new_val = map[key_1]
 				else:  # no match found
-					updated_pdb += line
+					updated_pdb += line + "\n"
 					continue
 
 				# replace existing b-factor with new value
 				# b-factor is in columns 60:66
-				new_line = f"{line[:60]}{new_val:6.2f}{line[66:]}"
+				new_line = f"{line[:60]}{new_val:6.2f}{line[66:]}\n"
 				updated_pdb += new_line
 
 			else:
-				updated_pdb += line
-
+				updated_pdb += line + "\n"
 		# overwrite old PDB string with new one
 		Data.set(updated_pdb)
 		Valid.set(False)
@@ -228,45 +229,43 @@ def server(input, output, session):
 	def Table():
 		data = Data()
 		
-		# warning message if input is an image, not a table
+		# placeholder message if no data has been successfully uploaded
 		if data is None:
 			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
 		
+		# warning message if input is an image, not a table
 		if isinstance(data, plotting.texture.Texture):
 			df = DataFrame({"Note": ["This heatmap is mapping an image file (.png or .jpg) onto the 3D surface. There is no table data to display."]})
 			return df
+		
 		# display residue numbers, B-factor data from PDB files
-			'''
-			Dr. Wishart notes:
-			The Table should display the residue numbers (column 1) and the B-factor or RMSD or RMSF values (column 2)
-			'''
 		elif isinstance(data, str):
 			output_data = []
-			selection = config.ColorScheme()
+			selection = config.OptType()
 			col_name = "B-factor"
-			if selection == "RMSF":
+			if selection == "rmsf":
 				col_name = "RMSF"
-			elif selection == "RMSD":
+			elif selection == "rmsd":
 				col_name = "RMSD"
-			elif selection == "pLDDT":
+			elif selection == "plddt":
 				col_name = "pLDDT"
 
 			for line in data.splitlines():
 				if line.startswith("ATOM"):
 					residue_num = int(line[22:26].strip())
+					atom_num = int(line[6:11].strip())
 					b_factor = float(line[60:66].strip())
-					output_data.append((residue_num, b_factor))
-			df = DataFrame(output_data, columns=["Residue Number", col_name])
+					output_data.append((residue_num, atom_num, b_factor))
+			df = DataFrame(output_data, columns=["Residue Number", "Atom Number", col_name])
 			return df
+		
 		# display table data
 		else:
 			try:
 				grid = render.DataGrid(Data(), editable=True)
-				Valid.set(True)
-				print(grid)
+				Valid.set(True)  # use this table as data to generate heatmap
 				return grid
 			except TypeError:
-				#Error("Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered.")
 				return DataFrame({"Note": ["Please ensure your uploaded file is properly formatted. The provided input format cannot be rendered."]})
 
 
@@ -356,6 +355,7 @@ def server(input, output, session):
 			config.Width(),
 			config.Opacity(),
 			config.Model(),
+			config.OptType(),
 		]
 
 		if not DataCache.In(global_inputs):
@@ -366,8 +366,7 @@ def server(input, output, session):
 
 			def GenerateScheme(source, initial_scheme, function_declared=False, model=0):
 				"""
-				@brief Py3DMol has a color, colorscheme, and colorfunc attribute. This function puts the right one in
-				without cluttering the interface with three different options.
+				@brief Py3DMol has a color, colorscheme, and colorfunc attribute. This function puts the right one in without cluttering the interface with three different options.
 				@param initial_scheme: The value of the scheme. Spectrum is a color, B-Color requires a function, all others
 				use a colorscheme
 				@param function_declared: Since there is a colorscheme for both the heatmap and the structure, we can accidentally
@@ -384,43 +383,14 @@ def server(input, output, session):
 					"pLDDT": "plddt",
 				}
 				
-				# B-factor, RMSD, RMSF, residue number, reverse residue number, secondary structure
 				prop = "color"
 				scheme = scheme_dict[initial_scheme]
 
-				# B Color requires a custom function.
-				#if scheme == "b-factor" or scheme == "b-factor (norm)":
+				####### colour using B-Factor data
 				if scheme == "b-factor":
 
 					# Initial weights
 					darkblue, blue, lightblue, white, orange, red = 5, 10, 15, 20, 40, 50
-
-					# If we're normalizing, get the average B-Factor, then assign that as white.
-					# if "norm" in scheme:
-
-					# 	# For caching.
-					# 	entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example()]
-					# 	a = 0.0
-					# 	l = 0
-					# 	if not DataCache.In(entry):
-					# 		p.inc(message="Normalizing...")
-					# 		l = 0
-					# 		# Get all the Atoms from the string, split by spaces, and remove empty entries.
-					# 		for atom in [atom for atom in source.split("\n") if atom.startswith("ATOM")]:
-					# 			entries = list(filter(None, atom.split(" ")))
-
-					# 			# This should be B-Factor, but sometimes the B-Factor is absent, in which case its an element.
-					# 			if not entries[10].isalpha():
-					# 				a += float(entries[10])
-					# 				l += 1
-					# 		a /= l
-
-					# 		# White is the average
-					# 		DataCache.Store((a * 0.25, a * 0.50, a * 0.75, a, a * 1.25, a * 1.5), entry)
-					# 	darkblue, blue, lightblue, white, orange, red = DataCache.Get(entry)
-					# 	Msg(f"Using normalized blue/white/red cutoffs at {lightblue:.2f}/{white:.2f}/{orange:.2f}")
-					# 	scheme = "NormalizedScheme"
-					# else: scheme = "Scheme"
 					scheme = "Scheme"
 
 					# Declare the function.
@@ -437,95 +407,166 @@ def server(input, output, session):
 							}}\n"""
 					prop = "colorfunc"
 				
-				# TODO: implement colour by pLDDT
+
+				####### colour by pLDDT value
 				elif scheme == "plddt":
-					pass
+					if config.OptType() != "plddt":
+						# remind user that pLDDT requires additional input
+						Msg("Is your model all grey or all red? \nUpload an additional data file with pLDDT values to visualize plDDT.")
+
+					# Initial weights
+					red, orange, yellow, lightblue, blue = 10, 50, 70, 90, 95
+					scheme = "Scheme"
+
+					# Declare the function.
+					if not function_declared:
+						viewer.startjs += f"""\n
+							let {scheme} = function(atom) {{
+								if (atom.b == 0) return "grey"
+								else if (atom.b < {red}) return "red"
+								else if (atom.b < {orange}) return "orange"
+								else if (atom.b < {yellow}) return "yellow"
+								else if (atom.b < {lightblue}) return "lightblue"
+								else if (atom.b < {blue}) return "blue"
+								else return "darkblue"
+							}}\n"""
+					prop = "colorfunc"
 				
-				# TODO: implement colour using RMSD data
+
+				####### colour by RMSD value
 				elif scheme == "rmsd":
 					
-					if len(structure) == 1:
-						Error("RMSD requires a PDB with more than one model to compute difference!")
-						return source, prop, scheme
+					if config.OptType() != "rmsd":
+						# remind user that RMSD requires additional input
+						Msg("Is your model all grey or all red? \nUpload an additional data file with RMSD values to visualize RMSD.")
+					
+					# Initial weights
+					darkblue, blue, lightblue, white, yellow, orange, red = 0.5, 1.0, 1.5, 2, 3, 4, 5
+					scheme = "rmsd"
 
-				# colour using RMSF data
-				elif scheme == "rmsf":
-
-					if len(structure) == 1:
-						Error("RMSF requires a PDB with more than one model to compute difference!")
-						return source, prop, scheme
-
-					# List of atom names of interest
-					atom_names_of_interest = ["C", "CA", "N"]
-
-					entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(), model]
-					if not DataCache.In(entry):
-						main_model = structure[model]
-						for chain in main_model:
-							for residue in chain:
-								for atom in residue:
-									if atom.get_id() in atom_names_of_interest:
-										distances = []
-										for model in structure:
-											if model != main_model:
-												try:
-													corresponding_atom = model[chain.id][residue.id][atom.get_id()]
-													distance = norm(atom.coord - corresponding_atom.coord)
-													distances.append(distance)
-												except KeyError: continue
-										# Calculate mean distance
-										if distances: atom.set_bfactor(mean(distances))
-										output = StringIO()
-
-						output = StringIO()
-						io = PDBIO()
-						io.set_structure(main_model)
-						io.save(output)
-						DataCache.Store(output.getvalue(), entry)
-						output.close()
-
-					scheme = "RMSD"  # ?????
-					source = DataCache.Get(entry)
-
-					darkblue, blue, lightblue, white, orange, red = 0.5, 1.0, 1.5, 2, 3, 4
 					if not function_declared:
 						viewer.startjs += f"""\n
 							let {scheme} = function(atom) {{
 								if (atom.b == 0) return "grey"
 								else if (atom.b < {darkblue}) return "darkblue"
 								else if (atom.b < {blue}) return "blue"
-								else if (atom.b < {lightblue}) return "lightblue"
+								else if (atom.b < {lightblue}) return "#73c9ff"
 								else if (atom.b < {white}) return "white"
-								else if (atom.b < {orange}) return "orange"
+								else if (atom.b < {yellow}) return "#fff27d"
+								else if (atom.b < {orange}) return "#ff6200"
 								else if (atom.b < {red}) return "red"
 								else return "darkred"
 							}}\n"""
 					prop = "colorfunc"
+
+
+				####### colour using RMSF data
+				elif scheme == "rmsf":
+					
+					# Initial weights
+					darkblue, blue, lightblue, white, yellow, orange, red = 0.5, 1.0, 1.5, 2, 3, 4, 5
+					scheme = "rmsf"
+					prop = "colorfunc"
+
+					# if additional RMSF data file added, just return scheme
+					if config.OptType() == "rmsf":
+						if not function_declared:
+							viewer.startjs += f"""\n
+								let {scheme} = function(atom) {{
+									if (atom.b == 0) return "grey"
+									else if (atom.b < {darkblue}) return "darkblue"
+									else if (atom.b < {blue}) return "blue"
+									else if (atom.b < {lightblue}) return "#73c9ff"
+									else if (atom.b < {white}) return "white"
+									else if (atom.b < {yellow}) return "#fff27d"
+									else if (atom.b < {orange}) return "#ff6200"
+									else if (atom.b < {red}) return "red"
+									else return "darkred"
+								}}\n"""
+					
+					# if no RMSF data, calculate
+					else:
+						if len(structure) == 1:
+							Error("RMSF requires a PDB with more than one model to compute difference! Or, upload an additional data file with RMSF values.")
+							return source, prop, scheme
+					
+						Msg("Calculating RMSF...")
+						# List of atom names of interest
+						atom_names_of_interest = ["C", "CA", "N"]
+
+						entry = [input.File() if input.SourceFile() == "Upload" else input.ID() if input.SourceFile() == "PDB-ID" else input.Example(), model]
+						if not DataCache.In(entry):
+							main_model = structure[model]
+							for chain in main_model:
+								for residue in chain:
+									for atom in residue:
+										if atom.get_id() in atom_names_of_interest:
+											distances = []
+											for model in structure:
+												if model != main_model:
+													try:
+														corresponding_atom = model[chain.id][residue.id][atom.get_id()]
+														distance = norm(atom.coord - corresponding_atom.coord)
+														distances.append(distance)
+													except KeyError: continue
+											# Calculate mean distance
+											if distances: atom.set_bfactor(mean(distances))
+											output = StringIO()
+
+							output = StringIO()
+							io = PDBIO()
+							io.set_structure(main_model)
+							io.save(output)
+							DataCache.Store(output.getvalue(), entry)
+							output.close()
+
+						source = DataCache.Get(entry)
+
+						if not function_declared:
+							viewer.startjs += f"""\n
+								let {scheme} = function(atom) {{
+									if (atom.b == 0) return "grey"
+									else if (atom.b < {darkblue}) return "darkblue"
+									else if (atom.b < {blue}) return "blue"
+									else if (atom.b < {lightblue}) return "#73c9ff"
+									else if (atom.b < {white}) return "white"
+									else if (atom.b < {yellow}) return "yellow"
+									else if (atom.b < {orange}) return "orange"
+									else if (atom.b < {red}) return "red"
+									else return "darkred"
+								}}\n"""
+						prop = "colorfunc"
+
 				
+				####### colour by residue number
 				elif scheme == "residue":
-					# get number of residues (protein length)
-					max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
+					# get number of residues
+					uniq_res = {int(line[22:26].strip()) for line in source.splitlines() if line.startswith("ATOM")}
+					max = len(uniq_res)
 					prop = "colorscheme"
 					scheme = {
-						"prop": "index",  # index, b, resi
+						"prop": "resi",  # index, b, resi
 			   			"gradient": "linear", 
 						"colors": ["red", "orange", "yellow", "green", "blue", "purple"],
 						"min": 0, 
 						"max": max
 					}
 				
+				####### colour by reverse residue number
 				elif scheme == "reverse":
-					# get number of residues (protein length)
-					max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
+					# get number of residues
+					uniq_res = {int(line[22:26].strip()) for line in source.splitlines() if line.startswith("ATOM")}
+					max = len(uniq_res)
 					prop = "colorscheme"
 					scheme = {
-						"prop": "index",  # index, b, resi
+						"prop": "resi",  # index, b, resi
 			   			"gradient": "linear", 
 						"colors": ["purple", "blue", "green", "yellow", "orange", "red"],
 						"min": 0, 
 						"max": max
 					}
 
+				####### colour by secondary structure
 				elif scheme == "ssJmol": 
 					prop = "colorscheme"
 					
@@ -654,8 +695,17 @@ def server(input, output, session):
 			if source is None: return "No data to display! <br>Please upload your data or select an example data set in the sidebar."
 
 			if type(source) == str:
-				return PDBViewer(source, p)
-			return ModelViewer(source, p)
+				try:
+					viewer = PDBViewer(source, p)
+					return viewer
+				except:
+					return "3D model could not be generated, please check the format of your PDB file."
+				
+			try:
+				model_viewer = ModelViewer(source, p)
+				return model_viewer
+			except:
+				return "3D model could not be generated, please check file formatting."
 
 
 	@output
@@ -698,12 +748,13 @@ def server(input, output, session):
 		if data is None: return
 
 		if type(data) == str or input.SourceFile() == "PDB-ID":
-			# add tooltip: two column *.csv file containing the protein residue numbers and the corresponding B-factor or RMSD or RMSF values
-			elements.append(
-				ui.panel_conditional("input.SourceFile === 'Upload'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False)))
 			elements += [
+				# add upload box for additional data file
+				ui.panel_conditional("input.SourceFile === 'Upload' || input.SourceFile === 'PDB-ID'", ui.input_file("OptFile", "Add Optional B-factor, RMSD, or RMSF Data", accept=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"], multiple=False, placeholder='Optional Data')),
+				config.OptType.UI(ui.input_radio_buttons, make_inline=True, id="OptType", label="Optional Data Type:", choices={"bfactor": "B-Factor", "rmsf": "RMSF", "rmsd": "RMSD", "plddt": "pLDDT"}, tooltip="Specify the type of data that has been uploaded as an optional additional file. Optional files should be a table file with 4 columns: atom number, residue name, chain letter, and value (B-factor, RMSF, RMSD, or pLDDT data)."),
+				
 				ui.HTML("<b>Customization</b>"),
-				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. The default option `spectrum` applies a reversed gradient based on residue number. Read about other options <a href="https://3dmol.org/doc/global.html#builtinColorSchemes"; target="_blank">here</a>.')),			
+				config.ColorScheme.UI(ui.input_select, id="ColorScheme", label="Color Scheme", choices=Schemes, tooltip=ui.HTML('Define the coloring of the model. <br><b>Residue #</b> - Apply a rainbow gradient based on residue number. <br><b>Reverse Residue #</b> - Apply a reversed rainbow gradient based on residue number. <br><b>B-Factor</b> - Color by B-factor. Low values are blue, and high values are red. <br><b>RMSF</b> - Color by Root Mean Square Fluctuation. Low values are blue, and high values are red. RMSF requires a PDB with more than one model to compute difference. <br><b>RMSD</b> - Color by Root Mean Square Deviation. Low values are blue, and high values are red. RMSD values must be provided in an additional table file. <br><b>2ndary Structure</b> - Color by secondary structure using the ssJmol coloring scheme. <br><b>pLDDT</b> - Color by predicted Local Distance Difference Test confidence. Low confidence values are red, and high confidence values are blue. ')),			
 				
 				config.Model.UI(ui.input_numeric, id="Model", label="PDB Model", min=0, tooltip="Select which model to use from the PDB file, if the PDB contains multiple models."),
 				

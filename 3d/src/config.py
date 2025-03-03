@@ -50,4 +50,7 @@ config = ConfigHandler({
     
 	# ".txt" ".csv" ".tsv" ".xlsx"
     "TableType": Config(selected=".txt"),
+    
+	# "B-Factor", "RMSF", "RMSD", "pLDDT"
+    "OptType": Config(selected=None)
 })
