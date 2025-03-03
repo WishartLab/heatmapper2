@@ -66,17 +66,23 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())));
-		Valid.set(False)
+		p = ui.Progress()
+		try:
+			Data.set((await DataCache.Load(input, p=p)))
+			Valid.set(False)
 
-		columns = Data().columns
-		key = Filter(columns, ColumnType.Name, id="KeyColumn")
-		val = Filter(columns, ColumnType.Value, id="ValueColumn", all=True)
-		if val:
-			choice = 0
-			while choice < len(val) and val[choice] == key: choice += 1
-			ui.update_select(id="ValueColumn", selected=val[choice])
-		DataCache.Invalidate(File(input))
+			columns = Data().columns
+			key = Filter(columns, ColumnType.Name, id="KeyColumn")
+			val = Filter(columns, ColumnType.Value, id="ValueColumn", all=True)
+			if val:
+				choice = 0
+				while choice < len(val) and val[choice] == key: choice += 1
+				ui.update_select(id="ValueColumn", selected=val[choice])
+			DataCache.Invalidate(File(input))
+		except:
+			p.close()
+			Error("File could not be loaded!\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file. GeoJSON files must follow GeoJSON standards.")
+			return
 
 
 	@reactive.effect

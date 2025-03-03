@@ -64,11 +64,13 @@ def server(input, output, session):
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
 		# catch error here
+		p = ui.Progress()
 		try:
-			Data.set((await DataCache.Load(input, p=ui.Progress())))
+			Data.set((await DataCache.Load(input, p=p)))
 			Valid.set(False)
 			DataCache.Invalidate(File(input))
 		except:
+			p.close()
 			Error("File could not be loaded!\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file. \nImages can be uploaded as a .bmp, .gif, .ico, .jpg, .tif, .webp, or .png file.")
 
 

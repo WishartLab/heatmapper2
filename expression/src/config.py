@@ -44,7 +44,7 @@ config = ConfigHandler({
 	"Features": Config(selected=["row", "col", "x", "y", "legend"]),
     
 	# Any integer from 1-25
-    "N": Config(value=1),
+    #"N": Config(value=1),
 
 	# True or False to Use custom color maps or pre-defined ones.
 	"Custom": Config(value=False),
