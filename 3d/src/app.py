@@ -146,7 +146,11 @@ def server(input, output, session):
 		# don't load files incompatible with WASM 
 		# if n.endswith(blacklist) and Pyodide: return
 		path = Path(n)
-		opt_data = Cache.DefaultHandler(path)
+		try:
+			opt_data = Cache.DefaultHandler(path)
+		except:
+			Error("File could not be loaded!\nPlease ensure you are using a properly formatted table file.")
+			return
 		
 		# find residue name, number, chain, and value columns in data
 		name_cols = ["name", "residue", "res_name"]
@@ -691,8 +695,17 @@ def server(input, output, session):
 			if source is None: return "No data to display! <br>Please upload your data or select an example data set in the sidebar."
 
 			if type(source) == str:
-				return PDBViewer(source, p)
-			return ModelViewer(source, p)
+				try:
+					viewer = PDBViewer(source, p)
+					return viewer
+				except:
+					return "3D model could not be generated, please check the format of your PDB file."
+				
+			try:
+				model_viewer = ModelViewer(source, p)
+				return model_viewer
+			except:
+				return "3D model could not be generated, please check file formatting."
 
 
 	@output
