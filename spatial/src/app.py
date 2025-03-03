@@ -192,104 +192,111 @@ def server(input, output, session):
 		with ui.Progress() as p:
 			p.inc(message="Loading Data...")
 			if input.SourceFile() == "Upload":
+				try:
+					# Get all the files, to generate a name.
+					if input.File() is None: return
+					name = [f["datapath"] for f in input.File()]
 
-				# Get all the files, to generate a name.
-				if input.File() is None: return
-				name = [f["datapath"] for f in input.File()]
+					# If the name hasn't been cached, we need to construct the object.
+					if not DataCache.In(name):
+						p.inc(message="Organizing Data...")
+						temp = TemporaryDirectory()
+						try:
+							if input.UploadType() == "Visium": adata = await VisiumReader(temp, p)
+							elif input.UploadType() == "NanoString": adata = await NanoStringReader(temp, p)
+							else: return None
+						except Exception:
+							Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
 
-				# If the name hasn't been cached, we need to construct the object.
-				if not DataCache.In(name):
-					p.inc(message="Organizing Data...")
-					temp = TemporaryDirectory()
-					try:
-						if input.UploadType() == "Visium": adata = await VisiumReader(temp, p)
-						elif input.UploadType() == "NanoString": adata = await NanoStringReader(temp, p)
-						else: return None
-					except Exception:
-						Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
+						if adata is None: return
 
-					if adata is None: return
+						# Throw it into the Cache.
+						DataCache.Store(adata, name)
 
-					# Throw it into the Cache.
-					DataCache.Store(adata, name)
+						# Now that it's cached, remove the origin
+						for file in name:
+								Path(file).unlink()
 
-					# Now that it's cached, remove the origin
-					for file in name:
-							Path(file).unlink()
+					adata = DataCache.Get(name)
 
-				adata = DataCache.Get(name)
+					if input.File()[0]["name"].endswith(".h5ad"):
+						# check for cluster obs, counts obsm, ....,
+						# TODO: !!! 
+						print("Returning")
+						Data.set(adata)
+						return
 
-				if input.File()[0]["name"].endswith(".h5ad"):
-					# check for cluster obs, counts obsm, ....,
-					# TODO: !!! 
-					print("Returning")
-					Data.set(adata)
-					return
+					cell, gene = input.CellCount(), input.GeneCount()
+					if cell is None or gene is None: return
 
-				cell, gene = input.CellCount(), input.GeneCount()
-				if cell is None or gene is None: return
+					filtered = name + [cell, gene]
+					if not DataCache.In(filtered):
 
-				filtered = name + [cell, gene]
-				if not DataCache.In(filtered):
+						bdata = adata.copy()
+						# keep cells that have at least min_counts RNA counts
+						pp.filter_cells(bdata, min_counts=cell)
+						# keep genes that are expressed in at least min_cells
+						pp.filter_genes(bdata , min_cells=gene)
 
-					bdata = adata.copy()
-					# keep cells that have at least min_counts RNA counts
-					pp.filter_cells(bdata, min_counts=cell)
-					# keep genes that are expressed in at least min_cells
-					pp.filter_genes(bdata , min_cells=gene)
+						if input.UploadType() == "Visium":
+							adata.var_names_make_unique()
+							p.inc(message="Normalizing...")
+							pp.normalize_total(bdata, inplace=True)
+							pp.log1p(bdata)
 
-					if input.UploadType() == "Visium":
-						adata.var_names_make_unique()
-						p.inc(message="Normalizing...")
-						pp.normalize_total(bdata, inplace=True)
-						pp.log1p(bdata)
+							p.inc(message="Calculating Neighbors...")
+							pp.neighbors(bdata)
+							tl.umap(bdata)
+							gr.spatial_neighbors(bdata)
 
-						p.inc(message="Calculating Neighbors...")
-						pp.neighbors(bdata)
-						tl.umap(bdata)
-						gr.spatial_neighbors(bdata)
+							p.inc(message="Calculating QC Metrics...")
+							pp.calculate_qc_metrics(bdata, inplace=True)
 
-						p.inc(message="Calculating QC Metrics...")
-						pp.calculate_qc_metrics(bdata, inplace=True)
+							p.inc(message="Clustering...")
+							tl.leiden(bdata, key_added="cluster", neighbors_key="spatial_neighbors", resolution=input.Resolution())
 
-						p.inc(message="Clustering...")
-						tl.leiden(bdata, key_added="cluster", neighbors_key="spatial_neighbors", resolution=input.Resolution())
-
-						p.inc(message="Finding Highly Variable Genes...")
-						pp.highly_variable_genes(bdata, inplace=True, n_top_genes=100, flavor="seurat_v3")
+							p.inc(message="Finding Highly Variable Genes...")
+							pp.highly_variable_genes(bdata, inplace=True, n_top_genes=100, flavor="seurat_v3")
 
 
-					elif input.UploadType() == "NanoString":
-						p.inc(message="Obtaining Control Probes...")
-						bdata.var["NegPrb"] = bdata.var_names.str.startswith("NegPrb")
-						pp.calculate_qc_metrics(bdata, qc_vars=["NegPrb"], inplace=True)
+						elif input.UploadType() == "NanoString":
+							p.inc(message="Obtaining Control Probes...")
+							bdata.var["NegPrb"] = bdata.var_names.str.startswith("NegPrb")
+							pp.calculate_qc_metrics(bdata, qc_vars=["NegPrb"], inplace=True)
 
-						p.inc(message="Normalizing...")
-						bdata.layers["counts"] = bdata.X.copy()
-						pp.normalize_total(bdata, inplace=True)
-						pp.log1p(bdata)
+							p.inc(message="Normalizing...")
+							bdata.layers["counts"] = bdata.X.copy()
+							pp.normalize_total(bdata, inplace=True)
+							pp.log1p(bdata)
 
-						p.inc(message="Calculating Neighbors...")
-						pp.pca(bdata)
-						pp.neighbors(bdata)
-						tl.umap(bdata)
-						gr.spatial_neighbors(bdata, coord_type="generic", delaunay=True)
+							p.inc(message="Calculating Neighbors...")
+							pp.pca(bdata)
+							pp.neighbors(bdata)
+							tl.umap(bdata)
+							gr.spatial_neighbors(bdata, coord_type="generic", delaunay=True)
 
-						p.inc(message="Clustering...")
-						tl.leiden(bdata, key_added="cluster")
+							p.inc(message="Clustering...")
+							tl.leiden(bdata, key_added="cluster")
 
-					ColumnNames(bdata ,p)
-					DataCache.Store(bdata, filtered)
-				Data.set(DataCache.Get(filtered))
-				p.close()
+						ColumnNames(bdata ,p)
+						DataCache.Store(bdata, filtered)
+					Data.set(DataCache.Get(filtered))
+					p.close()
+				except:
+					p.close()
+					Error(ui.HTML('File could not be loaded!\nData can be uploaded as Visium or NanoString sets of files. <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#spatial"; target="_blank">Read More</a>'))
 
 			# With an example, just return it.
 			else:
-				# check for cluster obs, counts obsm, ....,
-				# TODO: !!! 
-				Data.set(await DataCache.Load(input, default=None))
-				ColumnNames(Data(), p)
-				p.close()
+				try:
+					# check for cluster obs, counts obsm, ....,
+					# TODO: !!! 
+					Data.set(await DataCache.Load(input, default=None))
+					ColumnNames(Data(), p)
+					p.close()
+				except:
+					p.close()
+					Error("Error loading example.")
 
 	@output
 	@render.data_frame

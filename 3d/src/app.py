@@ -19,6 +19,7 @@ from Bio.PDB import PDBParser, PDBIO
 from io import StringIO
 from numpy import mean
 from numpy.linalg import norm
+from pathlib import Path
 
 # Shared functions
 from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, ColorMaps, Update, Pyodide, Error, Msg, File
@@ -63,9 +64,12 @@ def server(input, output, session):
 		"""
 
 		suffix = path.suffix
-		if suffix == ".obj": return VistaRead(path.resolve())
-		if suffix == ".png" or suffix == ".jpg": return read_texture(path.resolve())
+		if suffix == ".obj": 
+			return VistaRead(path.resolve())
+		elif suffix == ".png" or suffix == ".jpg": 
+			return read_texture(path.resolve())
 		else: return DataCache.DefaultHandler(path)
+	
 	DataCache = Cache("3d", DataHandler=HandleData)
 
 	Data = reactive.value(None)
@@ -84,10 +88,20 @@ def server(input, output, session):
 		and then invalidates the current data in the table.
 		"""
 		if input.SourceFile() == "PDB-ID":
-			data = await DataCache.Download(f"https://files.rcsb.org/view/{input.ID()}.pdb")
-			Data.set(data)
+			try:
+				data = await DataCache.Download(f"https://files.rcsb.org/view/{input.ID()}.pdb")
+				Data.set(data)
+			except:
+				Error("File could not be loaded!\nPlease ensure you are using a valid PDB ID, and are connected to the internet.")
+				return
 		else:
-			Data.set((await DataCache.Load(input, default=None, p=ui.Progress(), wasm_blacklist=(".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"))))
+			p = ui.Progress()
+			try:
+				Data.set((await DataCache.Load(input, default=None, p=p, wasm_blacklist=(".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"))))
+			except:
+				p.close()
+				Error(ui.HTML('File could not be loaded!<br>Protein files must be in .pdb format. <br>Object data can be uploaded as a table file, image file, or .obj file. <a href="https://github.com/WishartLab/heatmapper2/wiki/Format#3d"; target="_blank">Read more</a>'))
+				return
 		Valid.set(False)
 		DataCache.Invalidate(File(input))
 
@@ -109,6 +123,101 @@ def server(input, output, session):
 				p_name="object",
 				wasm=False
 			))
+
+
+	@reactive.effect
+	@reactive.event(input.OptFile)
+	def MergeOptFile():
+		"""
+		@brief Moves RMSD, RMSF, B-Factor or pLDDT data from an input file to the B-factor column of the PDB data
+		"""
+		# ignore optional file if 3D model is not PDB
+		data = GetData()  # GetData() vs Data()?
+		if type(data) != str:
+			return
+		
+		# load optional file as a dataframe
+		opt_file = input.OptFile()
+		if opt_file is None:
+			Error("Optional data could not be merged with the PDB file - Please check your data formatting.")
+			return
+		
+		n = str(opt_file[0]["datapath"])
+		# don't load files incompatible with WASM 
+		# if n.endswith(blacklist) and Pyodide: return
+		path = Path(n)
+		#opt_data = read_table(path.resolve()).fillna(0)
+		opt_data = Cache.DefaultHandler(path)
+		print(f"\nxxxxxxxxxxxxxxxx\n{opt_data}\nxxxxxxxxxxxxxxxx\n")
+		print(type(opt_data))
+		
+		# find residue name, number, chain, and value columns in data
+		name_cols = ["name", "residue", "res_name"]
+		num_cols = ["num", "number", "res_number"]
+		chain_cols = ["chain", "letter"]
+		val_cols = ["rmsd", "rmsf", "plddt", "bfactor"]
+
+		cols = [col.lower() for col in opt_data.columns]
+		print(f"cols:\t{cols}")
+		name = next((col for col in name_cols if col in cols), None)
+		print(name)
+		num = next((col for col in num_cols if col in cols), None)
+		print(num)
+		chain = next((col for col in chain_cols if col in cols), None)
+		print(chain)
+		val = next((col for col in val_cols if col in cols), None)
+		print(val)
+		
+		if name is None or num is None or chain is None or val is None:
+			Error("Additional data could not be merged! Please check your column names and formatting.")
+			return
+
+		# map values to residue number and chain ID
+		map = {}
+		for index, row in opt_data.iterrows():
+			new_chain_id = row[chain].strip()
+			new_res_num = row[num]
+			key = (new_res_num,) if not new_chain_id else (new_res_num, new_chain_id)
+			map[key] = float(row[val])
+		
+		# update pdb string
+		updated_pdb = ""
+		for line in data.splitlines():
+			# handle multiple models
+			if line.startswith("MODEL"):
+				updated_pdb += line
+				continue
+			elif line.startswith("ENDMDL"):
+				updated_pdb += line
+				continue
+
+			if line.startswith("ATOM"):
+				res_num = int(line[22:26].strip())
+				chain_id = line[21:22].strip()
+				
+				# match with chain ID or residue number
+				full_key = (res_num, chain_id)
+				mini_key = (res_num,)
+				if full_key in map:
+					new_val = map[full_key]
+				elif mini_key in map:
+					new_val = map[mini_key]
+				else:  # no match found
+					updated_pdb += line
+					continue
+
+				# replace existing b-factor with new value
+				# b-factor is in columns 60:66
+				new_line = f"{line[:60]}{new_val:6.2f}{line[66:]}"
+				updated_pdb += new_line
+
+			else:
+				updated_pdb += line
+
+		# overwrite old PDB string with new one
+		Data.set(updated_pdb)
+		Valid.set(False)
+		DataCache.Invalidate(File(input))
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -187,7 +296,13 @@ def server(input, output, session):
 			<br><br><h3>Format</h3>
 			<i>3D heatmaps can be created in two different ways:</i><br><br>
 			<b>1 - PDB</b><br>
-			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see example PDB 4K8X).
+			Upload a <b>.pdb</b> file, or select 'ID' in the sidebar and enter a <b>PDB ID</b> (see example PDB 4K8X).<br>
+			You can optionally upload an <b>additional table file</b> containing RMSF, RMSD, B-factor, or pDDLT values for the protein. These values will replace any values currently in the B-factor column of the PDB file.<br>
+			<br><i>Optional additional files MUST include the following columns (case-insensitive):</i><br>
+					<li><u>Name column:</u> "NAME", "RESIDUE", or "RES_NAME"</li>
+					<li><u>Number column:</u> "NUM", "NUMBER", or "RES_NUMBER"</li>
+					<li><u>Chain column:</u> "CHAIN", or "LETTER"</li>
+					<li><u>Value column:</u> "RMSD", "RMSF", "PLDDT", or "BFACTOR"</li>
 			<br><br>
 			<b>2 - Object Files</b><br>
 			Input an .obj file and either a table file or an image. If an image is used, it will be mapped onto the surface of the object (see Example 3).<br>
@@ -386,11 +501,6 @@ def server(input, output, session):
 								else return "darkred"
 							}}\n"""
 					prop = "colorfunc"
-
-				# elif scheme == "rainbow":
-				# 	max = len([atom for atom in source.split("\n") if atom.startswith("ATOM")])
-				# 	prop = "colorscheme"
-				# 	scheme = {"prop": "index", "gradient": "ROYGB", "min": 0, "max": max}
 				
 				elif scheme == "residue":
 					# get number of residues (protein length)

@@ -47,7 +47,7 @@ def server(input, output, session):
 		"example3.txt": "Input type: txt<br>Contents: The location of traffic signals in Toronto.<br>Source: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
 		"example21.csv": "Input type: csv<br>Contents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.<br>Source: https://www.nhc.noaa.gov/data/",
 		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anomalies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt",
-		"NYCtaxi-2013.csv": "Input type: csv<br>Contents: A subset of 2013 taxi trip data from the NYC Taxi and Limousine Commission.<br>Source: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
+		"NYCtaxi-2013.csv": "This example is a .csv file containing a subset of 2013 taxi trip data from the NYC Taxi and Limousine Commission. The columns are 'latitude', 'longitude', 'value', and 'time'. The time column is the pickup time of the taxi service, and the number in the value column is the number of passengers in that taxi. <br>Source: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
 	}
 
 
@@ -157,7 +157,7 @@ def server(input, output, session):
 						ui.update_select(id="ValueColumn", selected=columns[1] if len(columns) > 1 else None)
 				DataCache.Invalidate(File(input))
 		except Exception as e:
-			Error(f"File could not be loaded.", e)
+			Error(ui.HTML('File could not be loaded! Data can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file. Error'), e)
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -315,7 +315,7 @@ def server(input, output, session):
 			<i>Input data can be formatted as follows:</i>
 				<ul>
 				<li><u>Static Heatmaps</u> require 'Latitude' and 'Longitude' columns. An optional 'Value' column can be used to color data points based on value - a uniform value is applied if this column does not exist (see examples '1: Cholera Deaths' and '2: Traffic Signals').</li>
-				<li><u>Temporal Heatmaps</u> require 'Latitude' and 'Longitude' columns plus an additional 'Time' column. An optional 'Value' column can be used to color data points based on value - a uniform value is applied if this column does not exist (see examples '3: Hurricanes' and '4: Temperature').</li>
+				<li><u>Temporal Heatmaps</u> require 'Latitude' and 'Longitude' columns plus an additional 'Time' column. An optional 'Value' column can be used to color data points based on value - a uniform value is applied if this column does not exist (see examples '3: Hurricanes' and '4: NYC Taxi Trips').</li>
 				</ul>
 				 
 			<i>Geocoordinate heatmaps can be generated from the following file formats:</i>

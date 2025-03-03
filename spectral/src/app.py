@@ -122,19 +122,30 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress(), default=None)))
-		Valid.set(False)
-		DataCache.Invalidate(File(input))
+		p = ui.Progress()
+		try:
+			Data.set((await DataCache.Load(input, p=p, default=None)))
+			Valid.set(False)
+			DataCache.Invalidate(File(input))
+		except:
+			p.close()
+			Error("File could not be loaded!\nPlease upload data as a .mzml file.")
+			return
 
 		reader = Data()
 		if reader is None: return
 
-		ids = set()
-		first = None
-		for spectra in reader:
-			ids.add(spectra.ID)
-			if first is None: first = spectra.ID
-		ui.update_select(id="ID", selected=[first], choices=list(ids))
+		try:
+			ids = set()
+			first = None
+			for spectra in reader:
+				ids.add(spectra.ID)
+				if first is None: first = spectra.ID
+			ui.update_select(id="ID", selected=[first], choices=list(ids))
+		except:
+			p.close()
+			Error("File could not be parsed. Please check the formatting of your .mzml file.")
+			return
 
 
 	def GetData(): 

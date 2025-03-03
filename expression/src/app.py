@@ -55,10 +55,15 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())))
-		Valid.set(False)
-		Filter(Data().columns, ColumnType.Name, id="NameColumn")
-		DataCache.Invalidate(File(input))
+		p = ui.Progress()
+		try:
+			Data.set((await DataCache.Load(input, p=p)))
+			Valid.set(False)
+			Filter(Data().columns, ColumnType.Name, id="NameColumn")
+			DataCache.Invalidate(File(input))
+		except:
+			p.close()
+			Error("File could not be loaded!\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .odf file.")
 
 
 	def GetData(): return Table.data_view() if Valid() else Data()
@@ -72,7 +77,7 @@ def server(input, output, session):
 			File(input),
 			config.NameColumn(),
 			config.Features(),
-			config.N(),
+			#config.N(),
 			config.ScaleType(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
@@ -157,7 +162,11 @@ def server(input, output, session):
 		method = config.ClusterMethod().lower()
 		metric = config.DistanceMethod().lower()
 
-		matrix = hierarchy.linkage(data.values.T if invert else data.values, method=method, metric=metric)
+		try:
+			matrix = hierarchy.linkage(data.values.T if invert else data.values, method=method, metric=metric)
+		except:
+			Error("Could not generate heatmap from the uploaded data. Please check your data format.")
+			return None
 
 		if progress is not None: progress.inc(message="Creating dendrogram...")
 		dendrogram = hierarchy.dendrogram(matrix, ax=ax, orientation=orientation.lower())
@@ -367,6 +376,8 @@ def server(input, output, session):
 					if "row" in config.Features() and config.Elevation() == 90:
 						ax_row = fig.add_subplot(gs[1, 0])
 						row_dendrogram = GenerateDendrogram(data, ax_row, "Left", progress=p)
+						if row_dendrogram is None:
+							return CreateErrorImg("Error generating heat map. Please check your data format.", "#027bc2", inputs)
 						ax_row.axis("off")
 						leaves = row_dendrogram["leaves"]
 						leaves.reverse()
@@ -382,6 +393,8 @@ def server(input, output, session):
 					if "col" in config.Features() and config.Elevation() == 90:
 						ax_col = fig.add_subplot(gs[0, 1])
 						col_dendrogram = GenerateDendrogram(data, ax_col, "Top", invert=True, progress=p)
+						if col_dendrogram is None:
+							return CreateErrorImg("Error generating heat map. Please check your data format.", "#027bc2", inputs)
 						ax_col.axis("off")
 
 					# Handle scaling
@@ -394,11 +407,12 @@ def server(input, output, session):
 						ax_heatmap = fig.add_subplot(gs[1, 1], projection="3d")
 						heatmap, mappable = Heatmap3D(df, ax_heatmap, p)
 					
-					# if "expand" is selected, set text to 3
-					if config.AutoSize() == "expand":
-						text_size = 8
-					else:
-						text_size = config.TextSize()
+					# if "expand" is selected, set text to 8
+					# if config.AutoSize() == "expand":
+					# 	text_size = 8
+					# else:
+					# 	text_size = config.TextSize()
+					text_size = config.TextSize()
 
 					# If we render the Y axis.
 					# TODO: show every N-th (n = config.N()...)
@@ -431,23 +445,24 @@ def server(input, output, session):
 
 
 					# set image size based on config
-					if config.AutoSize() == "expand":
-						print(f"NUM COL: {num_col}")
-						size = num_col * (1/3) * num_col
-						if size < 1000:
-							size = 1000	
-						print(f"size: {size}")					
-						# save size to global variable to be used when loading from cache
-						if size > EXPANDED_SIZE:
-							EXPANDED_SIZE = size
+					# if config.AutoSize() == "expand":
+					# 	print(f"NUM COL: {num_col}")
+					# 	size = num_col * (1/3) * num_col
+					# 	if size < 1000:
+					# 		size = 1000	
+					# 	print(f"size: {size}")					
+					# 	# save size to global variable to be used when loading from cache
+					# 	if size > EXPANDED_SIZE:
+					# 		EXPANDED_SIZE = size
 					
 					# calculate dpi for auto expand
-					if config.AutoSize() == "expand":
-						dpi = size * 0.15
-						if config.DPI() > dpi:
-							dpi = config.DPI()
-					else:
-						dpi = config.DPI()
+					# if config.AutoSize() == "expand":
+					# 	dpi = size * 0.15
+					# 	if config.DPI() > dpi:
+					# 		dpi = config.DPI()
+					# else:
+					# 	dpi = config.DPI()
+					dpi = config.DPI()
 					
 					# catch invalid dpi values
 					if dpi > 1000:
@@ -465,9 +480,9 @@ def server(input, output, session):
 		if size == 0:  # loading from cache
 			if config.AutoSize() == "fit":
 				size = 500
-			elif config.AutoSize() == "expand":
-				size = EXPANDED_SIZE
-				print(f"expand size: {size}")					
+		# 	elif config.AutoSize() == "expand":
+		# 		size = EXPANDED_SIZE
+		# 		print(f"expand size: {size}")					
 			else:
 				size = config.Size()
 		
@@ -481,7 +496,8 @@ def server(input, output, session):
 
 	@output
 	@render.image(delete_file=True)
-	def Heatmap(): return GenerateHeatmap()
+	def Heatmap(): 
+		return GenerateHeatmap()
 
 
 	@output
@@ -639,7 +655,7 @@ app_ui = ui.page_fluid(
 				ui.HTML("<b>Features</b>"),
 				config.Features.UI(ui.input_checkbox_group, make_inline=False, id="Features", label=None, choices={"row": "Row Dendrogram", "col": "Column Dendrogram", "x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"}, tooltip="Row Dendrogram enables clustering of rows. Column Dendrogram enables clustering of columns. X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap.",
 				),
-				config.N.UI(ui.input_slider, id="N", label="Show N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
+				#config.N.UI(ui.input_slider, id="N", label="Show N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
 
 				ui.HTML("<b>Image Settings</b>"),
 				ui.div(
@@ -648,7 +664,7 @@ app_ui = ui.page_fluid(
 					ui.div(
 						ui.div(
 							config.AutoSize.UI(ui.input_radio_buttons,
-						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Width", "fit": "Fit to Screen", "expand": "Expand"}, 
+						  		make_inline=False, id="AutoSize", label=None, choices={"custom": "Custom Width", "fit": "Fit to Screen"}, 
 							),
 							style="flex: 1; padding-top: 15px;",
 						),
