@@ -70,9 +70,16 @@ def server(input, output, session):
 	@reactive.effect
 	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset)
 	async def UpdateData():
-		Data.set((await DataCache.Load(input, p=ui.Progress())));
-		Valid.set(False)
-		DataCache.Invalidate(File(input))
+		# catch error here
+		try:
+			p = ui.Progress()
+			Data.set((await DataCache.Load(input, p=p)))
+			Valid.set(False)
+			DataCache.Invalidate(File(input))
+		except:
+			p.close()
+			Error("File could not be loaded!\nData can be uploaded as a .csv, .tsv, .txt, .xslx, .dat, .tab, or .pdb file.")
+			return
 
 
 	def GetData(): 
@@ -86,6 +93,7 @@ def server(input, output, session):
 			config.DistanceMethod() if config.MatrixType() == "Distance" else config.CorrelationMethod(),
 			input.CustomColors() if config.Custom() else config.ColorMap().split(),
 			config.Interpolation(),
+			config.Chain(),
 			config.Bins(),
 			config.TextSize(),
 			config.K(),
@@ -173,15 +181,14 @@ def server(input, output, session):
 		for model in structure:
 			for chain in model:
 					if chain.id == config.Chain():
-							for residue in chain:
-									for atom in residue:
-											coordinates.append(list(atom.coord))
-		df = DataFrame(coordinates, dtype=float, columns=[x for x in range(1, len(coordinates[0])+1)])
-		print(f"PDB DATAFRAME:\n{df}\n")
-		print(f"dtypes: {df.dtypes}")
-
-
-		df = DataFrame({"Error": ["PDB test"]})
+						print(f"chain.id: {chain.id}\tconfig.Chain(): {config.Chain()}")
+						for residue in chain:
+							for atom in residue:
+								# coord is a len 3 array of floats (x, y, z)
+								l = list(atom.coord)[:3]
+								l.append(atom.name)
+								coordinates.append(l)
+		df = DataFrame(coordinates, columns=["X", "Y", "Z", "Name"])
 		return df
 
 
@@ -238,6 +245,7 @@ def server(input, output, session):
 	def Table():
 		print("TABLE")
 		df = Data()
+		print(f"LENGTH: {df.columns}")
 		if len(df.columns) == 0 or df is None:
 			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
 
@@ -257,6 +265,7 @@ def server(input, output, session):
 		# 	return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 		
 		except Exception:
+			print("here (post-exception)")
 			Error("The provided input format cannot be rendered")
 			return DataFrame({"Error": ["The provided input format cannot be rendered."]})
 
@@ -307,7 +316,7 @@ def server(input, output, session):
 		'''
 		@param data: Pandas df
 		'''
-		# TODO: if FASTA file & k-mer is different, create new matrix
+		# TODO: if FASTA, if k-mer is different create new matrix
 
 		name_col = Filter(data.columns, ColumnType.Name)
 		if name_col is not None:
@@ -325,7 +334,8 @@ def server(input, output, session):
 			else:
 				method = config.CorrelationMethod().lower()
 				return data.T.corr(method=method)
-		except Exception:
+		except Exception as e:
+			print(e)
 			Error("Could not compute matrix. Ensure your input data is correct!")
 			return None
 		
@@ -519,6 +529,8 @@ def server(input, output, session):
 						size = num_col * (1/3) * num_col
 						if size < 1000:
 							size = 1000					
+						elif size > 10000:
+							size = 10000
 						# save size to global variable to be used when loading from cache
 						if size > EXPANDED_SIZE:
 							EXPANDED_SIZE = size
