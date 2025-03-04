@@ -12,8 +12,8 @@ config = ConfigHandler({
 	# Dependent on input
 	"ID": Config(selected=[]),
 	"Peaks": Config(selected="Raw"),
-	"Interpolation": Config(selected="Nearest"),
-	"Dimension": Config(value=100),
+	#"Interpolation": Config(selected="Nearest"),
+	#"Dimension": Config(value=100),
 
 	"Elevation": Config(value=45),
 	"Rotation": Config(value=45),
