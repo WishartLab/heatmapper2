@@ -478,7 +478,7 @@ def server(input, output, session):
 		yield str(output_data)
 
 
-	@render.download(filename="heatmap.png")
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
 	def DownloadHeatmap(): yield DataCache.Get(Hash())
 
 
@@ -559,7 +559,8 @@ app_ui = ui.page_fluid(
 					tooltip=ui.HTML('X and Y labels toggle the data labels along their respective axes. <br><br>Z labels toggles the data labels along the Z axis if rendering as a 3D plot. <br><br>Legend displays a colorbar legend on the heatmap.'),
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
+				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
 			),
 			padding="10px",
 			gap="20px",

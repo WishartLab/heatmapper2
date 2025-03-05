@@ -654,10 +654,10 @@ def server(input, output, session):
 		yield open(temp.name, "rb").read()
 
 
-	@render.download(filename="heatmap.png")
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
 	def DownloadHeatmap():
 		# Generate a TemporaryFile that deletes itself after scope.
-		with NamedTemporaryFile(suffix=".png") as file:
+		with NamedTemporaryFile(suffix=config.HeatmapType()) as file:
 			data = GenerateHeatmap(file)
 			if data is None: return
 			yield file.read()
@@ -772,7 +772,8 @@ app_ui = ui.page_fluid(
 					tooltip=ui.HTML("Image toggles the visibility of the background image. <br>Legend toggles the visibility of the sidebar color legend. <br>Frame toggles the visibility of a frame around the heatmap with x and y axis titles."),
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download"),
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg", ".pdf"], inline=True),
+				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
 			),
 
 			ui.panel_conditional(
