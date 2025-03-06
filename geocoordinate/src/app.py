@@ -43,11 +43,10 @@ import branca, certifi, xyzservices, requests
 def server(input, output, session):
 
 	Info = {
-		"example1.txt": "Input type: txt<br>Contents: Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water.<br>Source: A digitised version of the data is available online, courtesy of Robin Wilson (robin@rtwilson.com).",
-		"example3.txt": "Input type: txt<br>Contents: The location of traffic signals in Toronto.<br>Source: Toronto Open Data. The idea to use this data set comes from an R-bloggers post by Myles Harrison.",
-		"example21.csv": "Input type: csv<br>Contents: A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022.<br>Source: https://www.nhc.noaa.gov/data/",
-		"test.txt": "Input type: txt<br>Contents: NASA Temperature Anomalies from 1980-2024<br>Source: https://data.giss.nasa.gov/tmp/gistemp/NMAPS/tmp_GHCNv4_ERSSTv5_1200km_Anom_6_2024_2024_1951_1980_100_180_90_0_2_/amaps.txt",
-		"NYCtaxi-2013.csv": "This example is a .csv file containing a subset of 2013 taxi trip data from the NYC Taxi and Limousine Commission. The columns are 'latitude', 'longitude', 'value', and 'time'. The time column is the pickup time of the taxi service, and the number in the value column is the number of passengers in that taxi. <br>Source: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
+		"example1.txt": '<u>Input type:</u> .txt Data<br><u>Contents:</u> Deaths from a cholera outbreak in 1854. John Snow used this data in conjunction with local pump locations as evidence that cholera is spread by contaminated water. <br><u>Source:</u> A digitised version of the data is available <a href="https://blog.rtwilson.com/john-snows-cholera-data-in-more-formats/"; target="_blank">courtesy of Robin Wilson</a>.',
+		"example3.txt": '<u>Input type:</u> .txt Data<br><u>Contents:</u> The location of traffic signals in Toronto, Canada.<br><u>Source:</u> <a href="https://open.toronto.ca/dataset/traffic-signals-tabular/"; target="_blank">Toronto Open Data</a>',
+		"example21.csv": '<u>Input type:</u> .csv Data <br><u>Contents:</u> A parsed version of the Northeast and North Central Pacific hurricane database (HURDAT2) 2000-2022. Data includes the date and time, location, and intensity of each hurricane. This example can be viewed as a temporal heat map.<br><u>Source:</u> <a href="https://www.nhc.noaa.gov/data/"; target="_blank">www.nhc.noaa.gov/data/</a>',
+		"NYCtaxi-2013.csv": '''<u>Input type:</u> .csv Data <br><u>Contents:</u> This example contains a subset of 2013 taxi trip data from the NYC Taxi and Limousine Commission. The columns are 'latitude', 'longitude', 'value', and 'time'. The time column is the pickup time of the taxi service, and the number in the value column is the number of passengers in that taxi. This example can be viewed as a temporal heat map.<br><u>Source:</u> <a href="https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page"; target="_blank">www.nyc.gov</a>'''
 	}
 
 
@@ -504,7 +503,6 @@ app_ui = ui.page_fluid(
 					"example3.txt": "2: Traffic Signals",
 					"example21.csv": "3: Hurricanes",
 					"NYCtaxi-2013.csv": "4: NYC Taxi Trips",
-					"test.txt": "5: Temperature Anomalies",
 				},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".nc"],
 				project="Geocoordinate"
