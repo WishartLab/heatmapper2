@@ -41,7 +41,7 @@ EXPANDED_SIZE = 0
 def server(input, output, session):
 	# Information about the Examples
 	Info = {
-		"example1.txt": "<u>Input type:</u> .txt Data <br><u>Source:</u> Retrieved from the website for the Ashley Lab Heatmap Builder.",
+		"mouse_leukemia.tsv": '<u>Input type:</u> .tsv Data <br><u>Contents:</u> A subset of gene expression data from a murine study on acute myeloid leukemia (AML). Columns represent samples, while rows are genes. The samples have various mutations related to altered DNA methylation. <br><u>Source:</u> Shih, A. H. et al. (2017). PMCID: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5413413/"; "target="_blank">PMC5413413</a>',
 		"human_liver_subset.tsv": '<u>Input type:</u> .tsv Data <br><u>Contents:</u> Subset of human liver RNA-Seq data from ARCHS4. Columns represent samples, while rows are genes. The dataset is composed of samples from multiple different experiments. <br><u>Source:</u> <a href="https://www.kaggle.com/datasets/lachmann12/human-liver-rnaseq-gene-expression-903-samples?resource=download"; target="_blank">kaggle.com</a>.',
 		"example3.txt": '<u>Input type:</u> .txt Data <br><u>Contents:</u> Large dataset of gene expression in <i>S. cerevisiae</i> under varying conditions. Data was collected during the cell division cycle, alpha factor arrest, centrifugal elutriation, sporulation, high temperature shock, low temperature shock, and diauxic shift. Data was collected using DNA microarrays.<br><u>Source:</u> Eisen et al. (1998). PMCID: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC24541/#F2"; target="_blank">PMC24541</a> DOI: 10.1073/pnas.95.25.14863'
 	}
@@ -486,7 +486,8 @@ def server(input, output, session):
 				size = config.Size()
 		
 		b = DataCache.Get(inputs)
-		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+		#with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+		with NamedTemporaryFile(delete=False, suffix=config.HeatmapType()) as temp:
 			temp.write(b)
 			temp.close()
 			img: types.ImgData = {"src": temp.name, "height": f"{size}px"}
@@ -545,7 +546,8 @@ def server(input, output, session):
 
 
 	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
-	def DownloadHeatmap(): yield DataCache.Get(HashString())
+	def DownloadHeatmap(): 
+		yield DataCache.Get(HashString())
 
 
 	@render.ui
@@ -600,7 +602,7 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={
-					"example1.txt": "Ex1: ", 
+					"mouse_leukemia.tsv": "Ex1: Mouse AML", 
 			  		"human_liver_subset.tsv": "Ex2: Human Liver", 
 					"example3.txt": "Ex3: S. cerevisiae"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
