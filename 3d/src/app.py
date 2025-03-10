@@ -17,6 +17,7 @@ from shiny import App, reactive, render, ui
 from pandas import DataFrame, read_table
 from Bio.PDB import PDBParser, PDBIO
 from io import StringIO
+from imgkit import from_file as convert
 from numpy import mean
 from numpy.linalg import norm
 from pathlib import Path
@@ -51,7 +52,8 @@ def server(input, output, session):
 			"Description": '<u>Input type:</u> PDB File<br><u>Contents:</u> Binary complex of 9N DNA polymerase in the replicative state, from organism Thermococcus sp. 9oN-7. The data was determined by X-ray diffraction, with a resolution of 2.28 angstrom. <br><u>Source:</u> <a href="https://www.rcsb.org/structure/4k8x"; target="_blank">www.rcsb.org</a>'
 		}
 	}
-	#Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "RMSD", "ssJmol", "amino", "shapely", "nucleic", "chain", "rasmol"]
+
+	# colour scheme options
 	Schemes = ["Residue #", "Reverse Residue #", "B-factor", "RMSF", "RMSD", "2ndary Structure", "pLDDT"]
 
 
@@ -355,6 +357,7 @@ def server(input, output, session):
 		@brief Returns an HTML string containing the Py3DMol.js viewer of the source.
 		@param source: The source containing PDB data as a string.
 		@param p: The progress bar.
+		@param image: bool indicating if output should be generated as a png for download only
 		@returns An HTML string that should be wrapped with ui.HTML
 		"""
 
@@ -619,7 +622,6 @@ def server(input, output, session):
 
 			if heatmap_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{heatname_name}"', f'{heatname_name}')
 
-
 			p.inc(message="Exporting...")
 			DataCache.Store(viewer.write_html(), global_inputs)
 
@@ -631,6 +633,7 @@ def server(input, output, session):
 		@brief Generates an HTML string of the PyVista Model viewer.
 		@param source: The data to be applied to the object.
 		@param p: The progress bar.
+		@param image: bool indicating if output should be generated as a png for download only
 		@returns An HTML string that should be wrapped with ui.HTML
 		@info Object will also need to be defined.
 		"""
@@ -759,11 +762,15 @@ def server(input, output, session):
 			yield df.to_string()
 
 
-	@render.download(filename="heatmap.html")
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
 	def DownloadHeatmap():
-		html = GenerateHeatmap()
-		if html is not None:
-			yield html
+		if config.HeatmapType() == ".png":
+			# yield convert(GenerateHeatmap(), "heatmap.png")
+			pass
+		else: 
+			html = GenerateHeatmap()
+			if html is not None:
+				yield html
 
 
 	@output
@@ -880,6 +887,7 @@ app_ui = ui.page_fluid(
 
 				ui.output_ui(id="ConditionalElements"),
 
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".html"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download HTML"),
 			),
 			padding="10px",
