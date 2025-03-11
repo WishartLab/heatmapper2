@@ -358,7 +358,7 @@ def server(input, output, session):
 		yield file_contents
 
 
-	@render.download(filename="heatmap.png")
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
 	def DownloadHeatmap(): yield DataCache.Get(HashString())
 
 
@@ -443,7 +443,8 @@ app_ui = ui.page_fluid(
 				),
 				config.Legend.UI(ui.input_text, id="Legend", label="Legend Title", conditional="input.Features.includes('legend')", tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"),
 
-				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
+				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
 			),
 			padding="10px",
 			gap="20px",

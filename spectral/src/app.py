@@ -63,7 +63,7 @@ def server(input, output, session):
 				config.Elevation(),
 				config.Zoom(),
 				config.Rotation(),
-				config.Dimension(),
+				#config.Dimension(),
 				input.mode(),
 			]
 		elif tab == "SimilarityTab":
@@ -74,7 +74,7 @@ def server(input, output, session):
 				config.TextSize(),
 				config.ID(),
 				config.DPI(),
-				config.Interpolation(),
+				#config.Interpolation(),
 				input.mode(),
 			]
 
@@ -144,7 +144,7 @@ def server(input, output, session):
 			ui.update_select(id="ID", selected=[first], choices=list(ids))
 		except:
 			p.close()
-			Error("File could not be parsed. Please check the formatting of your .mzml file.")
+			Error("File could not be parsed. \nPlease check the formatting of your .mzml file.")
 			return
 
 
@@ -269,7 +269,8 @@ def server(input, output, session):
 				p.inc(message="Plotting")
 				df = DataFrame(data=distances, columns=indices, index=indices, dtype="float")
 				fig, ax = subplots()
-				interpolation = config.Interpolation().lower()
+				#interpolation = config.Interpolation().lower()
+				interpolation = "nearest"
 				plot = ax.imshow(df, cmap=config.ColorMap().lower(), interpolation=interpolation, aspect="equal")
 
 				# Visibility of features
@@ -325,7 +326,9 @@ def server(input, output, session):
 				cmap = get_cmap(config.ColorMap().lower())
 
 				# We additionally cache interpolation.
-				interpolation_cache = [File(input), config.Peaks(), config.Dimension(), "Interpolation"]
+				#dimension = config.Dimension()
+				dimension = 100
+				interpolation_cache = [File(input), config.Peaks(), dimension, "Interpolation"]
 				if not DataCache.In(interpolation_cache):
 
 					peaks = config.Peaks().lower()
@@ -345,14 +348,15 @@ def server(input, output, session):
 							rts.append(rt)
 					if not values:
 						Error("No Spectra in File!")
-						return CreateErrorImg("No specta could be identified in the input file.", "#027bc2")
+						return CreateErrorImg("No spectra could be identified in the input file.", "#027bc2")
 
 					# Get the min and max of each list.
 					vm, vM, rm, rM = min(values), max(values), min(rts), max(rts)
 
 					# Create a grid for mz and rt
 					p.inc(message="Interpolating")
-					dimension = config.Dimension()
+					#dimension = config.Dimension()
+					dimension = 100
 					mz_grid, rt_grid = meshgrid(
 						linspace(vm, vM, dimension),
 						linspace(rm, rM, dimension)
@@ -474,7 +478,7 @@ def server(input, output, session):
 		yield str(output_data)
 
 
-	@render.download(filename="heatmap.png")
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
 	def DownloadHeatmap(): yield DataCache.Get(Hash())
 
 
@@ -529,9 +533,9 @@ app_ui = ui.page_fluid(
 
 				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip=ui.HTML('Select a peak type from the input file to display. <br>Raw visualizes unprocessed data. <br>Centroided peaks have reduced noise. <br>Reprofiled peaks have been smoothed. <br><a href="https://academic.oup.com/bioinformatics/article/28/7/1052/209917" target="_blank">Read more here</a>.')),
 
-				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother."),
+				#config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother."),
 
-				config.Dimension.UI(ui.input_numeric, id="Dimension", label="Intrpl Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the interpolation size for generating contours (lower values improve computation time but decrease accuracy)."),
+				#config.Dimension.UI(ui.input_numeric, id="Dimension", label="Intrpl Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the interpolation size for generating contours (lower values improve computation time but decrease accuracy)."),
 
 
 				ui.HTML("<b>3D</b>"),
@@ -555,7 +559,8 @@ app_ui = ui.page_fluid(
 					tooltip=ui.HTML('X and Y labels toggle the data labels along their respective axes. <br><br>Z labels toggles the data labels along the Z axis if rendering as a 3D plot. <br><br>Legend displays a colorbar legend on the heatmap.'),
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
+				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
 			),
 			padding="10px",
 			gap="20px",

@@ -1,13 +1,14 @@
-Province or territory	1990 (emissions in kilotonnes)	2000 (emissions in kilotonnes)	2013 (emissions in kilotonnes)
-Newfoundland and Labrador	1520.3	844.2	261.6
-Prince Edward Island	152.3	83.4	34.8
-Nova Scotia	315.2	218.5	179.9
-New Brunswick	329.3	216.6	147.4
-Quebec	2968	2254.2	1713.8
-Ontario	3985	2707.8	1500.4
-Manitoba	920.9	532.5	228.8
-Saskatchewan	1138.7	686.5	291.9
-Alberta	2416.6	1662.3	1191.3
-British Columbia	2475.1	1276.8	692.2
-Yukon Territory	90	43.3	12.4
-Northwest Territories	500.4	245.8	46.7
+Province or territory	1990 (emissions in kilotonnes)	2005 (emissions in kilotonnes)	2022 (emissions in kilotonnes)
+Newfoundland and Labrador	207.1	122.1	65.3
+Prince Edward Island	72.5	42.2	16.9
+Nova Scotia	364	216.5	95.8
+New Brunswick	305.6	234	79.4
+Quebec	2470.4	1844.5	1143.9
+Ontario	3574.8	2447.3	949.8
+Manitoba	496.7	401.7	203.2
+Saskatchewan	826.7	680.9	342
+Alberta	2287.1	1654	1041.8
+British Columbia	2321.9	1205.6	540.1
+Yukon Territory	17.1	17.5	6.3
+Northwest Territories	28.4	17.7	8.6
+Nunavut	0.0	6.3	5.5

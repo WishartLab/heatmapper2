@@ -41,9 +41,9 @@ EXPANDED_SIZE = 0
 def server(input, output, session):
 	# Information about the Examples
 	Info = {
-		"example1.txt": "Input type: txt\nSource: Retrieved from the website for the Ashley Lab Heatmap Builder.",
-		"example2.txt": "Input type: txt\nSource: Retrieved from an online tutorial by Yan Cui (ycui2@uthsc.edu).",
-		"example3.txt": "Input type: txt\nContents: Gene expression in yeast under varying conditions.\nSource: Retrieved from the online supplement to Eisen et al. (1998). DOI: 10.1073/pnas.95.25.14863"
+		"mouse_leukemia.tsv": '<u>Input type:</u> .tsv Data <br><u>Contents:</u> A subset of gene expression data from a murine study on acute myeloid leukemia (AML). Columns represent samples, while rows are genes. The samples have various mutations related to altered DNA methylation. <br><u>Source:</u> Shih, A. H. et al. (2017). PMCID: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5413413/"; "target="_blank">PMC5413413</a>',
+		"human_liver_subset.tsv": '<u>Input type:</u> .tsv Data <br><u>Contents:</u> Subset of human liver RNA-Seq data from ARCHS4. Columns represent samples, while rows are genes. The dataset is composed of samples from multiple different experiments. <br><u>Source:</u> <a href="https://www.kaggle.com/datasets/lachmann12/human-liver-rnaseq-gene-expression-903-samples?resource=download"; target="_blank">kaggle.com</a>.',
+		"example3.txt": '<u>Input type:</u> .txt Data <br><u>Contents:</u> Large dataset of gene expression in <i>S. cerevisiae</i> under varying conditions. Data was collected during the cell division cycle, alpha factor arrest, centrifugal elutriation, sporulation, high temperature shock, low temperature shock, and diauxic shift. Data was collected using DNA microarrays.<br><u>Source:</u> Eisen et al. (1998). PMCID: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC24541/#F2"; target="_blank">PMC24541</a> DOI: 10.1073/pnas.95.25.14863'
 	}
 
 	DataCache = Cache("expression")
@@ -356,7 +356,6 @@ def server(input, output, session):
 
 		# If we're rendering as images, fetch from the cache if we can
 		if not DataCache.In(inputs):
-			#print(File(input), "NO")
 			with ui.Progress() as p:
 				p.inc(message="Reading input...")
 				index_labels, x_labels, data = ProcessData(GetData())
@@ -487,7 +486,8 @@ def server(input, output, session):
 				size = config.Size()
 		
 		b = DataCache.Get(inputs)
-		with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+		#with NamedTemporaryFile(delete=False, suffix=".png") as temp:
+		with NamedTemporaryFile(delete=False, suffix=config.HeatmapType()) as temp:
 			temp.write(b)
 			temp.close()
 			img: types.ImgData = {"src": temp.name, "height": f"{size}px"}
@@ -545,8 +545,9 @@ def server(input, output, session):
 		yield file_contents
 
 
-	@render.download(filename="heatmap.png")
-	def DownloadHeatmap(): yield DataCache.Get(HashString())
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
+	def DownloadHeatmap(): 
+		yield DataCache.Get(HashString())
 
 
 	@render.ui
@@ -601,9 +602,9 @@ app_ui = ui.page_fluid(
 
 			FileSelection(
 				examples={
-					"example1.txt": "Example 1", 
-			  		"example2.txt": "Example 2", 
-					"example3.txt": "Example 3"},
+					"mouse_leukemia.tsv": "Ex1: Mouse AML", 
+			  		"human_liver_subset.tsv": "Ex2: Human Liver", 
+					"example3.txt": "Ex3: S. cerevisiae"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
 				project="Expression"
 			),
@@ -679,7 +680,8 @@ app_ui = ui.page_fluid(
 					style="margin: 0px;"
 				),
 
-				ui.download_button(id="DownloadHeatmap", label="Download PNG"),
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
+				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
 			),
 
 			# Settings pertaining to the dendrogram view.

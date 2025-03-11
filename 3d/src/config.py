@@ -52,5 +52,8 @@ config = ConfigHandler({
     "TableType": Config(selected=".txt"),
     
 	# "B-Factor", "RMSF", "RMSD", "pLDDT"
-    "OptType": Config(selected=None)
+    "OptType": Config(selected=None),
+    
+	# ".png", ".html"
+	"HeatmapType": Config(selected=".html"),
 })

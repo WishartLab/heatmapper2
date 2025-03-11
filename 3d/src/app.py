@@ -17,6 +17,7 @@ from shiny import App, reactive, render, ui
 from pandas import DataFrame, read_table
 from Bio.PDB import PDBParser, PDBIO
 from io import StringIO
+from imgkit import from_file as convert
 from numpy import mean
 from numpy.linalg import norm
 from pathlib import Path
@@ -40,18 +41,19 @@ def server(input, output, session):
 	Info = {
 		"example1.csv": {
 			"Object": "bunny.obj",
-			"Description": "Input type: csv, obj<br>Contents: A bunny, mapped with random data."
+			"Description": '<u>Input type:</u> .csv data, .obj object<br><u>Contents:</u> A bunny object file, mapped with random data from a .csv file. <br><u>Source:</u> <a href="https://github.com/alecjacobson/common-3d-test-models/tree/master/data"; target="_blank">github.com</a>'
 		},
 		"texture.jpg": {
 			"Object": "FinalBaseMesh.obj",
-			"Description": "Input type: jpg, obj<br>Contents: A human model with a sample heatmap texture applied.<br>Source: https://free3d.com/3d-model/male-base-mesh-6682.html"
+			"Description": '<u>Input type:</u> .jpg data, .obj object<br><u>Contents:</u> A human model with a sample heatmap texture applied. The heat map is a flat image wrapped around the object.<br><u>Source:</u> <a href="https://free3d.com/3d-model/male-base-mesh-6682.html"; target="_blank">free3d.com</a>'
 		},
 		"4K8X.pdb": {
 			"Object": None,
-			"Description": "Input type: pdb<br>Contents: An example protein PDB.<br>Source: https://dash.plotly.com/dash-bio/molecule3dviewer"
+			"Description": '<u>Input type:</u> PDB File<br><u>Contents:</u> Binary complex of 9N DNA polymerase in the replicative state, from organism Thermococcus sp. 9oN-7. The data was determined by X-ray diffraction, with a resolution of 2.28 angstrom. <br><u>Source:</u> <a href="https://www.rcsb.org/structure/4k8x"; target="_blank">www.rcsb.org</a>'
 		}
 	}
-	#Schemes = ["spectrum", "b-factor", "b-factor (norm)", "RMSF", "RMSD", "ssJmol", "amino", "shapely", "nucleic", "chain", "rasmol"]
+
+	# colour scheme options
 	Schemes = ["Residue #", "Reverse Residue #", "B-factor", "RMSF", "RMSD", "2ndary Structure", "pLDDT"]
 
 
@@ -167,14 +169,27 @@ def server(input, output, session):
 		if name is None or num is None or chain is None or val is None:
 			Error("Additional data could not be merged! Please check your column names and formatting.")
 			return
+		
+		# if input file uses 1 letter codes, convert to 3 letter
+		aa_codes = {
+			'A': 'ALA', 'C': 'CYS', 'D': 'ASP', 'E': 'GLU', 'F': 'PHE',
+			'G': 'GLY', 'H': 'HIS', 'I': 'ILE', 'K': 'LYS', 'L': 'LEU',
+			'M': 'MET', 'N': 'ASN', 'P': 'PRO', 'Q': 'GLN', 'R': 'ARG',
+			'S': 'SER', 'T': 'THR', 'V': 'VAL', 'W': 'TRP', 'Y': 'TYR'
+		}
 
 		# map values to atom number and chain ID
 		map = {}
 		for index, row in opt_data.iterrows():
 			new_chain_id = row[chain].strip()
-			new_atom_num = row[num]
-			new_name = row[name].strip()
-			key = tuple(i for i in (new_atom_num, new_chain_id, new_name) if i is not None)
+			new_res_num = row[num]
+			# change 1 letter code to 3 letter if applicable
+			aa = row[name].strip()
+			if aa in aa_codes:
+				new_name = aa_codes[aa]
+			else:
+				new_name = aa
+			key = tuple(i for i in (new_res_num, new_chain_id, new_name) if i is not None)
 			map[key] = float(row[val])
 		
 		# update pdb string
@@ -189,12 +204,12 @@ def server(input, output, session):
 				continue
 
 			if line.startswith("ATOM"):
-				#res_num = int(line[22:26].strip())
-				number = int(line[6:11].strip())  # atom number, not res
+				number = int(line[22:26].strip())  # residue number
+				#number = int(line[6:11].strip())  # atom number
 				chain_id = line[21:22].strip()
 				res_name = line[17:20].strip()
 				
-				# match with chain ID or atom number
+				# match with chain ID or residue number
 				key_3 = (number, chain_id, res_name)
 				key_2 = (number, chain_id)
 				key_1 = (number,)
@@ -253,10 +268,11 @@ def server(input, output, session):
 			for line in data.splitlines():
 				if line.startswith("ATOM"):
 					residue_num = int(line[22:26].strip())
+					residue_name = line[17:20].strip()
 					atom_num = int(line[6:11].strip())
 					b_factor = float(line[60:66].strip())
-					output_data.append((residue_num, atom_num, b_factor))
-			df = DataFrame(output_data, columns=["Residue Number", "Atom Number", col_name])
+					output_data.append((residue_num, residue_name, atom_num, b_factor))
+			df = DataFrame(output_data, columns=["Residue Number", "Residue Name", "Atom Number", col_name])
 			return df
 		
 		# display table data
@@ -304,8 +320,8 @@ def server(input, output, session):
 					<li><u>Value column:</u> "RMSD", "RMSF", "PLDDT", or "BFACTOR"</li>
 			<br><br>
 			<b>2 - Object Files</b><br>
-			Input an .obj file and either a table file or an image. If an image is used, it will be mapped onto the surface of the object (see Example 3).<br>
-			If a table file is used, values in a 'Value' column will be mapped to each face of the model. If a 'Name' column is provided, it should contain the numerical values of the faces, otherwise the values will be applied linearly (see Example 2).
+			Input an .obj file and either a table file or an image. If an image is used, it will be mapped onto the surface of the object (see Ex: 3D Human).<br>
+			If a table file is used, values in a 'Value' column will be mapped to each face of the model. If a 'Name' column is provided, it should contain the numerical values of the faces, otherwise the values will be applied linearly (see Ex: 3D Bunny).
 			<br><br>
 			<table style="border-spacing: 100px";>
 			<tr>
@@ -341,6 +357,7 @@ def server(input, output, session):
 		@brief Returns an HTML string containing the Py3DMol.js viewer of the source.
 		@param source: The source containing PDB data as a string.
 		@param p: The progress bar.
+		@param image: bool indicating if output should be generated as a png for download only
 		@returns An HTML string that should be wrapped with ui.HTML
 		"""
 
@@ -488,6 +505,19 @@ def server(input, output, session):
 					else:
 						if len(structure) == 1:
 							Error("RMSF requires a PDB with more than one model to compute difference! Or, upload an additional data file with RMSF values.")
+							if not function_declared:
+								viewer.startjs += f"""\n
+									let {scheme} = function(atom) {{
+										if (atom.b == 0) return "grey"
+										else if (atom.b < {darkblue}) return "darkblue"
+										else if (atom.b < {blue}) return "blue"
+										else if (atom.b < {lightblue}) return "#73c9ff"
+										else if (atom.b < {white}) return "white"
+										else if (atom.b < {yellow}) return "#fff27d"
+										else if (atom.b < {orange}) return "#ff6200"
+										else if (atom.b < {red}) return "red"
+										else return "darkred"
+									}}\n"""
 							return source, prop, scheme
 					
 						Msg("Calculating RMSF...")
@@ -592,7 +622,6 @@ def server(input, output, session):
 
 			if heatmap_property == "colorfunc": viewer.startjs = viewer.startjs.replace(f'"{heatname_name}"', f'{heatname_name}')
 
-
 			p.inc(message="Exporting...")
 			DataCache.Store(viewer.write_html(), global_inputs)
 
@@ -604,6 +633,7 @@ def server(input, output, session):
 		@brief Generates an HTML string of the PyVista Model viewer.
 		@param source: The data to be applied to the object.
 		@param p: The progress bar.
+		@param image: bool indicating if output should be generated as a png for download only
 		@returns An HTML string that should be wrapped with ui.HTML
 		@info Object will also need to be defined.
 		"""
@@ -732,11 +762,15 @@ def server(input, output, session):
 			yield df.to_string()
 
 
-	@render.download(filename="heatmap.html")
+	@render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
 	def DownloadHeatmap():
-		html = GenerateHeatmap()
-		if html is not None:
-			yield html
+		if config.HeatmapType() == ".png":
+			# yield convert(GenerateHeatmap(), "heatmap.png")
+			pass
+		else: 
+			html = GenerateHeatmap()
+			if html is not None:
+				yield html
 
 
 	@output
@@ -788,7 +822,9 @@ def server(input, output, session):
 	def GetInputTypes():
 		if config.ModelType() =="Object":
 			return FileSelection(
-				examples={"example1.csv": "Example 2", "texture.jpg": "Example 3"},
+				examples={
+					"example1.csv": "Ex: 3D Bunny", 
+					"texture.jpg": "Ex: 3D Human"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf", ".png", ".jpg"],
 				project="3D",
 			)
@@ -851,6 +887,7 @@ app_ui = ui.page_fluid(
 
 				ui.output_ui(id="ConditionalElements"),
 
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".html"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download HTML"),
 			),
 			padding="10px",

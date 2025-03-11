@@ -41,7 +41,7 @@ config = ConfigHandler({
 	"Interpolation": Config(selected="None"),
 
 	# A list of any of "row", "col", "x", "y", "legend"
-	"Features": Config(selected=["row", "col", "x", "y", "legend"]),
+	"Features": Config(selected=["row", "x", "y", "legend"]),
     
 	# Any integer from 1-25
     #"N": Config(value=1),
@@ -72,4 +72,7 @@ config = ConfigHandler({
     
 	# ".txt" ".csv" ".tsv" ".xlsx"
     "TableType": Config(selected=".txt"),
+    
+	# ".png", ".jpg"
+	"HeatmapType": Config(selected=".png"),
 })
