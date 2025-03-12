@@ -37,7 +37,7 @@ def server(input, output, session):
 	Info = {
 		"example1.txt": {
 			"Image": "example1.jpg",
-			"Description": "Input type: txt, jpg\nContents: Hypothetical example illustrating data overlaid on a satellite image. Input data are count or magnitude values within the overlaid grid sections."
+			"Description": "<u>Input type:</u> .txt Data, .jpg Image <br><u>Contents:</u> Hypothetical example illustrating data overlaid on a satellite image. Input data are count or magnitude values within the overlaid grid sections."
 		}
 	}
 	
