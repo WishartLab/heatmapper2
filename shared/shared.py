@@ -103,7 +103,6 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False, remo
 	add the good list onto the START (So its the default), that way users can choose a column if Heatmapper
 	doesn't like their column names.
 	"""
-
 	# Fold cases
 	folded = []
 	for column in columns:
@@ -112,11 +111,13 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False, remo
 		except Exception:
 			folded.append(column)
 	options = set(folded)
-	if ctype != ColumnType.Free: options &= Columns[ctype]
+	if ctype != ColumnType.Free: 
+		options &= Columns[ctype]
 
 	if remove_unknown:
 		for type in Columns:
-			if type != ctype: options -= Columns[type]
+			if type != ctype: 
+				options -= Columns[type]
 
 	indices = [folded.index(value) for value in options]; indices.sort()
 	reassembled = [columns[index] for index in indices] + good
@@ -125,7 +126,8 @@ def Filter(columns, ctype: ColumnType, good: list = [], id=None, all=False, remo
 		if reassembled == good:
 			options = set(folded)
 			for type in Columns:
-				if type != ctype: options -= Columns[type]
+				if type != ctype: 
+					options -= Columns[type]
 			indices = [folded.index(value) for value in options]; indices.sort()
 			reassembled = good + [columns[index] for index in indices]
 		ui.update_select(id=id, choices=reassembled)

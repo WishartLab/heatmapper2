@@ -35,7 +35,7 @@ config = ConfigHandler({
 	"Features": Config(selected=["legend"]),
     
 	# Any string
-    "Legend": Config(value="Value"),
+	"Legend": Config(value="Value"),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
@@ -47,7 +47,7 @@ config = ConfigHandler({
 	"DPI": Config(value=300),
     
 	# ".txt" ".csv" ".tsv" ".xlsx"
-    "TableType": Config(selected=".txt"),
+	"TableType": Config(selected=".txt"),
     
 	# ".png", ".jpg"
 	"HeatmapType": Config(selected=".png"),

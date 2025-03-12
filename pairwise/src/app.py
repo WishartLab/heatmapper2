@@ -44,13 +44,14 @@ def server(input, output, session):
 
 	# Information about the Examples
 	Info = {
-		"example1.txt": "Input type: txt<br>Contents: Pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
-		"example2.txt": "Input type: txt<br>Contents: This example dataset was generated randomly.",
-		"example3.txt": "Input type: txt<br>Contents: This example dataset was generated randomly.",
-		"example4.fasta": "Input type: FASTA<br>Contents: ",
-		"ala_phe_ala.pdb": "Input type: PDB<br>Contents: ",
-		"example6.txt": "Input type: txt<Br>Contents: Randomly generated data with x, y, and z columns."
+		"example1.txt": "<u>Input type:</u> .txt Data <br><u>Contents:</u> Pairwise distances between C-alpha atoms in ubiquitin (1ubq).",
+		"example2.txt": "<u>Input type:</u> .txt Data <br><u>Contents:</u> This example dataset was generated randomly.",
+		"example3.txt": "<u>Input type:</u> .txt Data<br><u>Contents:</u> This example dataset was generated randomly.",
+		"example4.fasta": "<u>Input type:</u> .FASTA file <br><u>Contents:</u> ",
+		"ala_phe_ala.pdb": "<u>Input type:</u> .PDB file <br><u>Contents:</u> ",
+		"example6.txt": "<u>Input type:</u> .txt Data <br><u>Contents:</u> Randomly generated data with x, y, and z columns."
 	}
+	# city_geospatial_info.tsv https://en.wikipedia.org/wiki/List_of_cities_by_elevation city name, lat, long, elevation (m) of African cities
 
 	def HandleData(path, p=None):
 		suffix = path.suffix

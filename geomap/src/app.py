@@ -41,7 +41,6 @@ def server(input, output, session):
 	Info = {
 		"example1.txt": '<u>Input type:</u> .txt Data <br><u>Contents:</u> Data from a carbon monoxide emissions study conducted by Environment Canada. The three columns show carbon monoxide emissions (in kilotonnes) from 1990, 2005, and 2022. The data represents emissions from human activities only (e.g. emissions from fires and vegetation are excluded). Data is excluded for Nunavut in 1990, as it was a part of the Northwest Territories until 1999. <br><u>Source:</u> <a href="https://open.canada.ca/data/en/dataset/8c3d9333-fd03-4f32-b991-580e4fa6c343/resource/d1c16e1c-abd4-47f7-abd1-218a9e4848d5"; target="_blank">Open Data Portal</a>',
 		"example2.txt": '''<u>Input type:</u> .txt Data <br><u>Contents:</u> Data from Statistics Canada: 'New cases and age-standardized rates of primary cancer, by cancer type and sex'. The columns represent new cancer cases (age-standardized rate per 100,000 population) each year from 2013 to 2017 in Canadian provinces and territories.<br><u>Source:</u> <a href="https://doi.org/10.25318/1310074701-eng"; target="_blank">Statistics Canada</a>''',
-		#"example3.txt": "Input type: txt<br>Contents: Diagnosed Diabetes, Age Adjusted Rate (per 100), Adults - Total, 2013.<br>Source: U.S. Centers for Disease Control and Prevention",
 		"example6.csv": '''<u>Input type:</u> .csv Data<br> <u>Contents:</u> COVID-19 information by province or territory, reported by the Canadian Government, from February 8, 2020 to February 17, 2024. The 'Value Column' dropdown indicates which column is visualized. <br><u>Source:</u> <a href="https://open.canada.ca/data/en/dataset/261c32ab-4cfd-4f81-9dea-7b64065690dc/resource/39434379-45a1-43d5-aea7-a7a50113c291"; target="_blank">Open Data Portal</a>''',
 		#"https://media.githubusercontent.com/media/WishartLab/heatmapper2/main/geomap/example_input/owid-covid-data.csv": "File type: csv<br>Contents: Global COVID 19 Statistics.<br>Source: Our World in Data"
 	}
@@ -421,7 +420,6 @@ app_ui = ui.page_fluid(
 				examples={
 				"example1.txt": "Ex1: CO Emissions",
 				"example2.txt": "Ex2: Cancer Cases",
-				#"example3.txt": "Example 3",
 				"example6.csv": "Ex3: COVID-19"},
 				#"https://heatmapper2.ca/geomap/example_input/owid-covid-data.csv": "Example 5"},
 				types=[".csv", ".txt", ".dat", ".tsv", ".tab", ".xlsx", ".xls", ".odf"],
