@@ -63,7 +63,8 @@ def server(input, output, session):
 				config.Elevation(),
 				config.Zoom(),
 				config.Rotation(),
-				#config.Dimension(),
+				config.DimensionRT(),
+				config.DimensionMZ(),
 				input.mode(),
 			]
 		elif tab == "SimilarityTab":
@@ -74,7 +75,7 @@ def server(input, output, session):
 				config.TextSize(),
 				config.ID(),
 				config.DPI(),
-				#config.Interpolation(),
+				config.Interpolation(),
 				input.mode(),
 			]
 
@@ -148,11 +149,6 @@ def server(input, output, session):
 			return
 
 
-	def GetData(): 
-		# return Table.data_view() if Valid() else Data()
-		return Data()
-
-
 	@output
 	@render.data_frame
 	def Table(): 
@@ -191,15 +187,6 @@ def server(input, output, session):
 		return render.DataGrid(df, editable=False)
 
 
-	# @Table.set_patch_fn
-	# def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-	# 	if config.Type() == "Integer": value = int(patch["value"])
-	# 	elif config.Type() == "Float": value = float(patch["value"])
-	# 	else: value = patch["value"]
-	# 	DataCache.Invalidate(File(input))
-	# 	return value
-
-
 	# Info text in welcome tab
 	@render.ui
 	def Welcome():
@@ -233,7 +220,7 @@ def server(input, output, session):
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
-				reader = GetData()
+				reader = Data()
 				
 				# display placeholder message if no data has been uploaded
 				if reader is None: 
@@ -269,8 +256,7 @@ def server(input, output, session):
 				p.inc(message="Plotting")
 				df = DataFrame(data=distances, columns=indices, index=indices, dtype="float")
 				fig, ax = subplots()
-				#interpolation = config.Interpolation().lower()
-				interpolation = "nearest"
+				interpolation = config.Interpolation().lower()
 				plot = ax.imshow(df, cmap=config.ColorMap().lower(), interpolation=interpolation, aspect="equal")
 
 				# Visibility of features
@@ -316,19 +302,20 @@ def server(input, output, session):
 		if not DataCache.In(inputs):
 			with ui.Progress() as p:
 				p.inc(message="Loading input...")
-				reader = GetData()
+				reader = Data()
 
 				# display placeholder message if no data is uploaded
 				if reader is None: 
 					return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2")
-
+				
+                ###REPLACE WITH PLOTLY###
 				fig, ax = subplots(subplot_kw={"projection": "3d"})
 				cmap = get_cmap(config.ColorMap().lower())
 
 				# We additionally cache interpolation.
-				#dimension = config.Dimension()
-				dimension = 100
-				interpolation_cache = [File(input), config.Peaks(), dimension, "Interpolation"]
+				rt_dimension = config.DimensionRT()+1
+				mz_dimension = config.DimensionMZ()
+				interpolation_cache = [File(input), config.Peaks(), rt_dimension, mz_dimension, "Interpolation"]
 				if not DataCache.In(interpolation_cache):
 
 					peaks = config.Peaks().lower()
@@ -355,15 +342,16 @@ def server(input, output, session):
 
 					# Create a grid for mz and rt
 					p.inc(message="Interpolating")
-					#dimension = config.Dimension()
-					dimension = 100
+					rt_dimension = config.DimensionRT()+1
+					mz_dimension = config.DimensionMZ()
+					# linspace returns 'dimension' evenly spaced samples, calculated over the interval min, max
 					mz_grid, rt_grid = meshgrid(
-						linspace(vm, vM, dimension),
-						linspace(rm, rM, dimension)
+						linspace(vm, vM, mz_dimension),
+						linspace(rm, rM, rt_dimension)
 					)
 
-					# Interpolate.
-					intensity_grid = griddata((values, rts), intensities, (mz_grid, rt_grid), method='cubic')
+					# Interpolate using SciPy
+					intensity_grid = griddata((values, rts), intensities, (mz_grid, rt_grid), method='cubic')  # linear, nearest, cubic
 					intensity_grid[intensity_grid < 0] = 0
 
 					DataCache.Store([mz_grid, rt_grid, intensity_grid, vm, vM, rm, rM], interpolation_cache)
@@ -374,10 +362,11 @@ def server(input, output, session):
 				p.inc(message="Plotting")
 				plot = ax.plot_surface(mz_grid, rt_grid, intensity_grid, cmap=cmap)
 
+                #REPLACE WITH PLOTLY#
 				ax.set_xlim(vm, vM)
 				ax.set_ylim(rm, rM)
 				
-				# This causes issues.
+				# This causes issues
 				#ax.set_zlim(0, iM)
 
 				ax.view_init(elev=config.Elevation(), azim=config.Rotation())
@@ -446,7 +435,7 @@ def server(input, output, session):
 
 	@render.download(filename=lambda: f"table{config.TableType()}")
 	def DownloadTable(): 
-		data = GetData()
+		data = Data()
 		
 		# return error if no data to download
 		if data is None:
@@ -533,9 +522,11 @@ app_ui = ui.page_fluid(
 
 				config.Peaks.UI(ui.input_select, id="Peaks", label="Peak Type", choices=["Raw", "Centroided", "Reprofiled"], conditional="input.MainTab === 'HeatmapTab'", tooltip=ui.HTML('Select a peak type from the input file to display. <br>Raw visualizes unprocessed data. <br>Centroided peaks have reduced noise. <br>Reprofiled peaks have been smoothed. <br><a href="https://academic.oup.com/bioinformatics/article/28/7/1052/209917" target="_blank">Read more here</a>.')),
 
-				#config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Specify an interpolation algorithm to apply to the figure. This can cause values to bleed together and appear smoother."),
+				config.Interpolation.UI(ui.input_select, id="Interpolation", label="Inter", choices=InterpolationMethods, conditional="input.MainTab === 'SimilarityTab'", tooltip="Specify an interpolation algorithm to apply to the similarity heat map image. This can cause values to bleed together and appear smoother."),
 
-				#config.Dimension.UI(ui.input_numeric, id="Dimension", label="Intrpl Size", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the interpolation size for generating contours (lower values improve computation time but decrease accuracy)."),
+				config.DimensionRT.UI(ui.input_numeric, id="DimensionRT", label="Interpolate RT", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the level of interpolation to use for generating retention time contours. Lower values generate the curve using fewer data points, which improves computation time but decreases accuracy. Higher values increase computation time, but result in smoother and more accurate curves."),
+				
+                config.DimensionMZ.UI(ui.input_numeric, id="DimensionMZ", label="Interpolate m/z", conditional="input.MainTab === 'HeatmapTab'", min=1, tooltip="Specify the level of interpolation for the m/z axis. Lower values generate curves across fewer m/z values, which improves computation time but decreases accuracy. Higher values increase computation time, but result in a more accurate graph."),
 
 
 				ui.HTML("<b>3D</b>"),

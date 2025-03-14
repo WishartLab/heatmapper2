@@ -12,8 +12,9 @@ config = ConfigHandler({
 	# Dependent on input
 	"ID": Config(selected=[]),
 	"Peaks": Config(selected="Raw"),
-	#"Interpolation": Config(selected="Nearest"),
-	#"Dimension": Config(value=100),
+	"Interpolation": Config(selected="Nearest"),
+	"DimensionRT": Config(value=100),
+    "DimensionMZ": Config(value=495),
 
 	"Elevation": Config(value=45),
 	"Rotation": Config(value=45),
@@ -26,7 +27,7 @@ config = ConfigHandler({
 	"ColorMap": Config(selected="Viridis"),
 
 	# Any combination of "x", "y", "legend"
-	"Features": Config(selected=["legend"]),
+	"Features": Config(selected=["legend", "x", "y"]),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
