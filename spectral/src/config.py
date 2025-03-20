@@ -16,14 +16,12 @@ config = ConfigHandler({
 	"DimensionRT": Config(value=100),
     "DimensionMZ": Config(value=495),
 
-	"Elevation": Config(value=45),
-	"Rotation": Config(value=45),
-	"Zoom": Config(value=1),
-
 	# Any value in between 1-50
 	"TextSize": Config(value=8),
 
 	# See shared.py for ColorMaps
+	# Plotly built-in continuous color scales:
+    # https://plotly.com/python/builtin-colorscales/
 	"ColorMap": Config(selected="Viridis"),
 
 	# Any combination of "x", "y", "legend"
@@ -42,5 +40,5 @@ config = ConfigHandler({
     "TableType": Config(selected=".txt"),
     
 	# ".png", ".jpg"
-	"HeatmapType": Config(selected=".png"),
+	"HeatmapType": Config(selected=".html"),
 })
