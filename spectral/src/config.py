@@ -12,21 +12,20 @@ config = ConfigHandler({
 	# Dependent on input
 	"ID": Config(selected=[]),
 	"Peaks": Config(selected="Raw"),
-	#"Interpolation": Config(selected="Nearest"),
-	#"Dimension": Config(value=100),
-
-	"Elevation": Config(value=45),
-	"Rotation": Config(value=45),
-	"Zoom": Config(value=1),
+	"Interpolation": Config(selected="Nearest"),
+	"DimensionRT": Config(value=100),
+    "DimensionMZ": Config(value=495),
 
 	# Any value in between 1-50
 	"TextSize": Config(value=8),
 
 	# See shared.py for ColorMaps
+	# Plotly built-in continuous color scales:
+    # https://plotly.com/python/builtin-colorscales/
 	"ColorMap": Config(selected="Viridis"),
 
 	# Any combination of "x", "y", "legend"
-	"Features": Config(selected=["legend"]),
+	"Features": Config(selected=["legend", "x", "y"]),
 
 	# "Integer" "Float" "String"
 	"Type": Config(selected="Integer"),
@@ -40,6 +39,6 @@ config = ConfigHandler({
 	# ".txt" ".csv" ".tsv" ".xlsx"
     "TableType": Config(selected=".txt"),
     
-	# ".png", ".jpg"
+	# ".html", ".png", ".jpg"
 	"HeatmapType": Config(selected=".png"),
 })

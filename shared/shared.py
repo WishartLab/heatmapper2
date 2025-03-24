@@ -343,7 +343,10 @@ class Cache:
 		@brief Retrieve arbitrary data in the Cache.
 		@param inputs: A list of values that compose a hash of the object.
 		"""
-		h = "".join(str(i) for i in inputs)
+		try:
+			h = "".join(str(i) for i in inputs)
+		except:
+			return None
 		if h in self._objects:
 				return self._objects[h]
 		else: return None
