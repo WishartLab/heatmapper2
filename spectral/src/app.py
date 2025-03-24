@@ -17,21 +17,17 @@
 import regex
 
 from io import BytesIO
-from matplotlib.pyplot import subplots, colorbar, style, get_cmap, close as fig_close
-#from matplotlib.collections import LineCollection
-#from matplotlib.colors import Normalize
-#from mpl_toolkits.mplot3d.art3d import Line3DCollection
-from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like, zeros_like, meshgrid, full, where, linspace, log1p
+from matplotlib.pyplot import subplots, colorbar, close as fig_close
+from numpy import meshgrid, linspace
 from pandas import DataFrame
-from plotly.graph_objects import Surface, Figure, Scatter3d
+from plotly.graph_objects import Surface, Figure
 from plotly.io import renderers as r
 from pymzml.run import Reader
-#from scipy.spatial.distance import squareform
 from scipy.interpolate import griddata
 from shiny import App, reactive, render, ui
 from tempfile import NamedTemporaryFile
 
-from shared import Cache, MainTab, NavBar, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Update, Msg, File, InterpolationMethods, Error
+from shared import Cache, MainTab, NavBar, FileSelection, TableOptions, InitializeConfig, Update, Msg, File, InterpolationMethods, Error
 
 try:
     from user import config
@@ -47,7 +43,7 @@ def server(input, output, session):
     # Information regarding example files.
     Info = {
         #"1min.mzml": "An Example mzML from https://github.com/HUPO-PSI/mzML"
-        "BSA1-subset.mzML": "A subset of 8 spectra from the OpenMS Bovine Serum Albumin sample<br>https://github.com/OpenMS/OpenMS/tree/develop/share/OpenMS/examples/BSA"
+        "BSA1-subset.mzML": '<u>Input type:</u> .mzML Data <br><u>Contents:</u> A subset of 8 spectra from the OpenMS Bovine Serum Albumin sample<br><u>Source:</u> <a href="https://github.com/OpenMS/OpenMS/tree/develop/share/OpenMS/examples/BSA"; target="_blank">OpenMS GitHub</a>'
     }
 
 
@@ -63,9 +59,7 @@ def server(input, output, session):
                 config.ColorMap(),
                 config.Features(),
                 config.TextSize(),
-                config.ID(),
                 config.Peaks(),
-                config.DPI(),
                 config.DimensionRT(),
                 config.DimensionMZ(),
                 input.mode(),
@@ -88,7 +82,7 @@ def server(input, output, session):
         @brief Generates an image of the provided text
         @param text: The text to display as an error
         @param color: Hex color code for the text
-        @param inputs: A list of all the inputs for caching (from HashString())
+        @param inputs: A list of all the inputs for caching (from Hash())
         @returns 
         """
         if type == "img":
@@ -132,7 +126,8 @@ def server(input, output, session):
     async def UpdateData():
         p = ui.Progress()
         try:
-            Data.set((await DataCache.Load(input, p=p, default=None)))
+            #Data.set((await DataCache.Load(input, p=p, default=None)))
+            Data.set((await DataCache.Load(input, p=p)))
             Valid.set(False)
             DataCache.Invalidate(File(input))
         except:
@@ -148,7 +143,6 @@ def server(input, output, session):
         try:
             for spectra in reader:
                 ids.add(spectra.ID)
-                print(f"added {spectra.ID}")
                 if first is None: first = spectra.ID
             ui.update_select(id="ID", selected=[first], choices=list(ids))
         except:
@@ -162,11 +156,11 @@ def server(input, output, session):
     def Table(): 
         Valid.set(True)
         table_data = []
-        # Data() is a pymzml.run.Reader object
+        # data is a pymzml.run.Reader object
         data = Data()
         
         # display placeholder message if no file has been uploaded
-        if data is None:
+        if data is None or (type(data) == DataFrame and data.empty):
             return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
 
         # goal is to turn the pymzml.run.Reader object into a dataframe
@@ -229,9 +223,10 @@ def server(input, output, session):
             with ui.Progress() as p:
                 p.inc(message="Loading input...")
                 reader = Data()
+                print(f"TYPE: {type(reader)}")
                 
                 # display placeholder message if no data has been uploaded
-                if reader is None: 
+                if reader is None or (type(reader) == DataFrame and reader.empty): 
                     return CreateErrorImg("No data to display! \nPlease upload your data or select an example data set in the sidebar.", "#027bc2", "img")
 
                 # Get all the spectra the user wants.
@@ -300,6 +295,58 @@ def server(input, output, session):
             temp.close()
             img: types.ImgData = {"src": temp.name, "height": f"{config.Size()}vh"}
             return img
+        
+
+    def parse_ms_lvl_1(reader, p=None):  
+        """
+        @brief Iterate through all spectra in the reader object to get properties for MS1 spectra
+        @param reader: pymzML reader object to parse
+        @param p
+        @return list of mz_values, list of rt_values, list of intensities
+        """
+        mz_values = []
+        rt_values = []
+        intensities = []
+             
+        for spectrum in reader:
+            p.inc(message=f"Reading Spectra {spectrum.ID}")
+            try:
+                if spectrum.ms_level == 1:
+                    retention_time = spectrum.scan_time_in_minutes()
+                    
+                    # Access the peaks arrays directly
+                    mzs = spectrum.mz
+                    intens = spectrum.i
+
+                    if mzs is not None and intens is not None:
+                        mz_values.extend(mzs)
+                        rt_values.extend([retention_time] * len(mzs))
+                        intensities.extend(intens)
+            except Exception as e:
+                p.inc(message=f"Warning: Could not process spectrum: {e}")
+                continue
+        return mz_values, rt_values, intensities
+    
+
+    def parse_ms_peaktype(reader, peaktype, p=None):
+        """
+        @brief Iterate through all spectra in the reader object to get properties for specific peak type
+        @param reader: pymzML reader object to parse
+        @param p
+        @return list of mz_values, list of rt_values, list of intensities
+        """
+        mz_values = []
+        rt_values = []
+        intensities = []
+
+        for spectrum in reader:
+            p.inc(message=f"Reading Spectra {spectrum.ID}")
+            rt = spectrum.scan_time[0]
+            for mz, intensity in spectrum.peaks(peaktype):
+                mz_values.append(mz)
+                intensities.append(intensity)
+                rt_values.append(rt)
+        return mz_values, rt_values, intensities
 
 
     def GenerateHeatmap():
@@ -316,42 +363,30 @@ def server(input, output, session):
                 reader = Data()
 
                 # display placeholder message if no data is uploaded
-                if reader is None: 
+                if reader is None or (type(reader) == DataFrame and reader.empty): 
                     return CreateErrorImg("No data to display!<br>Please upload your data or select an example data set in the sidebar.", "#027bc2", "text")
 
                 # We additionally cache interpolation.
                 rt_dimension = config.DimensionRT()+1
                 mz_dimension = config.DimensionMZ()
                 interpolation_cache = [File(input), config.Peaks(), rt_dimension, mz_dimension, "Interpolation"]
-                print(f"rt_dim, mz_dim:\t{rt_dimension}, {mz_dimension}")
+
                 if not DataCache.In(interpolation_cache):
 
-                    # try to find based on selected peak type, parse normally if that fails
-                    #peaks = config.Peaks().lower()
-                    
                     mz_values = []
                     rt_values = []
                     intensities = []
-                    
-                    # iterate through all spectra, 
-                    # get m/z, intensities, and rt for MS1 spectra
-                    for spectrum in reader:
-                        p.inc(message=f"Reading Spectra {spectrum.ID}")
-                        try:
-                            if spectrum.ms_level == 1:
-                                retention_time = spectrum.scan_time_in_minutes()
-                                
-                                # Access the peaks arrays directly
-                                mzs = spectrum.mz
-                                intens = spectrum.i
-
-                                if mzs is not None and intens is not None:
-                                    mz_values.extend(mzs)
-                                    rt_values.extend([retention_time] * len(mzs))
-                                    intensities.extend(intens)
-                        except Exception as e:
-                            p.inc(message=f"Warning: Could not process spectrum: {e}")
-                            continue
+                        
+                    # try to find based on selected peak type, parse normally if that fails
+                    try:
+                        peaktype = config.Peaks().lower()
+                        for spectrum in reader:
+                            peaks = spectrum.peaks(peaktype)
+                            break
+                        mz_values, rt_values, intensities = parse_ms_peaktype(reader, peaktype, p)
+                    except Exception as e:
+                        Error(f"Selected peak type ({peaktype}) not present in file. Returning spectra with an MS level of 1.")
+                        mz_values, rt_values, intensities = parse_ms_lvl_1(reader, p)
             
                     # ??? does this work ???
                     if not mz_values:
@@ -361,10 +396,7 @@ def server(input, output, session):
                     # get min and max
                     intensity_min = min(intensities)
                     intensity_max = max(intensities)
-                    print(f"---INTENSITIES---\n{intensity_min}\t{intensity_max}")
                     vm, vM, rm, rM = min(mz_values), max(mz_values), min(rt_values), max(rt_values)
-                    print(f"---MZ---\n{vm}\t{vM}")
-                    print(f"---RT---\n{rm}\t{rM}")
 
                     # Create a grid for mz and rt
                     p.inc(message="Interpolating")
@@ -377,6 +409,12 @@ def server(input, output, session):
 
                     # Interpolate using SciPy
                     #points = np.column_stack((mz_values, rt_values))
+                    print(f"NUM POINTS: {len(mz_values)}")
+                    if len(mz_values) > 2000000:
+                        print("TRUE")
+                        return f"""Heat map could not be rendered! 
+                        The options you have selected result in {len(mz_values)} data points. 
+                        Try using a different peak type or upload a file with fewer spectra."""
                     intensity_grid = griddata(
                         points=(mz_values, rt_values), 
                         values=intensities, 
@@ -450,22 +488,19 @@ def server(input, output, session):
         return DataCache.Get(inputs)
 
 
-    # @output
-    # @render.image(delete_file=True)
-    # def Heatmap(): return GenerateHeatmap()
-
+    @output
+    @render.image(delete_file=True)
+    @reactive.event(input.Update)
+    def SimilarityReactive(): return GenerateSimilarity()
 
     @output
     @render.image(delete_file=True)
     def Similarity(): return GenerateSimilarity()
 
 
-    # @output
-    # @render.image(delete_file=True)
-    # @reactive.event(input.Update)
-    # def HeatmapReactive(): return GenerateHeatmap()
     @output
     @render.ui
+    @reactive.event(input.Update)
     def HeatmapReactive(): return ui.HTML(GenerateHeatmap())
 
     @output
@@ -512,42 +547,16 @@ def server(input, output, session):
         yield str(output_data)
 
 
-    @reactive.effect
-    @reactive.event(input.MainTab)
-    def _():
-        tab = input.MainTab()
-        choices = [".png", ".jpg", ".html"]
-        label="Download File Type"
-
-        if tab == "SimilarityTab":
-            choices = [".png", ".jpg"]
-            selected = [".png"]
-        elif tab == "HeatmapTab":
-            choices = [".html"]
-            selected = [".html"]
-        else:
-            label=""
-            choices = []
-            selected = []
-
-        ui.update_radio_buttons(
-            id="HeatmapType",
-            label=label,
-            choices=choices,
-            inline=True,
-            selected=selected
-        )
-
-
-    @render.download(filename=lambda: f"heatmap{config.HeatmapType()}")
+    @render.download(filename=lambda: f"heatmap{input.HeatmapType() if input.MainTab() == 'SimilarityTab' else '.html'}")
     def DownloadHeatmap():
+        tab = input.MainTab()
         data = DataCache.Get(Hash())
         if data is None:
             Error("You are trying to download an empty file! \nPlease upload your data or select an example data set in the sidebar.")
-            if config.HeatmapType() == ".html":
-                data = "Uhoh, no data to display! Please upload your data or select an example data set in the Heatmapper2 application."
-            else:
+            if tab == 'SimilarityTab':
                 return
+            else:
+                data = "Uhoh, no data to display! Please upload your data or select an example data set in the Heatmapper2 application."
         yield data
 
 
@@ -632,7 +641,7 @@ app_ui = ui.page_fluid(
                     tooltip=ui.HTML('X and Y labels toggle the data labels along their respective axes. <br><br>Z labels toggles the data labels along the Z axis if rendering as a 3D plot. <br><br>Legend displays a colorbar legend on the heatmap.'),
                 ),
 
-                config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg", ".html"], inline=True),
+                config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], conditional="input.MainTab === 'SimilarityTab'", inline=True,),
                 ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
             ),
             padding="10px",
@@ -642,9 +651,16 @@ app_ui = ui.page_fluid(
 
         # Add the main interface tabs.
         MainTab(
-            ui.nav_panel("Similarity", ui.output_plot("Similarity", height="86vh"), value="SimilarityTab"),
+            ui.nav_panel(
+                "Similarity", 
+                ui.panel_conditional("input.UpdateToggle", ui.output_plot(id="Similarity")),
+			    ui.panel_conditional("!input.UpdateToggle", ui.output_plot(id="SimilarityReactive")), 
+                value="SimilarityTab"),
             m_type=ui.output_ui,
         ),
+        # MainTab(
+		# 	ui.nav_panel("Similarity", ui.output_plot("Similarity", height="86vh"), value="SimilarityTab"),
+		# ),
     )
 )
 
