@@ -502,6 +502,13 @@ def server(input, output, session):
 
 				color = input.mode()
 				colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
+
+				# handle if user selects fewer than 2 colours
+				if len(colors) == 1:
+					colors = [colors[0], colors[0]]
+				elif len(colors) < 1:
+					colors = ['Blue', 'White', 'Yellow']
+
 				cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
 
 				with style.context('dark_background' if color == "dark" else "default"):

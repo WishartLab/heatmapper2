@@ -269,6 +269,13 @@ def server(input, output, session):
 
 	def Heatmap2D(df, ax_heatmap, p):
 		colors = input.CustomColors() if config.Custom() else config.ColorMap().split()
+
+		# handle if user selects fewer than 2 colours
+		if len(colors) == 1:
+			colors = [colors[0], colors[0]]
+		elif len(colors) < 1:
+			colors = ['Blue', 'White', 'Yellow']
+		
 		interpolation = config.Interpolation().lower()
 		bins = config.Bins()
 
