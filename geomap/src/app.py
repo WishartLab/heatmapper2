@@ -384,6 +384,18 @@ def server(input, output, session):
 	def DownloadHeatmap(): yield GenerateHeatmap().get_root().render()
 
 
+	@render.download(filename=f"heatmap{config.SettingType()}")
+	def DownloadSettings(): 
+		'''
+		Save current settings to a table file.
+		'''
+		json = input.JSONSelection()
+		if json is None:
+			json = input.JSONUpload()
+
+		yield f"Data Filename:\t{File(input)}\nGeoJSON File:\t{json}\nName Column:\t{config.KeyColumn()}\nValue Column:\t{config.ValueColumn()}\nGeoJSON Property:\t{config.KeyProperty()}\nMap Type:\t{config.MapType()}\nData Opacity:\t{config.Opacity()}\nColor Map:\t{config.ColorMap()}\nNumber of Color Bins:\t{config.Bins()}\nRange of Interest:\t{config.ROI()}\nRange of Interest Mode:\t{config.ROI_Mode()}\nRange of Interest Min:\t{config.Min()}\nRange of Interest Max:\t{config.Max()}"
+
+
 app_ui = ui.page_fluid(
 
 	ui.tags.style("""
@@ -467,6 +479,10 @@ app_ui = ui.page_fluid(
 				),
 
 				ui.download_button(id="DownloadHeatmap", label="Download HTML"),
+
+				config.SettingType.UI(ui.input_radio_buttons, make_inline=False, 
+				id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+				ui.download_button(id="DownloadSettings", label="Download Current Settings"),
 			),
 			padding="10px",
 			gap="20px",

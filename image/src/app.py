@@ -362,6 +362,11 @@ def server(input, output, session):
 	def DownloadHeatmap(): yield DataCache.Get(HashString())
 
 
+	@render.download(filename=lambda: f"settings{config.SettingType()}")
+	def DownloadSettings(): 
+		yield f"Data Filename:\t{File(input)}\nImage Filename:\t{input.Image()}\nText Size:\t{config.TextSize()}\nColor Map:\t{config.ColorMap()}\nContour Algorithm:\t{config.Algorithm()}\nContour Levels:\t{config.Levels()}\nHeatmap Opacity:\t{config.Opacity()}\nImage Quality:\t{config.Quality()}\nResolution(DPI):\t{config.DPI()}\nSelected Features:\t{config.Features()}\nLegend Title:\t{config.Legend()}"
+
+
 app_ui = ui.page_fluid(
 
 	ui.tags.style("""
@@ -443,8 +448,12 @@ app_ui = ui.page_fluid(
 				),
 				config.Legend.UI(ui.input_text, id="Legend", label="Legend Title", conditional="input.Features.includes('legend')", tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"),
 
-				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
+				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Heatmap File Type", choices=[".png", ".jpg"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
+
+				config.SettingType.UI(ui.input_radio_buttons, make_inline=False, 
+				id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+				ui.download_button(id="DownloadSettings", label="Download Current Settings"),
 			),
 			padding="10px",
 			gap="20px",

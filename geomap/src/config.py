@@ -47,4 +47,7 @@ config = ConfigHandler({
     
 	# ".txt" ".csv" ".tsv" ".xlsx"
     "TableType": Config(selected=".txt"),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+	"SettingType": Config(selected=".txt"),
 })
