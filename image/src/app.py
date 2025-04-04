@@ -364,6 +364,9 @@ def server(input, output, session):
 
 	@render.download(filename=lambda: f"settings{config.SettingType()}")
 	def DownloadSettings(): 
+		'''
+		Download a table file containing current config settings
+		'''
 		yield f"Data Filename:\t{File(input)}\nImage Filename:\t{input.Image()}\nText Size:\t{config.TextSize()}\nColor Map:\t{config.ColorMap()}\nContour Algorithm:\t{config.Algorithm()}\nContour Levels:\t{config.Levels()}\nHeatmap Opacity:\t{config.Opacity()}\nImage Quality:\t{config.Quality()}\nResolution(DPI):\t{config.DPI()}\nSelected Features:\t{config.Features()}\nLegend Title:\t{config.Legend()}"
 
 

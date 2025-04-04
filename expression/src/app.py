@@ -557,6 +557,14 @@ def server(input, output, session):
 		yield DataCache.Get(HashString())
 
 
+	@render.download(filename=lambda: f"settings{config.SettingType()}")
+	def DownloadSettings(): 
+		'''
+		Download a table file containing current config settings
+		'''
+		yield f"Data Filename:\t{File(input)}\nY-axis Label:\t{config.NameColumn()}\nClustering Method:\t{config.ClusterMethod()}\nDistance Method:\t{config.DistanceMethod()}\nText Size:\t{config.TextSize()}\nScale by:\t{config.ScaleType()}\nInterpolationMethod:\t{config.Interpolation()}\nView Elevation:\t{config.Elevation()}\nView Rotation:\t{config.Rotation()}\nZoom:\t{config.Zoom()}\nInterpolation Level:\t{config.InterpolationLevels()}\nScaling:\t{config.MinScale()}\nOpacity:\t{config.Opacity()}\nColors:\t{config.ColorMap()}\n# of Color Bins:\t{config.Bins()}\nFeatures:\t{config.Features()}\nResolution (DPI):\t{config.DPI()}"
+
+
 	@render.ui
 	def Color():
 		if config.Custom():
@@ -689,6 +697,10 @@ app_ui = ui.page_fluid(
 
 				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
+
+				config.SettingType.UI(ui.input_radio_buttons, make_inline=False, 
+				id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+				ui.download_button(id="DownloadSettings", label="Download Current Settings"),
 			),
 
 			# Settings pertaining to the dendrogram view.

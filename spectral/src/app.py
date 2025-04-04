@@ -19,10 +19,12 @@ import regex
 from io import BytesIO
 from matplotlib.pyplot import subplots, colorbar, close as fig_close
 from numpy import meshgrid, linspace
+#from numpy import zeros, unique, array, concatenate, asarray, hstack, column_stack, newaxis, full_like, zeros_like, meshgrid, full, where, linspace, log1p
 from pandas import DataFrame
 from plotly.graph_objects import Surface, Figure
 from plotly.io import renderers as r
 from pymzml.run import Reader
+#from scipy.spatial.distance import squareform
 from scipy.interpolate import griddata
 from shiny import App, reactive, render, ui
 from tempfile import NamedTemporaryFile
@@ -560,6 +562,17 @@ def server(input, output, session):
         yield data
 
 
+    @render.download(filename=lambda: f"settings{config.SettingType()}")
+    def DownloadSettings(): 
+        '''
+        Download a table file containing current config settings
+        '''
+        if input.MainTab() == "SimilarityTab":
+            yield f"Data Filename:\t{File(input)}\nIDs:\t{config.ID()}\nText Size:\t{config.TextSize()}\nColor Map:\t{config.ColorMap()}\nInterpolation:\t{config.Interpolation()}\nHeatmap Size:\t{config.Size()}\nResolution (DPI):\t{config.DPI()}\nFeatures:\t{config.Features()}"
+        else:
+            yield f"Data Filename:\t{File(input)}\nText Size:\t{config.TextSize()}\nColor Map:\t{config.ColorMap()}\nPeak Type:\t{config.Peaks()}\nInterpolate RT:\t{config.DimensionRT()}\nInterpolate m/z:\t{config.DimensionMZ()}\nFeatures:\t{config.Features()}"
+
+
 app_ui = ui.page_fluid(
 
     ui.tags.style("""
@@ -643,6 +656,10 @@ app_ui = ui.page_fluid(
 
                 config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], conditional="input.MainTab === 'SimilarityTab'", inline=True,),
                 ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
+
+                config.SettingType.UI(ui.input_radio_buttons, make_inline=False, 
+				id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+				ui.download_button(id="DownloadSettings", label="Download Current Settings"),
             ),
             padding="10px",
             gap="20px",

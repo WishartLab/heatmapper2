@@ -708,6 +708,14 @@ def server(input, output, session):
 	def DownloadHeatmap(): yield DataCache.Get(HashString())
 
 
+	@render.download(filename=lambda: f"settings{config.SettingType()}")
+	def DownloadSettings(): 
+		'''
+		Download a table file containing current config settings
+		'''
+		yield f"Data Filename:\t{File(input)}\nMatrix Type:\t{config.MatrixType()}\nDistance Method:\t{config.DistanceMethod()}\nInterpolation Method:\t{config.Interpolation()}\nPDB Chain:\t{config.Chain()}\nK-Mer Length:\t{config.K()}\nView Elevation:\t{config.Elevation()}\nView Rotation:\t{config.Rotation()}\nZoom:\t{config.Zoom()}\nInterpolation Level:\t{config.InterpolationLevels()}\nScaling:\t{config.MinScale()}\nOpacity:\t{config.Opacity()}\nColors:\t{config.ColorMap()}\n# of Color Bins:\t{config.Bins()}\nText Size:\t{config.TextSize()}\nFeatures:\t{config.Features()}\nShow every {config.N()} label(s)\nResolution (DPI):\t{config.DPI()}"
+
+
 	@render.ui
 	def Method():
 		if config.MatrixType() == "Distance":
@@ -845,6 +853,10 @@ app_ui = ui.page_fluid(
 
 				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
+
+				config.SettingType.UI(ui.input_radio_buttons, make_inline=False, 
+				id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+				ui.download_button(id="DownloadSettings", label="Download Current Settings"),
 			),
 			padding="10px",
 			gap="20px",

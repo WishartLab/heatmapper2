@@ -12,10 +12,7 @@
 # WebGL is required for this application.
 #
 
-'''
-I don’t see any legend in the example file. The Auto Update slider looks different than the other Auto Update slides.  These need to be consistent.
-'''
-
+from pandas.core.arrays.arrow.array import pa
 from pandas import DataFrame
 from shiny import App, reactive, render, ui
 from matplotlib.pyplot import get_cmap, subplots, close as fig_close
@@ -38,7 +35,7 @@ def server(input, output, session):
 
 	# Information regarding example files.
 	Info = {
-		"visium_hne_adata.h5ad": "Input type: h5ad\nContents: Pre-processed example file.\nSource: SquidPy",
+		"visium_hne_adata.h5ad": '<u>Input type:</u> .h5ad Data <br><u>Contents:</u> Pre-processed example file featuring a coronal section of the mouse brain. <br><u>Source:</u> <a href="https://squidpy.readthedocs.io/en/stable/api/squidpy.datasets.visium_hne_adata.html"; target="_blank">SquidPy</a>',
 	}
 
 	InitializeConfig(config, input)
@@ -71,6 +68,7 @@ def server(input, output, session):
 		"""
 		@brief A custom Data Handler for the Cache.
 		@param path: the Path to the file
+		@param p: A progress bar to increment; optional.
 		@returns A data object from the cache.
 		@info This Data Handler supports h5ad files via scanpy.
 		"""
@@ -90,14 +88,18 @@ def server(input, output, session):
 
 	def ColumnNames(adata, p):
 		p.inc(message="Generating Annotation Keys...")
-		print(f"\nCOLUMNS TO LIST: \n{adata.obs.columns.to_list()}")
-		print(f"\nadata.obs: \n{adata.obs}")
-		Filter(adata.obs["cluster"].cat.categories.to_list(), ColumnType.Free, id="CoCluster") 
+		try:
+			Filter(adata.obs["cluster"].cat.categories.to_list(), ctype=ColumnType.Free, id="CoCluster")
+		except:
+			Filter(adata.obs["Cluster"].cat.categories.to_list(), ctype=ColumnType.Free, id="CoCluster")
 		Filter(adata.obs.columns.to_list(), ColumnType.Count, id="Count")
 
 		choices = []
 		if input.UploadType() == "Visium" or input.SourceFile() == "Example":
-			choices = adata.var.gene_ids.index.drop_duplicates().to_list()
+			try:
+				choices = adata.var.gene_ids.index.drop_duplicates().to_list()
+			except:
+				choices = adata.var.index.drop_duplicates().tolist()
 		elif input.UploadType() == "NanoString":
 			choices = adata.obs["fov"].drop_duplicates().to_list()
 			ui.update_select(id="Count", choices=adata.obs.columns.to_list())
@@ -181,12 +183,12 @@ def server(input, output, session):
 		return adata
 
 	@reactive.effect
-	@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.CellCount, input.GeneCount, input.UploadType)
+	@reactive.event(input.SourceFile, input.File, input.Example, input.CellCount, input.GeneCount, input.UploadType)
+	#@reactive.event(input.SourceFile, input.File, input.Example, input.Reset, input.CellCount, input.GeneCount, input.UploadType)
 	async def UpdateData():
 		"""
 		@brief Returns AnnData objects with data for Spatial Mapping.
-		@info SquidPy's Visium Reader expect a directory, so Spatial will accept multiple files
-			and then parse them into the correct structure.
+		@info SquidPy's Visium Reader expect a directory, so Spatial will accept multiple files and then parse them into the correct structure.
 		"""
 
 		with ui.Progress() as p:
@@ -194,7 +196,8 @@ def server(input, output, session):
 			if input.SourceFile() == "Upload":
 				try:
 					# Get all the files, to generate a name.
-					if input.File() is None: return
+					if input.File() is None: 
+						return None
 					name = [f["datapath"] for f in input.File()]
 
 					# If the name hasn't been cached, we need to construct the object.
@@ -202,11 +205,15 @@ def server(input, output, session):
 						p.inc(message="Organizing Data...")
 						temp = TemporaryDirectory()
 						try:
-							if input.UploadType() == "Visium": adata = await VisiumReader(temp, p)
-							elif input.UploadType() == "NanoString": adata = await NanoStringReader(temp, p)
-							else: return None
+							if input.UploadType() == "Visium": 
+								adata = await VisiumReader(temp, p)
+							elif input.UploadType() == "NanoString": 
+								adata = await NanoStringReader(temp, p)
+							else: 
+								return None
 						except Exception:
 							Error("Couldn't parse the provided input! Make sure all files needed files are uploaded, and the right Upload Type is selected!")
+							return None
 
 						if adata is None: return
 
@@ -215,48 +222,61 @@ def server(input, output, session):
 
 						# Now that it's cached, remove the origin
 						for file in name:
-								Path(file).unlink()
+							Path(file).unlink()
 
 					adata = DataCache.Get(name)
 
-					if input.File()[0]["name"].endswith(".h5ad"):
-						# check for cluster obs, counts obsm, ....,
-						# TODO: !!! 
-						print("Returning")
-						Data.set(adata)
-						return
+					# if input.File()[0]["name"].endswith(".h5ad"):
+					# 	# check for cluster obs, counts obsm, ....,
+					# 	# TODO: !!! 
+					# 	Data.set(adata)
+					# 	return
 
 					cell, gene = input.CellCount(), input.GeneCount()
-					if cell is None or gene is None: return
+					if cell is None or gene is None: 
+						return
 
 					filtered = name + [cell, gene]
 					if not DataCache.In(filtered):
 
 						bdata = adata.copy()
+						print(f"B 1: {bdata.X}")
 						# keep cells that have at least min_counts RNA counts
 						pp.filter_cells(bdata, min_counts=cell)
+						print(f"B 2: {bdata.X}")
 						# keep genes that are expressed in at least min_cells
 						pp.filter_genes(bdata , min_cells=gene)
+						print(f"B 3: {bdata.X}")
 
 						if input.UploadType() == "Visium":
 							adata.var_names_make_unique()
+							# normalize counts per cell
 							p.inc(message="Normalizing...")
 							pp.normalize_total(bdata, inplace=True)
+							
+							print(f"B 4: {bdata.X}")
 							pp.log1p(bdata)
+							print("here2")
 
 							p.inc(message="Calculating Neighbors...")
 							pp.neighbors(bdata)
+							print("here3")
 							tl.umap(bdata)
+							print("here4")
 							gr.spatial_neighbors(bdata)
+							print("here5")
 
 							p.inc(message="Calculating QC Metrics...")
 							pp.calculate_qc_metrics(bdata, inplace=True)
+							print("here6")
 
 							p.inc(message="Clustering...")
 							tl.leiden(bdata, key_added="cluster", neighbors_key="spatial_neighbors", resolution=input.Resolution())
+							print("here7")
 
 							p.inc(message="Finding Highly Variable Genes...")
 							pp.highly_variable_genes(bdata, inplace=True, n_top_genes=100, flavor="seurat_v3")
+							print("here8")
 
 
 						elif input.UploadType() == "NanoString":
@@ -289,8 +309,6 @@ def server(input, output, session):
 			# With an example, just return it.
 			else:
 				try:
-					# check for cluster obs, counts obsm, ....,
-					# TODO: !!! 
 					Data.set(await DataCache.Load(input, default=None))
 					ColumnNames(Data(), p)
 					p.close()
@@ -308,74 +326,33 @@ def server(input, output, session):
 			return DataFrame({"Note": ["No data to display! Please upload your data or select an example data set in the sidebar."]})
 		if state == "obs": 
 			try:
-				return render.DataGrid(df.obs, editable=True)
+				return render.DataGrid(df.obs, editable=False)  #True
 			except:
 				return DataFrame({"Error": ["Observation table could not be rendered."]})
 		elif state == "var": 
 			try:
-				return render.DataGrid(df.var, editable=True)
+				return render.DataGrid(df.var, editable=False)  #True
 			except:
 				return DataFrame({"Error": ["Variable table could not be rendered."]})
 
 
-	@Table.set_patch_fn
-	def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
-		if config.Type() == "Integer": value = int(patch["value"])
-		elif config.Type() == "Float": value = float(patch["value"])
-		else: value = patch["value"]
+	# @Table.set_patch_fn
+	# def UpdateTable(*, patch: render.CellPatch) -> render.CellValue:
+	# 	if config.Type() == "Integer": value = int(patch["value"])
+	# 	elif config.Type() == "Float": value = float(patch["value"])
+	# 	else: value = patch["value"]
 
-		row = patch["row_index"]
-		col = patch["column_index"]
+	# 	row = patch["row_index"]
+	# 	col = patch["column_index"]
 
-		df = Data()
-		table = df.obs if config.State() == "obs" else df.var
-		table.iloc[row, col] = value
-		Data.set(df)
+	# 	df = Data()
+	# 	table = df.obs if config.State() == "obs" else df.var
+	# 	table.iloc[row, col] = value
+	# 	Data.set(df)
 
-		DataCache.Invalidate(File(input))
+	# 	DataCache.Invalidate(File(input))
 
-		return value
-
-
-	# Info text in welcome tab
-	@render.ui
-	def Welcome():
-		return ui.HTML("""
-			<h1>Spatial heatmaps</h1>
-			Spatial heatmaps display spatial molecular data, and visualize various related metrics. <br><br>
-			Upload your data files in the sidebar to get started, or select 'Example' to check out a pre-loaded example. <br><br>
-			Navigate to the 'Heatmap' tab to see the heatmap, 'Table' to look at the input data, or one of the statistics tabs to see a visualization of statistics.
-				 
-			<br><br>
-			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spatial.png" alt="Image"; style="max-width:500px;">
-				 
-			<br><br><h3>Format</h3>
-			<i>Input data can be uploaded in three different formats:</i><br>
-			<b>1 - AnnData</b><br>
-			A preprocessed file generated by AnnData with the file extension <b>.h5ad</b> can be visualized on its own without any other files. This is the format the Heatmapper will output if you download a spatial heatmap table. <br><br>
-			<b>2 - Space Ranger / Visium</b><br>
-			You will need to upload a folder containing the following files:
-				<ul>
-				<li>.h5 counts file</li>
-				<li>Two tissue_{hires/lowres}_image.png images (from the <i>spatial</i> folder)</li>
-				<li>scalefactors_json.json (from the <i>spatial</i> folder)</li>
-				<li>tissue_positions.csv (from the <i>spatial</i> folder)</li>
-				</ul>
-			See <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">here</a> for an explanation of Space Ranger output.
-			<br><br>
-			<b>3 - NanoString</b><br>
-			You will need to upload a folder containing the following files:
-			<ul>
-				<li>A count file that ends in _exprMat_file.csv</li>
-				<li>A meta file that ends in _metadata_file.csv</li>
-				<li>An optional FOV file that contains fov in the file name.</li>
-				<li>The contents of the CellLabels folder (.tif)</li>
-				<li>The contents of the CellComposite folder (.png or .jpg)</li>
-				</ul>
-			<br>
-			<br><h3>Interface</h3>
-			Click on the '?' icon beside sidebar options to read more about them.
-		""")
+	# 	return value
 
 
 	def GenerateNanoString(adata, file, p):
@@ -458,7 +435,7 @@ def server(input, output, session):
 			img_alpha=img_alpha,
 			cmap=get_cmap(cmap),
 			alpha=alpha,
-			colorbar=len(colors) > 1 and "Legend" in features,
+			colorbar="Legend" in features,
 			frameon="Frame" in features,
 			ncols=columns,
 			wspace=spacing,
@@ -487,8 +464,8 @@ def server(input, output, session):
 			if file is None: file = NamedTemporaryFile(delete=False, suffix=".png")
 			
 			# add placeholder message if no data uploaded
-			if adata is None:
-				return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", file)
+			# if adata is None:
+			# 	return CreateErrorImg("No data to display!\n\nPlease upload your data or select an example data set in the sidebar.", "#027bc2", file)
 			
 			# generate heat maps
 			try:
@@ -663,6 +640,62 @@ def server(input, output, session):
 			yield file.read()
 
 
+	@render.download(filename=lambda: f"settings{config.SettingType()}")
+	def DownloadSettings(): 
+		'''
+		Download a table file containing current config settings
+		'''
+		if input.MainTab() == "Centrality":
+			yield f"Filename:\t{File(input)}\nFile Type:\t{input.UploadType()}\nMin Gene Count:\t{input.GeneCount()}\nMin Cell Count:\t{input.CellCount()}\nAnnotation Keys:\t{config.Keys()}\nNanostring Count:\t{config.Count()}\nScore:\t{config.Score()}\n"
+		elif input.MainTab() == "Ripley":
+			yield f"Filename:\t{File(input)}\nFile Type:\t{input.UploadType()}\nMin Gene Count:\t{input.GeneCount()}\nMin Cell Count:\t{input.CellCount()}\nAnnotation Keys:\t{config.Keys()}\nNanostring Count:\t{config.Count()}\nFunction:\t{config.Function()}\nDistance:\t{config.Distance()}"
+		elif input.MainTab() == "Occurrence":
+			yield f"Filename:\t{File(input)}\nFile Type:\t{input.UploadType()}\nMin Gene Count:\t{input.GeneCount()}\nMin Cell Count:\t{input.CellCount()}\nAnnotation Keys:\t{config.Keys()}\nNanostring Count:\t{config.Count()}\nGroup:\t{config.CoCluster()}\nGraph:\t{input.Graph()}\nInterval:\t{config.Interval()}\nSplits:\t{config.Splits()}"
+		else:
+			yield f"Data Filename:\t{File(input)}\nFile Type:\t{input.UploadType()}\nMin Gene Count:\t{input.GeneCount()}\nMin Cell Count:\t{input.CellCount()}\nAnnotation Keys:\t{config.Keys()}\nNanostring Count:\t{config.Count()}\nVisium Statistic:\t{config.Statistic()}\nColor Map:\t{config.ColorMap()}\nData Shape:\t{config.Shape()}\n# of Columns:\t{config.Columns()}\nColumn Spacing:\t{config.Spacing()}\nImage Opacity:\t{config.ImgOpacity()}\nData Opacity:\t{config.Opacity()}\nResolution (DPI):\t{config.DPI()}\nFeatures:\t{config.Features()}"
+
+
+	# Info text in welcome tab
+	@render.ui
+	def Welcome():
+		return ui.HTML("""
+			<h1>Spatial heatmaps</h1>
+			Spatial heatmaps display spatial molecular data, and visualize various related metrics. <br><br>
+			Upload your data files in the sidebar to get started, or select 'Example' to check out a pre-loaded example. <br><br>
+			Navigate to the 'Heatmap' tab to see the heatmap, 'Table' to look at the input data, or one of the statistics tabs to see a visualization of statistics.
+				 
+			<br><br>
+			<img src="https://github.com/WishartLab/heatmapper2/wiki/assets/Spatial.png" alt="Image"; style="max-width:500px;">
+				 
+			<br><br><h3>Format</h3>
+			<i>Input data can be uploaded in three different formats:</i><br>
+			<b>1 - AnnData</b><br>
+			A preprocessed file generated by AnnData with the file extension <b>.h5ad</b> can be visualized on its own without any other files. This is the format the Heatmapper will output if you download a spatial heatmap table. <br><br>
+			<b>2 - Space Ranger / Visium</b><br>
+			You will need to upload a folder containing the following files:
+				<ul>
+				<li>.h5 counts file</li>
+				<li>Two tissue_{hires/lowres}_image.png images (from the <i>spatial</i> folder)</li>
+				<li>scalefactors_json.json (from the <i>spatial</i> folder)</li>
+				<li>tissue_positions.csv (from the <i>spatial</i> folder)</li>
+				</ul>
+			See <a href="https://www.10xgenomics.com/support/software/space-ranger/latest/analysis/outputs/output-overview">here</a> for an explanation of Space Ranger output.
+			<br><br>
+			<b>3 - NanoString</b><br>
+			You will need to upload a folder containing the following files:
+			<ul>
+				<li>A count file that ends in _exprMat_file.csv</li>
+				<li>A meta file that ends in _metadata_file.csv</li>
+				<li>An optional FOV file that contains fov in the file name.</li>
+				<li>The contents of the CellLabels folder (.tif)</li>
+				<li>The contents of the CellComposite folder (.png or .jpg)</li>
+				</ul>
+			<br>
+			<br><h3>Interface</h3>
+			Click on the '?' icon beside sidebar options to read more about them.
+		""")
+
+
 app_ui = ui.page_fluid(
 
 	ui.tags.style("""
@@ -695,7 +728,7 @@ app_ui = ui.page_fluid(
 		ui.sidebar(
 			FileSelection(
 				examples={
-					"visium_hne_adata.h5ad": "Example 1",
+					"visium_hne_adata.h5ad": "Ex1: Visium H&E",
 				},
 				types=[".h5", ".png", ".csv", ".json", ".h5ad", ".jpg", ".tif"],
 				multiple=True,
@@ -774,6 +807,7 @@ app_ui = ui.page_fluid(
 
 				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".png", ".jpg", ".pdf"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
+
 			),
 
 			ui.panel_conditional(
@@ -807,6 +841,10 @@ app_ui = ui.page_fluid(
 				config.Interval.UI(ui.input_slider, id="Interval", label="Interval", min=1, max=100, step=1, tooltip="Define the interval at which co-occurrence is computed"),
 				config.Splits.UI(ui.input_slider, id="Splits", label="Splits", min=0, max=10, step=0, tooltip="Define the number of splits in which to divide spatial coordinates (if 0, Heatmapper selects a value automatically)"),
 			),
+
+			config.SettingType.UI(ui.input_radio_buttons, make_inline=False, id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+			ui.download_button(id="DownloadSettings", label="Download Current Settings"),
+
 			padding="10px",
 			gap="20px",
 			width="300px",
