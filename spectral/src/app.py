@@ -146,7 +146,11 @@ def server(input, output, session):
             for spectra in reader:
                 ids.add(spectra.ID)
                 if first is None: first = spectra.ID
-            ui.update_select(id="ID", selected=[first], choices=list(ids))
+            if len(ids) > 3:
+                selected = list(ids)[:4]
+            else:
+                selected = [first]
+            ui.update_select(id="ID", selected=selected, choices=list(ids))
         except:
             p.close()
             Error("File could not be parsed. \nPlease check the formatting of your .mzml file.")
@@ -617,7 +621,7 @@ app_ui = ui.page_fluid(
 
                 ui.HTML("<b>Heatmap</b>"),
 
-                config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0], conditional="input.MainTab === 'SimilarityTab'", tooltip="Select the IDs of the spectra whose similarity you would like to plot."),
+                config.ID.UI(ui.input_select, id="ID", label="ID", selectize=True, multiple=True, choices=[0], conditional="input.MainTab === 'SimilarityTab'", tooltip="Select the IDs of the spectral peaks whose similarity you would like to plot."),
 
                 config.TextSize.UI(ui.input_numeric, id="TextSize", label="Text Size", min=1, max=50, step=1, tooltip="Change the text size of all axis labels. Axis labels can be toggled on and off in the 'Features' section at the bottom of this sidebar."),
                 config.ColorMap.UI(
