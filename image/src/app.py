@@ -303,6 +303,7 @@ def server(input, output, session):
 
 					# Visibility of features
 					if "legend" in input.Features():
+						#cbar = colorbar(im, ax=ax, label=config.Legend(), orientation='horizontal', shrink=0.5)  #pad = 0.1
 						cbar = colorbar(im, ax=ax, label=config.Legend())
 						cbar.ax.tick_params(labelsize=config.TextSize())
 
