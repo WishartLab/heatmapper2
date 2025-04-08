@@ -17,7 +17,7 @@ from shiny import App, reactive, render, ui
 from pandas import DataFrame, read_table
 from Bio.PDB import PDBParser, PDBIO
 from io import StringIO
-from imgkit import from_file as convert
+#from imgkit import from_file as convert
 from numpy import mean
 from numpy.linalg import norm
 from pathlib import Path
@@ -773,6 +773,28 @@ def server(input, output, session):
 				yield html
 
 
+	@render.download(filename=lambda: f"settings{config.SettingType()}")
+	def DownloadSettings(): 
+		'''
+		Download a table file containing current config settings
+		'''
+		if config.ModelType() == "Protein":
+			try:
+				opt = input.OptFile()[0].get('name',None)
+			except:
+				opt = None
+			if input.SourceFile() == "PDB-ID":
+				yield f"PDB ID:\t{input.ID()}\nOptional Additional Data:\t{opt}\nOptional Data Type:\t{config.OptType()}\nColor Scheme:\t{config.ColorScheme()}\nPDB Model:\t{config.Model()}\nOpacity:\t{config.Opacity()}\nRibbon Thickness:\t{config.Thickness()}\nRibbon Width:\t{config.Width()}\nFeatures:\t{config.PFeatures()}"
+			else:
+				yield f"Input File:\t{File(input)}\nOptional Additional Data:\t{opt}\nOptional Data Type:\t{config.OptType()}\nColor Scheme:\t{config.ColorScheme()}\nPDB Model:\t{config.Model()}\nOpacity:\t{config.Opacity()}\nRibbon Thickness:\t{config.Thickness()}\nRibbon Width:\t{config.Width()}\nFeatures:\t{config.PFeatures()}"
+		else:
+			try:
+				obj = input.Object()[0].get('name',None)
+			except:
+				obj = None
+			yield f"Data File:\t{File(input)}\nObject File:\t{obj}\nOpacity:\t{config.Opacity()}\nStyle:\t{config.Style()}\nNumber of Colors:\t{config.Colors()}\nColor Map:\t{config.ColorMap()}\nFeatures:\t{config.Features()}"
+
+
 	@output
 	@render.ui
 	def ConditionalElements():
@@ -889,6 +911,10 @@ app_ui = ui.page_fluid(
 
 				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Download File Type", choices=[".html"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download HTML"),
+
+				config.SettingType.UI(ui.input_radio_buttons, make_inline=False, 
+				id="SettingType", label="Settings File Type", choices=[".txt", ".csv", ".tsv", ".xlsx"], inline=True),
+				ui.download_button(id="DownloadSettings", label="Download Current Settings"),
 			),
 			padding="10px",
 			gap="20px",

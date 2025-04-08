@@ -56,4 +56,7 @@ config = ConfigHandler({
     
 	# ".png", ".html"
 	"HeatmapType": Config(selected=".html"),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+	"SettingType": Config(selected=".txt"),
 })

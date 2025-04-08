@@ -20,7 +20,7 @@ config = ConfigHandler({
 	"Count": Config(),
 
 	# See shared.py for ColorMaps
-	"ColorMap": Config(selected="Autumn"),
+	"ColorMap": Config(selected="Viridis"),
 
 	# "Circle", "Square", "Hex"
 	"Shape": Config(selected="Hex"),
@@ -78,4 +78,7 @@ config = ConfigHandler({
     
 	# ".png", ".jpg"
 	"HeatmapType": Config(selected=".png"),
+    
+	# ".txt" ".csv" ".tsv" ".xlsx"
+	"SettingType": Config(selected=".txt"),
 })
