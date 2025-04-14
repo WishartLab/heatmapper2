@@ -95,10 +95,13 @@ def server(input, output, session):
 			config.Levels(),
 			config.Features(),
 			config.Legend(),
+			input.LegendOrientation(),
+			input.LegendSize(),
+			input.LegendPadding(),
 			config.TextSize(),
 			config.DPI(),
 			config.Quality(),
-			input.mode()
+			input.mode(),
 		]
 		if config.Elevation() != 90: inputs += [config.Elevation(), config.Rotation(), config.Zoom(), config.Slices()]
 		return inputs
@@ -268,7 +271,7 @@ def server(input, output, session):
 						ax.invert_yaxis()
 
 					else:
-						fig, ax = subplots(subplot_kw={"projection": "3d"})
+						fig, ax = subplots(subplot_kw={"projection": "3d"}, constrained_layout=True)
 
 						z = df.values
 						ax.set_zlim([0, z.max()])
@@ -288,9 +291,9 @@ def server(input, output, session):
 							points = column_stack((x.ravel(), y.ravel()))
 							points_new = column_stack((x_new.ravel(), y_new.ravel()))
 							z = griddata(points, z.flatten(), points_new, method='cubic').reshape(ix, iy)
-							x, y = meshgrid(arange(ix), arange(iy))
+							x, y = meshgrid(arange(iy), arange(ix))
 
-							ax.plot_surface(x, y, zeros_like(x), rstride=1, cstride=1, facecolors=arr)
+							ax.plot_surface(y, x, zeros_like(x), rstride=1, cstride=1, facecolors=arr)
 
 						ax.view_init(elev=config.Elevation(), azim=config.Rotation())
 						ax.set_box_aspect(None, zoom=config.Zoom())
@@ -303,8 +306,14 @@ def server(input, output, session):
 
 					# Visibility of features
 					if "legend" in input.Features():
-						#cbar = colorbar(im, ax=ax, label=config.Legend(), orientation='horizontal', shrink=0.5)  #pad = 0.1
-						cbar = colorbar(im, ax=ax, label=config.Legend())
+						cbar = colorbar(
+							im, 
+							ax=ax, 
+							label=config.Legend(), 
+							location=input.LegendOrientation().lower(),
+							shrink=input.LegendSize()/100,
+							pad=(input.LegendPadding()/100), 
+						)
 						cbar.ax.tick_params(labelsize=config.TextSize())
 
 					if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
@@ -450,8 +459,39 @@ app_ui = ui.page_fluid(
 					choices={"x": "X Labels", "y": "Y Labels", "z": "Z Labels", "legend": "Legend"},
 					tooltip="X and Y labels toggle the data labels along their respective axes. Z labels toggles the data labels along the Z axis if rendering as a 3D plot. Legend displays a colorbar legend on the heatmap."
 				),
-				config.Legend.UI(ui.input_text, id="Legend", label="Legend Title", conditional="input.Features.includes('legend')", tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"),
-
+				# legend options
+				ui.panel_conditional("input.Features.includes('legend')", 
+					config.Legend.UI(
+						ui.input_text, 
+						id="Legend", 
+						label="Legend Title", 
+						tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"
+					),
+					ui.input_slider(
+						id="LegendSize",
+						label="Legend Size",
+						min=10,
+						max=100,
+						step=1,
+						value=100,
+					),
+					ui.input_select(
+						id="LegendOrientation",
+						label="Legend Orientation",
+						choices=["Left", "Right", "Top", "Bottom"],
+						selected="Right",
+					),
+					ui.input_slider(
+						id="LegendPadding",
+						label="Legend Padding",
+						min=0,
+						max=99,
+						step=1,
+						value=5,
+					),
+				),
+				
+				ui.HTML("<b>Downloads</b>"),
 				config.HeatmapType.UI(ui.input_radio_buttons, make_inline=False, id="HeatmapType", label="Heatmap File Type", choices=[".png", ".jpg"], inline=True),
 				ui.download_button(id="DownloadHeatmap", label="Download Heatmap"),
 
