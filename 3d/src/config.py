@@ -51,8 +51,8 @@ config = ConfigHandler({
 	# ".txt" ".csv" ".tsv" ".xlsx"
     "TableType": Config(selected=".txt"),
     
-	# "B-Factor", "RMSF", "RMSD", "pLDDT"
-    "OptType": Config(selected=None),
+	# this is just so I can add a tooltip to the text
+    "Descr": Config(),
     
 	# ".png", ".html"
 	"HeatmapType": Config(selected=".html"),
