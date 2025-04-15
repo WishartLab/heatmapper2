@@ -10,7 +10,7 @@ from shared import Config, ConfigHandler
 config = ConfigHandler({
 
 	# Any value in between 1-50
-	"TextSize": Config(value=8),
+	"TextSize": Config(value=16),
 
 	# Any value between 0.0-1.0
 	"Opacity": Config(value=0.5),

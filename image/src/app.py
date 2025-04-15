@@ -240,6 +240,9 @@ def server(input, output, session):
 						img = img.resize((round(w * config.Quality()), round(h * config.Quality())))
 					except TypeError: img = None
 
+				if img is None:
+					return CreateErrorImg("Please upload a background image.", "#027bc2", inputs)
+
 				# Wrangle into an acceptable format.
 				p.inc(message="Formatting...")
 				v_col = Filter(df.columns, ColumnType.Value)
@@ -259,7 +262,21 @@ def server(input, output, session):
 					levels = config.Levels()
 
 					if config.Elevation() == 90:
-						fig, ax = subplots()
+						print(f"img.size: {img.size}")
+						# calculate subplot dimensions
+						w, h = img.size
+						m = float(max(w, h, 15))
+						w_new = float(w) * (15.0 / m)
+						h_new = float(h) * (15.0 / m)
+						if input.LegendOrientation() in ["Right", "Left"]:
+							pad = float(input.LegendPadding() / 100) * w_new
+							figsize = (w_new + (3.0 * pad), h_new)
+						else:
+							pad = float(input.LegendPadding() / 100) * h_new
+							figsize = (w_new, h_new + (3.0 * pad))
+						print(figsize)
+						
+						fig, ax = subplots(figsize=figsize)
 						# Add the image as an overlay, if we have one.
 						if img is not None:
 							img = img.transpose(method=Image.FLIP_TOP_BOTTOM)
@@ -315,6 +332,8 @@ def server(input, output, session):
 							pad=(input.LegendPadding()/100), 
 						)
 						cbar.ax.tick_params(labelsize=config.TextSize())
+						cbar.ax.set_ylabel(cbar.ax.get_ylabel(), fontsize=config.TextSize())
+						cbar.ax.set_xlabel(cbar.ax.get_xlabel(), fontsize=config.TextSize())
 
 					if "y" in config.Features(): ax.tick_params(axis="y", labelsize=config.TextSize())
 					else: ax.set_yticklabels([])
@@ -465,7 +484,7 @@ app_ui = ui.page_fluid(
 						ui.input_text, 
 						id="Legend", 
 						label="Legend Title", 
-						tooltip="Provide a title for the colorbar legend. (Toggle on the 'Legend' option above to display the colorbar legend.)"
+						tooltip="Provide a title for the colorbar legend."
 					),
 					ui.input_slider(
 						id="LegendSize",
