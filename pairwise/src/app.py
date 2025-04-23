@@ -99,6 +99,9 @@ def server(input, output, session):
 			config.K(),
 			config.Features(),
 			config.N(),
+			input.LegendOrientation(),
+			input.LegendSize(),
+			input.LegendPadding(),
 			config.DPI(),
 			config.AutoSize(),
 			config.Elevation(),
@@ -510,7 +513,7 @@ def server(input, output, session):
 					colors = ['Blue', 'White', 'Yellow']
 
 				cmap = LinearSegmentedColormap.from_list("ColorMap", colors, N=config.Bins())
-
+				
 				with style.context('dark_background' if color == "dark" else "default"):
 					rotation = config.Rotation()
 					elevation = config.Elevation()
@@ -539,7 +542,7 @@ def server(input, output, session):
 						# save size to global variable to be used when loading from cache
 						if size > EXPANDED_SIZE:
 							EXPANDED_SIZE = size
-					
+
 					# calculate dpi for auto expand
 					if config.AutoSize() == "expand":
 						dpi = size * 0.15
@@ -568,7 +571,14 @@ def server(input, output, session):
 					# Visibility of features
 					if "legend" in config.Features():
 						if not d3:
-							cbar = colorbar(im, ax=ax, label=config.MatrixType())
+							cbar = colorbar(
+								im, 
+								ax=ax, 
+								label=config.MatrixType(),
+								location=input.LegendOrientation().lower(),
+								shrink=input.LegendSize()/100,
+								pad=(input.LegendPadding()/100),
+							)
 						else:
 							mappable = ScalarMappable(cmap=cmap, norm=norm)
 							mappable.set_array(z)
@@ -577,8 +587,17 @@ def server(input, output, session):
 								value = config.MatrixType()
 							else:
 								value = config.HeightMatrix()
-							cbar = colorbar(mappable, ax=ax, label=value, orientation='vertical')
+							cbar = colorbar(
+								mappable, 
+								ax=ax, 
+								label=value, 
+								location=input.LegendOrientation().lower(),
+								shrink=input.LegendSize()/100,
+								pad=(input.LegendPadding()/100),
+							)
 						cbar.ax.tick_params(labelsize=text_size)
+						cbar.ax.set_ylabel(cbar.ax.get_ylabel(), fontsize=config.TextSize())
+						cbar.ax.set_xlabel(cbar.ax.get_xlabel(), fontsize=config.TextSize())
 
 
 					n = config.N()
@@ -828,6 +847,31 @@ app_ui = ui.page_fluid(
 					tooltip=ui.HTML("X Labels toggles data labels along the X axis. <br><br>Y Labels toggles data labels along the Y axis. <br><br>Z labels toggles data labels along the Z axis if rendering as a 3D plot. <br><br>Data Labels displays the associated value for every point on the heatmap - this can be illegible for large datasets. <br><br>Legend displays a colorbar legend on the heatmap."),
 				),
 				config.N.UI(ui.input_slider, id="N", label="Show N-th Label", min=1, max=25, step=1, tooltip=ui.HTML("Display every N-th label. <br>For example, a value of 2 will display only every second label on visualized axes. <br>Set to 1 to display every label.")),
+
+				ui.panel_conditional("input.Features.includes('legend')", 
+					ui.input_slider(
+						id="LegendSize",
+						label="Legend Size",
+						min=10,
+						max=100,
+						step=1,
+						value=100,
+					),
+					ui.input_select(
+						id="LegendOrientation",
+						label="Legend Orientation",
+						choices=["Left", "Right", "Top", "Bottom"],
+						selected="Right",
+					),
+					ui.input_slider(
+						id="LegendPadding",
+						label="Legend Padding",
+						min=0,
+						max=25,
+						step=1,
+						value=5,
+					),
+				),
 
 				ui.HTML("<b>Image Settings</b>"),
 				ui.div(

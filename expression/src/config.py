@@ -43,6 +43,9 @@ config = ConfigHandler({
 	# A list of any of "row", "col", "x", "y", "legend"
 	"Features": Config(selected=["row", "x", "y", "legend"]),
     
+	# Any string
+	"Legend": Config(value="Expression"),
+    
 	# Any integer from 1-25
     #"N": Config(value=1),
 

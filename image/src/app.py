@@ -274,7 +274,6 @@ def server(input, output, session):
 						else:
 							pad = float(input.LegendPadding() / 100) * h_new
 							figsize = (w_new, h_new + (3.0 * pad))
-						print(figsize)
 						
 						fig, ax = subplots(figsize=figsize)
 						# Add the image as an overlay, if we have one.
@@ -504,7 +503,7 @@ app_ui = ui.page_fluid(
 						id="LegendPadding",
 						label="Legend Padding",
 						min=0,
-						max=99,
+						max=25,
 						step=1,
 						value=5,
 					),
