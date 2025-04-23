@@ -558,7 +558,7 @@ class Config:
 			else: element = ui_element(*args, **combined)
 
 			# display tooltip when user clicks on TooltipIcon
-			if "id" in combined and tooltip is not None:
+			if tooltip is not None:
 				element = ui.div(
 					element,
 					ui.popover(
@@ -567,7 +567,7 @@ class Config:
 						),
 						tooltip,
 						placement="right",
-						id=combined["id"]+"_tooltip"
+						id=combined["id"]+"_tooltip" if "id" in combined else None,
 					),
 					style="display: inline-flex; gap: 5px;",
 				)
