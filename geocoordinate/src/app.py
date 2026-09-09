@@ -29,7 +29,7 @@ from pandas import DataFrame
 from io import StringIO
 from math import sqrt
 
-from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg, File
+from shared import Cache, NavBar, MainTab, FileSelection, Filter, ColumnType, TableOptions, InitializeConfig, Error, Update, Msg, File, MapTiles
 
 try:
     from user import config
@@ -362,7 +362,8 @@ def server(input, output, session):
 
             t_col = config.TimeColumn()
 
-            map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=config.MapType())
+            tile_info = MapTiles[config.MapType()]
+            map = FoliumMap((df[lat_col][0], df[lon_col][0]), tiles=tile_info["tiles"], attr=tile_info["attr"])
 
             p.inc(message="Dropping Invalid Values...")
             if config.ROI():
@@ -530,7 +531,7 @@ app_ui = ui.page_fluid(
                 ui.HTML("<b>Heatmap</b>"),
                 config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render Mode", choices=["Raster", "Vector"], tooltip="Display data as discrete vector points, or a smooth raster shape (vector does not apply to temporal heatmaps). The intensity of raster points scales when the map is zoomed in or out. Vector points maintain a constant intensity regardless of zoom, but are more computationally expensive."),
                 config.RenderShape.UI(ui.input_select, id="RenderShape", label="Vector Shape", choices=["Circle", "Rectangle"], tooltip="Specify the shape of vector points. Rectangular points are useful for contiguous data (like temperature or rainfall), while circular points are useful for discrete data (like disease cases or wildlife sightings)."),
-                config.MapType.UI(ui.input_select,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
+                config.MapType.UI(ui.input_select,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "CartoDB Voyager": "CartoDB Voyager", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, CartoDB Voyager is a more detailed authenticated CartoDB style, and OSM is more highly annotated."),
 
                 config.Radius.UI(ui.input_numeric, id="Radius", label="Data Point Size", min=5, tooltip="Specify how large each data point should be on the map."),
 

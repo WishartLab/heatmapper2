@@ -23,7 +23,7 @@ from json import loads
 from datetime import datetime
 from time import mktime
 
-from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update, Msg, File
+from shared import Cache, NavBar, MainTab, FileSelection, Pyodide, Filter, ColumnType, TableOptions, Raw, InitializeConfig, ColorMaps, Error, Update, Msg, File, MapTiles
 from geojson import Mappings
 
 try:
@@ -305,13 +305,13 @@ def server(input, output, session):
 			k_col, v_col, k_prop = config.KeyColumn(), config.ValueColumn(), config.KeyProperty()
 			if k_col not in df or v_col not in df or k_prop not in properties: return ui.HTML("Data could not be displayed. <br>Please upload a Table file and a GeoJSON, or select an example data set in the sidebar. <br><br><i>Uploaded Table files should include: <br>a Key column (e.g. 'name', 'continent', 'country', 'location') <br>and a Value column (e.g. 'value', 'weight', 'intensity')</i>")
 
-			map_type = config.MapType()
+			tile_info = MapTiles[config.MapType()]
 
 			# Give a placeholder map if nothing is selected, which should never really be the case.
-			if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=map_type, zoom_start=15)
+			if df.empty or geojson is None: return FoliumMap((53.5213, -113.5213), tiles=tile_info["tiles"], attr=tile_info["attr"], zoom_start=15)
 
 			# Create map
-			map = FoliumMap(tiles=map_type)
+			map = FoliumMap(tiles=tile_info["tiles"], attr=tile_info["attr"])
 
 			p.inc(message="Dropping Invalid Values...")
 			names = []
@@ -463,7 +463,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time, which can be navigated with a time slider embedded into the map. Temporal data must have an explicit time column, or separate columns for each time period. "),
-				config.MapType.UI(ui.input_select, id="MapType", label="Background Map", choices={"CartoDB Positron": "CartoDB", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, while OSM is more highly annotated."),
+				config.MapType.UI(ui.input_select, id="MapType", label="Background Map", choices={"CartoDB Positron": "CartoDB", "CartoDB Voyager": "CartoDB Voyager", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, CartoDB Voyager is a more detailed authenticated CartoDB style, and OSM is more highly annotated."),
 				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
 
 				ui.HTML("<b>Colors</b>"),

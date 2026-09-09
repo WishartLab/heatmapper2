@@ -53,6 +53,18 @@ else:
 			Error("Could not download file!")
 			return None
 
+# CARTO basemap tiles, authenticated with a CARTO account API key.
+CartoAPIKey = "cb1_2x2c_1_a245f0ef873546292ff9ce9c"
+CartoAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+
+# Maps a MapType selection to the Folium `tiles`/`attr` arguments it needs.
+# Named providers ("CartoDB Positron", "OpenStreetMap") are resolved by Folium itself, so no attribution is needed.
+MapTiles = {
+	"CartoDB Positron": {"tiles": "CartoDB Positron", "attr": None},
+	"OpenStreetMap": {"tiles": "OpenStreetMap", "attr": None},
+	"CartoDB Voyager": {"tiles": f"https://basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}.png?key={CartoAPIKey}", "attr": CartoAttribution},
+}
+
 # Shared Values
 Colors = ["Blue", "Orange", "Green", "Red", "Purple", "Brown", "Pink", "Gray", "Olive", "Cyan", "White", "Yellow"]
 DistanceMethods = ["Braycurtis", "Canberra", "Chebyshev", "Cityblock", "Correlation", "Cosine", "Dice", "Euclidean", "Hamming", "Jaccard", "Jensenshannon", "Kulczynski1", "Matching", "Minkowski", "Rogerstanimoto", "Russellrao", "Seuclidean", "Sokalmichener", "Sokalsneath", "Sqeuclidean", "Yule"]
