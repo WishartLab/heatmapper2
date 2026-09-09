@@ -16,8 +16,8 @@ config = ConfigHandler({
 	"RenderMode": Config(selected="Raster"),
 	"RenderShape": Config(selected="Circle"),
 
-	# "CartoDB Positron", "CartoDB Voyager", "OpenStreetMap"
-	"MapType": Config(selected="CartoDB Positron"),
+	# "CartoDB Voyager", "OpenStreetMap"
+	"MapType": Config(selected="CartoDB Voyager"),
 
 	# Any floating value between 0.0 and 1.0
 	"Opacity": Config(value=0.7),

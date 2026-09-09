@@ -17,8 +17,8 @@ config = ConfigHandler({
 	"ValueColumn": Config(),
 	"KeyProperty": Config(),
 
-	# "CartoDB Positron", "CartoDB Voyager", "OpenStreetMap"
-	"MapType": Config(selected="CartoDB Positron"),
+	# "CartoDB Voyager", "OpenStreetMap"
+	"MapType": Config(selected="CartoDB Voyager"),
 
 	# See shared.py for ColorMaps
 	"ColorMap": Config(selected="Viridis"),

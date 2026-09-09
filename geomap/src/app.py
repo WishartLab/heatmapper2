@@ -463,7 +463,7 @@ app_ui = ui.page_fluid(
 
 				ui.HTML("<b>Heatmap</b>"),
 				config.Temporal.UI(ui.input_checkbox, id="Temporal", label="Temporal", tooltip="Specify if the input data should be interpreted over time, which can be navigated with a time slider embedded into the map. Temporal data must have an explicit time column, or separate columns for each time period. "),
-				config.MapType.UI(ui.input_select, id="MapType", label="Background Map", choices={"CartoDB Positron": "CartoDB", "CartoDB Voyager": "CartoDB Voyager", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, CartoDB Voyager is a more detailed authenticated CartoDB style, and OSM is more highly annotated."),
+				config.MapType.UI(ui.input_select, id="MapType", label="Background Map", choices={"CartoDB Voyager": "CartoDB Voyager", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB Voyager is a detailed, authenticated CartoDB style, while OSM is more highly annotated."),
 				config.Opacity.UI(ui.input_slider, id="Opacity", label="Heatmap Opacity", min=0.0, max=1.0, step=0.1, tooltip="Specify the opacity of the heatmap. 1.0 indicates full opacity, while lower values make the background map more visible."),
 
 				ui.HTML("<b>Colors</b>"),

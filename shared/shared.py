@@ -58,9 +58,8 @@ CartoAPIKey = "cb1_2x2c_1_a245f0ef873546292ff9ce9c"
 CartoAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
 # Maps a MapType selection to the Folium `tiles`/`attr` arguments it needs.
-# Named providers ("CartoDB Positron", "OpenStreetMap") are resolved by Folium itself, so no attribution is needed.
+# "OpenStreetMap" is resolved by Folium itself, so no attribution is needed.
 MapTiles = {
-	"CartoDB Positron": {"tiles": "CartoDB Positron", "attr": None},
 	"OpenStreetMap": {"tiles": "OpenStreetMap", "attr": None},
 	"CartoDB Voyager": {"tiles": f"https://basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}.png?key={CartoAPIKey}", "attr": CartoAttribution},
 }

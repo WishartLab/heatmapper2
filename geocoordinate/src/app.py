@@ -531,7 +531,7 @@ app_ui = ui.page_fluid(
                 ui.HTML("<b>Heatmap</b>"),
                 config.RenderMode.UI(ui.input_select, id="RenderMode", label="Render Mode", choices=["Raster", "Vector"], tooltip="Display data as discrete vector points, or a smooth raster shape (vector does not apply to temporal heatmaps). The intensity of raster points scales when the map is zoomed in or out. Vector points maintain a constant intensity regardless of zoom, but are more computationally expensive."),
                 config.RenderShape.UI(ui.input_select, id="RenderShape", label="Vector Shape", choices=["Circle", "Rectangle"], tooltip="Specify the shape of vector points. Rectangular points are useful for contiguous data (like temperature or rainfall), while circular points are useful for discrete data (like disease cases or wildlife sightings)."),
-                config.MapType.UI(ui.input_select,id="MapType", label="Map Type", choices={"CartoDB Positron": "CartoDB", "CartoDB Voyager": "CartoDB Voyager", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB is a simpler map, CartoDB Voyager is a more detailed authenticated CartoDB style, and OSM is more highly annotated."),
+                config.MapType.UI(ui.input_select,id="MapType", label="Map Type", choices={"CartoDB Voyager": "CartoDB Voyager", "OpenStreetMap": "OSM"}, tooltip="Specify the background map to plot your data on. CartoDB Voyager is a detailed, authenticated CartoDB style, while OSM is more highly annotated."),
 
                 config.Radius.UI(ui.input_numeric, id="Radius", label="Data Point Size", min=5, tooltip="Specify how large each data point should be on the map."),
 
